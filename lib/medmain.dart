@@ -32,7 +32,7 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
   final List<Medication> _medicationList = [
     Medication(
       name: 'Aspirin',
-      days: ['Monday', 'Wednesday', 'Friday'],
+      days: ['Monday', 'Wednesdayty', 'Friday'],
       frequency: 'Once daily',
       times: [const TimeOfDay(hour: 8, minute: 0)],
       notes: 'Take with a full glass of water.',
