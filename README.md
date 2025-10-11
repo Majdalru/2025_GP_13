@@ -1,16 +1,28 @@
-# flutter_khalil
+# Khalil: Elderly Voice Assistant App
 
-A new Flutter project.
+## Introduction
+Khalil is a mobile application designed to support elderly users and their caregivers.  
+It helps elderly individuals manage medications, receive reminders, reduce feelings of loneliness, and stay safe through voice-first interaction.  
+The app also empowers caregivers to monitor medication adherence, receive emergency alerts, and provide timely support.  
 
-## Getting Started
+## Goal
+The goal of Khalil is to provide elderly users with a simple and accessible voice assistant that:  
+- Promotes independence.  
+- Ensures medication adherence.  
+- Reduces social isolation.  
+- Enhances safety.  
 
-This project is a starting point for a Flutter application.
+At the same time, it empowers caregivers with tools to monitor elderly wellbeing, receive emergency alerts, and provide timely support.  
+By bridging the digital divide, Khalil makes healthcare support easy to use for elderly individuals while aligning with Saudi Vision 2030’s Quality of Life objectives.  
 
-A few resources to get you started if this is your first Flutter project:
+## Technology
+### Programming Languages & Frameworks
+- **Flutter (Dart):** For building a cross-platform mobile application with a single codebase.  
+- **Python:** For machine learning tasks such as emotion detection.  
+- **SQL:** For database management.  
+  
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Launching Instructions
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+  
+
