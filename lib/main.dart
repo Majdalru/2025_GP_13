@@ -16,7 +16,7 @@ class CaregiverApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5E60CE),
+          seedColor: const Color.fromARGB(255, 7, 8, 58),
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: const Color(0xFFF7F6FD),

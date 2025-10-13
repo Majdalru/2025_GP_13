@@ -30,18 +30,18 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_role == UserRole.elderly) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Elderly app coming soon')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Elderly app coming soon')));
       return;
     }
 
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeShell()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeShell()));
   }
 
   @override
@@ -67,7 +67,10 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     // حشوات ثابتة مريحة
-    const fieldContentPadding = EdgeInsets.symmetric(vertical: 18, horizontal: 14);
+    const fieldContentPadding = EdgeInsets.symmetric(
+      vertical: 18,
+      horizontal: 14,
+    );
     final buttonStyle = FilledButton.styleFrom(
       minimumSize: const Size.fromHeight(56),
       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -84,19 +87,25 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 // LOGO
                 // LOGO (معدّل: عرض الشعار مباشرة)
-Center(
-  child: Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10), // مسافة محيطة
-    child: Image.asset(
-      'assets/khalil_logo.png',
-      height: logoH.toDouble(), // اجعل الشعار يملأ الارتفاع
-      fit: BoxFit.contain,
-    ),
-  ),
-),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                    ), // مسافة محيطة
+                    child: Center(
+                      child: Image.asset(
+                        'assets/khalil_logo.png',
+                        height: 140,
+                        width: 140,
+                        // اجعل الشعار يملأ الارتفاع
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 20),
 
-                Text('Log in', style: titleStyle),
+                Center(child: Text('Log in', style: titleStyle)),
                 const SizedBox(height: 14),
 
                 // اختيار الدور
@@ -108,11 +117,17 @@ Center(
                   ),
                   child: Row(
                     children: [
-                      _roleChip('Caregiver', _role == UserRole.caregiver,
-                          () => setState(() => _role = UserRole.caregiver)),
+                      _roleChip(
+                        'Caregiver',
+                        _role == UserRole.caregiver,
+                        () => setState(() => _role = UserRole.caregiver),
+                      ),
                       const SizedBox(width: 8),
-                      _roleChip('Elderly', _role == UserRole.elderly,
-                          () => setState(() => _role = UserRole.elderly)),
+                      _roleChip(
+                        'Elderly',
+                        _role == UserRole.elderly,
+                        () => setState(() => _role = UserRole.elderly),
+                      ),
                     ],
                   ),
                 ),
@@ -145,12 +160,15 @@ Center(
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
                             onPressed: () => setState(() => _ob = !_ob),
-                            icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
+                            icon: Icon(
+                              _ob ? Icons.visibility_off : Icons.visibility,
+                            ),
                           ),
                           contentPadding: fieldContentPadding,
                         ),
-                        validator: (v) =>
-                            (v == null || v.length < 6) ? 'Min 6 characters' : null,
+                        validator: (v) => (v == null || v.length < 6)
+                            ? 'Min 6 characters'
+                            : null,
                       ),
                     ],
                   ),
@@ -160,7 +178,9 @@ Center(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordPage(),
+                      ),
                     ),
                     child: const Text('Forgot password?'),
                   ),
@@ -171,7 +191,10 @@ Center(
                   style: buttonStyle,
                   child: _loading
                       ? const SizedBox(
-                          width: 22, height: 22, child: CircularProgressIndicator())
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(),
+                        )
                       : const Text('Next'),
                 ),
 
@@ -179,8 +202,10 @@ Center(
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Don’t have an account?",
-                        style: TextStyle(color: Colors.grey.shade700)),
+                    Text(
+                      "Don’t have an account?",
+                      style: TextStyle(color: Colors.grey.shade700),
+                    ),
                     TextButton(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SignUpPage()),
