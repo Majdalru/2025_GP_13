@@ -1,59 +1,47 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart'; // Make sure this path is correct
 
-void main() {
-  runApp(const CaregiverApp());
-}
+class HomePage extends StatelessWidget {
+  final String elderlyName;
+  final VoidCallback onTapArrowToMedsSummary;
+  final VoidCallback onTapEmergency;
 
-class CaregiverApp extends StatelessWidget {
-  const CaregiverApp({super.key});
+  const HomePage({
+    super.key,
+    required this.elderlyName,
+    required this.onTapArrowToMedsSummary,
+    required this.onTapEmergency,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Caregiver',
-      debugShowCheckedModeBanner: false,
-      // All theme properties now go inside ThemeData
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF7F6FD),
-        appBarTheme: const AppBarTheme(elevation: 0, centerTitle: false),
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          color: Color(0xFFFFFFFF),
-          margin: EdgeInsets.symmetric(vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(18)),
+    // Placeholder UI for the caregiver's home page.
+    // You can build this out with the actual UI you need.
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        Text(
+          'Monitoring: $elderlyName',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        const SizedBox(height: 20),
+        Card(
+          child: ListTile(
+            title: const Text("Today's Medication Summary"),
+            subtitle: const Text("View today's medication status."),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: onTapArrowToMedsSummary,
           ),
         ),
-        listTileTheme: const ListTileThemeData(
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          iconColor: Colors.black87,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFF3F2FA),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none,
+        Card(
+          child: ListTile(
+            title: const Text("Emergency SOS"),
+            subtitle: const Text("View location alerts."),
+            tileColor: Colors.red.shade50,
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: onTapEmergency,
           ),
         ),
-        navigationBarTheme: NavigationBarThemeData(
-          height: 64,
-          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-          indicatorColor: const Color(0xFF5E60CE).withOpacity(.15),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          ),
-        ),
-      ),
-      home: const LoginPage(),
+      ],
     );
   }
 }

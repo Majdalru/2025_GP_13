@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'media_page.dart';
+import 'elderly_med.dart';
 
 void main() {
   runApp(const KhalilApp());
@@ -22,10 +23,7 @@ class KhalilApp extends StatelessWidget {
           backgroundColor: Color(0xFF34495E),
           foregroundColor: Colors.white,
           centerTitle: true,
-          titleTextStyle: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-          ),
+          titleTextStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
         colorScheme: const ColorScheme.light(
           primary: Color(0xFF34495E),
@@ -70,7 +68,8 @@ class HomePage extends StatelessWidget {
                 builder: (context) => AlertDialog(
                   backgroundColor: const Color(0xFFFDFEFE),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25)),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                   title: const Text(
                     "Settings",
                     style: TextStyle(
@@ -97,7 +96,8 @@ class HomePage extends StatelessWidget {
                             builder: (context) => AlertDialog(
                               backgroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                               title: const Text(
                                 "Are you sure you want to log out?",
                                 textAlign: TextAlign.center,
@@ -113,13 +113,17 @@ class HomePage extends StatelessWidget {
                                   style: FilledButton.styleFrom(
                                     backgroundColor: Colors.grey[200],
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 35, vertical: 15),
+                                      horizontal: 35,
+                                      vertical: 15,
+                                    ),
                                   ),
                                   onPressed: () => Navigator.pop(context),
                                   child: const Text(
                                     "No",
                                     style: TextStyle(
-                                        fontSize: 24, color: Colors.black87),
+                                      fontSize: 24,
+                                      color: Colors.black87,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 15),
@@ -127,7 +131,9 @@ class HomePage extends StatelessWidget {
                                   style: FilledButton.styleFrom(
                                     backgroundColor: buttonRed,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 35, vertical: 15),
+                                      horizontal: 35,
+                                      vertical: 15,
+                                    ),
                                   ),
                                   onPressed: () {
                                     Navigator.pop(context);
@@ -136,15 +142,20 @@ class HomePage extends StatelessWidget {
                                   child: const Text(
                                     "Yes",
                                     style: TextStyle(
-                                        fontSize: 24, color: Colors.white),
+                                      fontSize: 24,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           );
                         },
-                        icon: const Icon(Icons.logout,
-                            size: 34, color: Colors.white),
+                        icon: const Icon(
+                          Icons.logout,
+                          size: 34,
+                          color: Colors.white,
+                        ),
                         label: const Text(
                           "Log out",
                           style: TextStyle(
@@ -233,7 +244,8 @@ class HomePage extends StatelessWidget {
                   backgroundColor: buttonRed,
                   minimumSize: const Size(double.infinity, 100),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25)),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                   elevation: 6,
                 ),
                 onPressed: () {
@@ -261,7 +273,8 @@ class HomePage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const MediaPage()),
+                            builder: (context) => const MediaPage(),
+                          ),
                         );
                       },
                     ),
@@ -273,6 +286,13 @@ class HomePage extends StatelessWidget {
                       title: "Medic",
                       onTap: () {
                         HapticFeedback.selectionClick();
+                        // Add this line to navigate
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MedicationApp(),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -382,8 +402,9 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
           style: FilledButton.styleFrom(
             backgroundColor: Colors.grey.shade800,
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onPressed: generateNewCode,
           child: const Text(
@@ -440,4 +461,3 @@ class _HomeCard extends StatelessWidget {
     );
   }
 }
-

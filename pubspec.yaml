@@ -29,12 +29,14 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   flutter:
+
     sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   intl: ^0.20.2
+  shared_preferences: ^2.0.15 # Add this line
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +58,7 @@ flutter:
 
   assets:
     - assets/khalil_logo.png
+    - assets/images/ # Add this line
 
   # To add assets to your application, add an assets section, like this:
   # assets:

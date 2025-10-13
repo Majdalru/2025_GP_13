@@ -16,9 +16,7 @@ class BrowseLocationPage extends StatelessWidget {
               color: color.primaryContainer.withOpacity(.5),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
-              child: Icon(Icons.map, size: 64),
-            ),
+            child: const Center(child: Icon(Icons.map, size: 64)),
           ),
           const SizedBox(height: 20),
           const _KV(label: 'Location', value: 'Riyadh, KSU - Gate 3'),

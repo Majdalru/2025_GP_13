@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_shell.dart';
-import'elderly_home.dart';
+import '../elderly_Screens/screens/elderly_home.dart';
 
 enum SignUpRole { caregiver, elderly }
 
@@ -41,14 +41,14 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-   if (_role == SignUpRole.elderly) {
-  // elderly
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const HomePage()),
-    (_) => false,
-  );
-  return;
-}
+    if (_role == SignUpRole.elderly) {
+      // elderly
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+        (_) => false,
+      );
+      return;
+    }
 
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 500));
@@ -93,11 +93,17 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
             child: Row(
               children: [
-                _roleChip('Caregiver', _role == SignUpRole.caregiver,
-                    () => setState(() => _role = SignUpRole.caregiver)),
+                _roleChip(
+                  'Caregiver',
+                  _role == SignUpRole.caregiver,
+                  () => setState(() => _role = SignUpRole.caregiver),
+                ),
                 const SizedBox(width: 8),
-                _roleChip('Elderly', _role == SignUpRole.elderly,
-                    () => setState(() => _role = SignUpRole.elderly)),
+                _roleChip(
+                  'Elderly',
+                  _role == SignUpRole.elderly,
+                  () => setState(() => _role = SignUpRole.elderly),
+                ),
               ],
             ),
           ),
@@ -172,7 +178,10 @@ class _SignUpPageState extends State<SignUpPage> {
                       value: _gender,
                       items: const [
                         DropdownMenuItem(value: 'Male', child: Text('Male')),
-                        DropdownMenuItem(value: 'Female', child: Text('Female')),
+                        DropdownMenuItem(
+                          value: 'Female',
+                          child: Text('Female'),
+                        ),
                       ],
                       onChanged: (v) => setState(() => _gender = v ?? 'Male'),
                     ),
@@ -190,8 +199,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     labelStyle: labelStyle,
                     prefixIcon: const Icon(Icons.phone_outlined),
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().length < 8) ? 'Enter a valid phone' : null,
+                  validator: (v) => (v == null || v.trim().length < 8)
+                      ? 'Enter a valid phone'
+                      : null,
                 ),
                 const SizedBox(height: 12),
 
@@ -205,8 +215,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     labelStyle: labelStyle,
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Enter a valid email'
+                      : null,
                 ),
                 const SizedBox(height: 12),
 
@@ -233,24 +244,28 @@ class _SignUpPageState extends State<SignUpPage> {
           const SizedBox(height: 16),
 
           FilledButton(
-            onPressed: _loading ? null : () {
-              // محاكاة حجز اسم المستخدم محليًا
-              final u = _username.text.trim().toLowerCase();
-              if (u.isNotEmpty && !_takenUsernames.contains(u)) {
-                _takenUsernames.add(u);
-              }
-              _submit();
-            },
+            onPressed: _loading
+                ? null
+                : () {
+                    // محاكاة حجز اسم المستخدم محليًا
+                    final u = _username.text.trim().toLowerCase();
+                    if (u.isNotEmpty && !_takenUsernames.contains(u)) {
+                      _takenUsernames.add(u);
+                    }
+                    _submit();
+                  },
             style: FilledButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
             child: _loading
                 ? const SizedBox(
-                    width: 22, height: 22, child: CircularProgressIndicator())
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(),
+                  )
                 : const Text('Create account'),
           ),
         ],

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/elderly_home.dart';
+import '../screens/elderly_home.dart';
 
 void main() {
   runApp(const KhalilApp());
@@ -12,7 +12,7 @@ class KhalilApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomePage(),//go to the elderly homepage 
+      home: HomePage(), //go to the elderly homepage
     );
   }
 }
