@@ -68,7 +68,9 @@ class HomePage extends StatelessWidget {
         Card(
           elevation: 0,
           clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -79,8 +81,8 @@ class HomePage extends StatelessWidget {
                     Text(
                       'Today • 7 OCT',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const Spacer(),
                     // السهم للـ Summary
@@ -98,9 +100,21 @@ class HomePage extends StatelessWidget {
                 Divider(color: Colors.grey.withOpacity(.25), height: 20),
 
                 // صفوف الأدوية (مثال)
-                const _MedTodayRow(name: 'Med name', time: '8:00 AM', done: true),
-                const _MedTodayRow(name: 'Med name', time: '1:00 PM', done: true),
-                const _MedTodayRow(name: 'Med name', time: '8:00 PM', done: false),
+                const _MedTodayRow(
+                  name: 'Med name',
+                  time: '8:00 AM',
+                  done: true,
+                ),
+                const _MedTodayRow(
+                  name: 'Med name',
+                  time: '1:00 PM',
+                  done: true,
+                ),
+                const _MedTodayRow(
+                  name: 'Med name',
+                  time: '8:00 PM',
+                  done: false,
+                ),
               ],
             ),
           ),
@@ -151,10 +165,7 @@ class _MedTodayRow extends StatelessWidget {
           ),
           child: Icon(Icons.medication_outlined, color: accent),
         ),
-        title: Text(
-          name,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Text(time),
         trailing: Icon(
           done ? Icons.check_circle : Icons.radio_button_unchecked,

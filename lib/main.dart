@@ -20,10 +20,7 @@ class CaregiverApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: const Color(0xFFF7F6FD),
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: false,
-        ),
+        appBarTheme: const AppBarTheme(elevation: 0, centerTitle: false),
         cardTheme: const CardThemeData(
           elevation: 0,
           color: Color(0xFFFFFFFF),
@@ -52,9 +49,9 @@ class CaregiverApp extends StatelessWidget {
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
-            padding:
-                const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           ),
         ),
       ),

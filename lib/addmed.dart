@@ -34,9 +34,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
     if (_isEditing) {
       final med = widget.medicationToEdit!;
       _medicationName = med.name;
-      _selectedDays = List.from(
-        med.days,
-      ); // Use List.from to create a mutable copy
+      _selectedDays = List.from(med.days);
       _frequency = med.frequency;
       _selectedTimes = List.from(med.times);
       _notes = med.notes;
@@ -159,19 +157,27 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Shared button style for consistency
+    final ButtonStyle tealButtonStyle = ElevatedButton.styleFrom(
+      backgroundColor: Colors.teal,
+      foregroundColor: Colors.white,
+      minimumSize: const Size.fromHeight(50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    );
+
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 90,
-        // Dynamically change the title
         title: Text(_isEditing ? 'Edit Medication' : 'Add Medication'),
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
         backgroundColor: const Color.fromRGBO(12, 45, 93, 1),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _goToPreviousPage,
         ),
         actions: [
@@ -184,9 +190,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
           ),
         ],
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(10), // Adjust the radius as needed
-          ),
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
       ),
       body: Column(
@@ -203,8 +207,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 _Step1MedName(
-                  // Pass initial value for editing
                   initialValue: _medicationName,
+                  buttonStyle: tealButtonStyle,
                   onNext: (name) {
                     setState(() => _medicationName = name);
                     _goToNextPage();
@@ -212,8 +216,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
                 ),
                 _Step2SelectDays(
                   medicationName: _medicationName,
-                  // Pass initial value for editing
                   initialDays: _selectedDays,
+                  buttonStyle: tealButtonStyle,
                   onNext: (days) {
                     setState(() => _selectedDays = days);
                     _goToNextPage();
@@ -221,10 +225,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                 ),
                 _Step3HowManyTimesPerDay(
                   medicationName: _medicationName,
-                  // Pass initial value for editing
                   initialFrequency: _frequency,
+                  buttonStyle: tealButtonStyle,
                   onNext: (freq) {
-                    // Only re-initialize times if the frequency changes
                     if (_frequency != freq) {
                       _initializeTimesForFrequency(freq);
                     }
@@ -236,6 +239,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   medicationName: _medicationName,
                   frequency: _frequency,
                   selectedTimes: _selectedTimes,
+                  buttonStyle: tealButtonStyle,
                   onTimeChanged: _updateTimes,
                   onClearTimes: _clearAllTimes,
                   onAddTime: _frequency == 'Custom'
@@ -255,8 +259,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
                 ),
                 _Step5AddNotes(
                   medicationName: _medicationName,
-                  // Pass initial value for editing
                   initialNotes: _notes,
+                  buttonStyle: tealButtonStyle,
                   onNext: (notes) {
                     setState(() => _notes = notes);
                     _goToNextPage();
@@ -268,8 +272,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   frequency: _frequency,
                   selectedTimes: _selectedTimes.whereType<TimeOfDay>().toList(),
                   notes: _notes,
-                  // Pass editing status to change button text
                   isEditing: _isEditing,
+                  buttonStyle: tealButtonStyle,
                   onSave: _saveMedication,
                 ),
               ],
@@ -281,7 +285,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 }
 
-// --- Stepper and Header Widgets (Unchanged) ---
+// --- Stepper and Header Widgets ---
 class _Stepper extends StatelessWidget {
   final int currentIndex;
   final int stepCount;
@@ -290,18 +294,19 @@ class _Stepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(stepCount, (index) {
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4.0),
-            width: 55.0,
-            height: 12.0,
-            decoration: BoxDecoration(
-              shape: BoxShape.rectangle,
-              borderRadius: BorderRadius.circular(10),
-              color: index == currentIndex ? Colors.teal : Colors.grey.shade300,
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4.0),
+              height: 8.0,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: index <= currentIndex
+                    ? Colors.teal
+                    : Colors.grey.shade300,
+              ),
             ),
           );
         }),
@@ -311,13 +316,13 @@ class _Stepper extends StatelessWidget {
 }
 
 class _StepHeader extends StatelessWidget {
-  final String stepNumber;
   final String title;
+  final String subtitle;
   final String? medicationName;
 
   const _StepHeader({
-    required this.stepNumber,
     required this.title,
+    required this.subtitle,
     this.medicationName,
   });
 
@@ -326,36 +331,45 @@ class _StepHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (medicationName != null)
+        if (medicationName != null && medicationName!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 16.0),
+            padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               medicationName!,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
+                color: Theme.of(context).colorScheme.primary,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         Text(
-          stepNumber,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          title,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
-        Text(title, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
+        ),
         const SizedBox(height: 24),
       ],
     );
   }
 }
 
-// --- Updated Step Widgets to accept initial values ---
+// --- Step Widgets (Refactored to be inside a Card) ---
 
 class _Step1MedName extends StatefulWidget {
   final ValueChanged<String> onNext;
   final String? initialValue;
-  const _Step1MedName({required this.onNext, this.initialValue});
+  final ButtonStyle buttonStyle;
+  const _Step1MedName({
+    required this.onNext,
+    this.initialValue,
+    required this.buttonStyle,
+  });
 
   @override
   State<_Step1MedName> createState() => _Step1MedNameState();
@@ -380,34 +394,39 @@ class _Step1MedNameState extends State<_Step1MedName> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _StepHeader(
-            stepNumber: 'Step 1: Enter Medicine Name',
-            title: 'What medication do you need to take?',
-            medicationName: widget.initialValue,
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const _StepHeader(
+                title: 'Step 1: Medicine Name',
+                subtitle: 'What medication do you need to take?',
+              ),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Medicine Name',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _nameController.text.trim().isNotEmpty
+                    ? () => widget.onNext(_nameController.text.trim())
+                    : null,
+                style: widget.buttonStyle,
+                child: const Text('Next'),
+              ),
+            ],
           ),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Medicine Name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () {
-              if (_nameController.text.isNotEmpty) {
-                widget.onNext(_nameController.text);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-            ),
-            child: const Text('Next'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -417,10 +436,13 @@ class _Step2SelectDays extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<List<String>> onNext;
   final List<String>? initialDays;
+  final ButtonStyle buttonStyle;
+
   const _Step2SelectDays({
     this.medicationName,
     required this.onNext,
     this.initialDays,
+    required this.buttonStyle,
   });
 
   @override
@@ -429,7 +451,7 @@ class _Step2SelectDays extends StatefulWidget {
 
 class _Step2SelectDaysState extends State<_Step2SelectDays> {
   final List<String> _daysOfWeek = [
-    'Everyday',
+    'Every day',
     'Sunday',
     'Monday',
     'Tuesday',
@@ -448,43 +470,66 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
     }
   }
 
+  void _onDaySelected(bool? value, String day) {
+    setState(() {
+      if (day == 'Every day') {
+        if (value == true) {
+          _selectedDays = List.from(_daysOfWeek);
+        } else {
+          _selectedDays.clear();
+        }
+      } else {
+        if (value == true) {
+          _selectedDays.add(day);
+          _selectedDays.remove('Every day');
+        } else {
+          _selectedDays.remove(day);
+        }
+        // Check if all individual days are selected
+        if (_daysOfWeek.sublist(1).every((d) => _selectedDays.contains(d))) {
+          _selectedDays = List.from(_daysOfWeek);
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _StepHeader(
-            medicationName: widget.medicationName,
-            stepNumber: 'Step 2: Select Days',
-            title: 'Which days should you take this medication?',
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _StepHeader(
+                medicationName: widget.medicationName,
+                title: 'Step 2: Select Days',
+                subtitle: 'Which days should you take this medication?',
+              ),
+              ..._daysOfWeek.map(
+                (day) => CheckboxListTile(
+                  title: Text(day),
+                  value: _selectedDays.contains(day),
+                  onChanged: (bool? value) => _onDaySelected(value, day),
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _selectedDays.isNotEmpty
+                    ? () => widget.onNext(_selectedDays)
+                    : null,
+                style: widget.buttonStyle,
+                child: const Text('Next'),
+              ),
+            ],
           ),
-          ..._daysOfWeek.map(
-            (day) => CheckboxListTile(
-              title: Text(day),
-              value: _selectedDays.contains(day),
-              onChanged: (bool? value) => setState(() {
-                if (value == true)
-                  _selectedDays.add(day);
-                else
-                  _selectedDays.remove(day);
-              }),
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () {
-              if (_selectedDays.isNotEmpty) {
-                widget.onNext(_selectedDays);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-            ),
-            child: const Text('Next'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -494,10 +539,13 @@ class _Step3HowManyTimesPerDay extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String> onNext;
   final String? initialFrequency;
+  final ButtonStyle buttonStyle;
+
   const _Step3HowManyTimesPerDay({
     this.medicationName,
     required this.onNext,
     this.initialFrequency,
+    required this.buttonStyle,
   });
 
   @override
@@ -525,36 +573,41 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _StepHeader(
-            medicationName: widget.medicationName,
-            stepNumber: 'Step 3: How Many Times Per Day?',
-            title: 'Select how often you take this medication',
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _StepHeader(
+                medicationName: widget.medicationName,
+                title: 'Step 3: Frequency',
+                subtitle: 'Select how often you take this medication',
+              ),
+              ..._frequencyOptions.map(
+                (option) => RadioListTile<String>(
+                  title: Text(option),
+                  value: option,
+                  groupValue: _selectedFrequency,
+                  onChanged: (String? value) =>
+                      setState(() => _selectedFrequency = value),
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _selectedFrequency != null
+                    ? () => widget.onNext(_selectedFrequency!)
+                    : null,
+                style: widget.buttonStyle,
+                child: const Text('Next'),
+              ),
+            ],
           ),
-          ..._frequencyOptions.map(
-            (option) => RadioListTile<String>(
-              title: Text(option),
-              value: option,
-              groupValue: _selectedFrequency,
-              onChanged: (String? value) =>
-                  setState(() => _selectedFrequency = value),
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () {
-              if (_selectedFrequency != null) {
-                widget.onNext(_selectedFrequency!);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-            ),
-            child: const Text('Next'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -569,6 +622,7 @@ class _Step4SetTimes extends StatefulWidget {
   final VoidCallback onClearTimes;
   final VoidCallback? onAddTime;
   final ValueChanged<int>? onRemoveTime;
+  final ButtonStyle buttonStyle;
 
   const _Step4SetTimes({
     this.medicationName,
@@ -579,6 +633,7 @@ class _Step4SetTimes extends StatefulWidget {
     required this.onClearTimes,
     this.onAddTime,
     this.onRemoveTime,
+    required this.buttonStyle,
   });
 
   @override
@@ -599,86 +654,92 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
   @override
   Widget build(BuildContext context) {
     bool isCustom = widget.frequency == 'Custom';
+    bool allTimesSelected = widget.selectedTimes.every((time) => time != null);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _StepHeader(
-            medicationName: widget.medicationName,
-            stepNumber: 'Step 4: Set Times',
-            title: 'When should you take this medication?',
-          ),
-          ...widget.selectedTimes.asMap().entries.map((entry) {
-            int index = entry.key;
-            TimeOfDay? time = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _pickTime(index),
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                          labelText: 'Time ${index + 1}',
-                          border: const OutlineInputBorder(),
-                        ),
-                        child: Text(
-                          time?.format(context) ?? 'Select a time',
-                          style: const TextStyle(fontSize: 16),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _StepHeader(
+                medicationName: widget.medicationName,
+                title: 'Step 4: Set Times',
+                subtitle: 'When should you take this medication?',
+              ),
+              ...widget.selectedTimes.asMap().entries.map((entry) {
+                int index = entry.key;
+                TimeOfDay? time = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _pickTime(index),
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'Time ${index + 1}',
+                              border: const OutlineInputBorder(),
+                            ),
+                            child: Text(
+                              time?.format(context) ?? 'Select a time',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  if (isCustom && index > 0 && widget.onRemoveTime != null)
-                    IconButton(
-                      icon: const Icon(
-                        Icons.remove_circle_outline,
-                        color: Colors.red,
-                      ),
-                      onPressed: () => widget.onRemoveTime!(index),
-                    ),
-                ],
-              ),
-            );
-          }).toList(),
-          if (isCustom && widget.onAddTime != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: widget.onAddTime,
-                icon: const Icon(Icons.add_circle_outline),
-                label: const Text('Add another time'),
-              ),
-            ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: widget.onClearTimes,
-              child: const Text('Clear All Times'),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              if (widget.selectedTimes.every((time) => time != null)) {
-                widget.onNext();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please select all required times.'),
+                      if (isCustom && index > 0 && widget.onRemoveTime != null)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => widget.onRemoveTime!(index),
+                        ),
+                    ],
                   ),
                 );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-            ),
-            child: const Text('Next'),
+              }).toList(),
+              if (isCustom && widget.onAddTime != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: widget.onAddTime,
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Add another time'),
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: widget.onClearTimes,
+                  child: const Text('Clear All Times'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: allTimesSelected
+                    ? widget.onNext
+                    : () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select all required times.'),
+                          ),
+                        );
+                      },
+                style: widget.buttonStyle,
+                child: const Text('Next'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -688,10 +749,13 @@ class _Step5AddNotes extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String?> onNext;
   final String? initialNotes;
+  final ButtonStyle buttonStyle;
+
   const _Step5AddNotes({
     this.medicationName,
     required this.onNext,
     this.initialNotes,
+    required this.buttonStyle,
   });
 
   @override
@@ -717,31 +781,38 @@ class _Step5AddNotesState extends State<_Step5AddNotes> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _StepHeader(
-            medicationName: widget.medicationName,
-            stepNumber: 'Step 5: Add Notes (Optional)',
-            title: 'Any special instructions?',
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _StepHeader(
+                medicationName: widget.medicationName,
+                title: 'Step 5: Add Notes',
+                subtitle: 'Any special instructions? (Optional)',
+              ),
+              TextField(
+                controller: _notesController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () => widget.onNext(_notesController.text),
+                style: widget.buttonStyle,
+                child: const Text('Next'),
+              ),
+            ],
           ),
-          TextField(
-            controller: _notesController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Notes',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () => widget.onNext(_notesController.text),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-            ),
-            child: const Text('Next'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -755,6 +826,7 @@ class _Step6Summary extends StatelessWidget {
   final String? notes;
   final VoidCallback onSave;
   final bool isEditing;
+  final ButtonStyle buttonStyle;
 
   const _Step6Summary({
     this.medicationName,
@@ -764,6 +836,7 @@ class _Step6Summary extends StatelessWidget {
     this.notes,
     required this.onSave,
     required this.isEditing,
+    required this.buttonStyle,
   });
 
   @override
@@ -778,13 +851,19 @@ class _Step6Summary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _StepHeader(
-            medicationName: medicationName,
-            stepNumber: 'Step 6: Summary & Confirm',
-            title: 'Please review the information before saving.',
+          // This header doesn't need to be in a card
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8.0),
+            child: _StepHeader(
+              title: 'Step 6: Summary',
+              subtitle: 'Please review the information before saving.',
+            ),
           ),
           Card(
             elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.0),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -804,13 +883,13 @@ class _Step6Summary extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: onSave,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ElevatedButton(
+              onPressed: onSave,
+              style: buttonStyle,
+              child: Text(isEditing ? 'Save Changes' : 'Add Medication'),
             ),
-            // Dynamically change button text
-            child: Text(isEditing ? 'Save Changes' : 'Add Medication'),
           ),
         ],
       ),
