@@ -18,6 +18,16 @@ class Medication {
   });
 }
 
+enum MedStatus { taken, late, missed }
+
+class TodaysMedication {
+  final String name;
+  final TimeOfDay time;
+  final MedStatus? status; // Null for upcoming meds
+
+  TodaysMedication({required this.name, required this.time, this.status});
+}
+
 // --- Main Page Widget ---
 class Medmain extends StatefulWidget {
   const Medmain({super.key});
@@ -97,7 +107,13 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
           fontWeight: FontWeight.bold,
         ),
         centerTitle: true,
-        leading: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             bottom: Radius.circular(10), // Adjust the radius as needed
@@ -115,12 +131,7 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
               controller: _tabController,
               children: [
                 // Content for "Today's Meds" tab
-                const Center(
-                  child: Text(
-                    "Page for Today's Meds",
-                    style: TextStyle(fontSize: 20),
-                  ),
-                ),
+                const TodaysMedsTab(),
                 // Content for "Med list" tab
                 Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -386,6 +397,315 @@ class MedicationCard extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+// --- NEW WIDGETS FOR "TODAY'S MEDS" TAB ---
+
+// The main widget for the "Today's Meds" tab
+class TodaysMedsTab extends StatelessWidget {
+  const TodaysMedsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // --- Placeholder Data ---
+    final List<TodaysMedication> upcomingMeds = [
+      TodaysMedication(
+        name: 'Aspirin',
+        time: const TimeOfDay(hour: 18, minute: 0),
+      ),
+      TodaysMedication(
+        name: 'Vitamin D',
+        time: const TimeOfDay(hour: 21, minute: 0),
+      ),
+    ];
+
+    final List<TodaysMedication> historyMeds = [
+      TodaysMedication(
+        name: 'Metformin',
+        time: const TimeOfDay(hour: 8, minute: 5),
+        status: MedStatus.taken,
+      ),
+      TodaysMedication(
+        name: 'Lisinopril',
+        time: const TimeOfDay(hour: 8, minute: 20),
+        status: MedStatus.late,
+      ),
+      TodaysMedication(
+        name: 'Simvastatin',
+        time: const TimeOfDay(hour: 13, minute: 0),
+        status: MedStatus.missed,
+      ),
+      TodaysMedication(
+        name: 'Atorvastatin',
+        time: const TimeOfDay(hour: 13, minute: 5),
+        status: MedStatus.taken,
+      ),
+    ];
+    // --- End of Placeholder Data ---
+
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        _UpcomingMedsCard(meds: upcomingMeds),
+        const SizedBox(height: 24),
+        _HistoryMedsCard(meds: historyMeds),
+      ],
+    );
+  }
+}
+
+// Card for Upcoming Medications
+// --- UPDATED WIDGETS FOR "TODAY'S MEDS" TAB ---
+
+// Card for Upcoming Medications (Updated)
+class _UpcomingMedsCard extends StatelessWidget {
+  final List<TodaysMedication> meds;
+  const _UpcomingMedsCard({required this.meds});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              "Upcoming Medications",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const Divider(height: 24, thickness: 1), // Line under title
+            if (meds.isEmpty)
+              const Text(
+                "No upcoming medications.",
+                style: TextStyle(color: Colors.grey),
+              )
+            else
+              Column(
+                children: List.generate(meds.length, (index) {
+                  final med = meds[index];
+                  final isNext = index == 0;
+                  return Opacity(
+                    opacity: isNext ? 1.0 : 0.6, // Keep the highlight effect
+                    child: _MedicationItemFrame(
+                      name: med.name,
+                      formattedTime: med.time.format(context),
+                    ),
+                  );
+                }),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Card for History (Updated)
+// Card for History (CORRECTED FOR WIDER FRAMES)
+class _HistoryMedsCard extends StatelessWidget {
+  final List<TodaysMedication> meds;
+  const _HistoryMedsCard({super.key, required this.meds});
+
+  @override
+  Widget build(BuildContext context) {
+    final taken = meds.where((m) => m.status == MedStatus.taken).toList();
+    final late = meds.where((m) => m.status == MedStatus.late).toList();
+    final missed = meds.where((m) => m.status == MedStatus.missed).toList();
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              "History",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const Divider(height: 24, thickness: 1),
+            _buildStatusSection(
+              context,
+              "Taken",
+              taken,
+              Colors.green.shade700,
+              Icons.check_circle_outline,
+            ),
+            const SizedBox(height: 16),
+            _buildStatusSection(
+              context,
+              "Late",
+              late,
+              Colors.orange.shade800,
+              Icons.warning_amber_rounded,
+            ),
+            const SizedBox(height: 16),
+            _buildStatusSection(
+              context,
+              "Missed",
+              missed,
+              Colors.red.shade700,
+              Icons.cancel_outlined,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusSection(
+    BuildContext context,
+    String title,
+    List<TodaysMedication> meds,
+    Color color,
+    IconData icon,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (meds.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 28.0),
+            child: Text(
+              "None",
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          )
+        else
+          Column(
+            // The change is here: The Padding widget around _MedicationItemFrame was removed.
+            children: meds.map((med) {
+              return _MedicationItemFrame(
+                name: med.name,
+                formattedTime: med.time.format(context),
+                color: Colors.grey.shade700,
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+}
+
+// Add BuildContext to the method signature
+Widget _buildStatusSection(
+  BuildContext context,
+  String title,
+  List<TodaysMedication> meds,
+  Color color,
+  IconData icon,
+) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      if (meds.isEmpty)
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            "None",
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        )
+      else
+        Column(
+          children: meds.map((med) {
+            return Padding(
+              padding: const EdgeInsets.only(left: 28.0),
+              child: _MedicationItemFrame(
+                name: med.name,
+                // Now this line works because the method has the context
+                formattedTime: med.time.format(context),
+                color: Colors.grey.shade700,
+              ),
+            );
+          }).toList(),
+        ),
+    ],
+  );
+}
+
+/////////////////////////////////////////
+
+// --- NEW WIDGET FOR INDIVIDUAL MEDICATION FRAME ---
+class _MedicationItemFrame extends StatelessWidget {
+  final String name;
+  final String formattedTime;
+  final Color? color; // Optional color for the time text
+
+  const _MedicationItemFrame({
+    required this.name,
+    required this.formattedTime,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        // The "frame" style
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          Text(
+            formattedTime,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color ?? Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ],
       ),
     );
   }

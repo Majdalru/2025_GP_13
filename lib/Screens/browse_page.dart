@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/medmain.dart';
 import 'meds_summary_page.dart';
 import 'location_page.dart';
 
@@ -20,7 +21,15 @@ class BrowsePage extends StatelessWidget {
           leadingIconColor: cs.secondary,
           title: 'Medication',
           subtitle: '',
-          // لا onTap
+
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const Medmain(),
+              ), // <-- FIXED
+            );
+          },
         ),
 
         // Summary — قابل للنقر
@@ -31,9 +40,9 @@ class BrowsePage extends StatelessWidget {
           leadingIconColor: cs.primary,
           title: 'Summary',
           subtitle: 'Monthly overview',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MedsSummaryPage()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const MedsSummaryPage())),
         ),
 
         // Location — قابل للنقر
@@ -44,9 +53,9 @@ class BrowsePage extends StatelessWidget {
           leadingIconColor: Colors.teal,
           title: 'Location',
           subtitle: 'Live location & last seen',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const LocationPage()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const LocationPage())),
         ),
 
         // Manage access — غير قابل للنقر (مثل Medication)
@@ -96,18 +105,20 @@ class BrowsePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        )),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
                         style: TextStyle(color: Colors.grey.shade700),
                       ),
-                    ]
+                    ],
                   ],
                 ),
               ),
