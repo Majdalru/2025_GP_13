@@ -2,40 +2,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'media_page.dart';
+import 'elderly_med.dart'; // Import the medication screen
 
-void main() {
-  runApp(const KhalilApp());
-}
-
-class KhalilApp extends StatelessWidget {
-  const KhalilApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: false,
-        fontFamily: 'NotoSansArabic',
-        scaffoldBackgroundColor: const Color(0xFFFDFEFE),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF34495E),
-          foregroundColor: Colors.white,
-          centerTitle: true,
-          titleTextStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        ),
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFF34495E),
-          onPrimary: Colors.white,
-          secondary: Color(0xFFD62828),
-          background: Color(0xFFFDFEFE),
-          surface: Color(0xFFFFFFFF),
-        ),
-      ),
-      home: const HomePage(),
-    );
-  }
-}
+// Removed the incorrect main() and KhalilApp class
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -44,6 +13,10 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     const darkBlue = Color(0xFF2A4D69);
     const redButton = Color(0xFFD62828);
+
+    // Define the missing color variables
+    const appBarColor = Color(0xFF34495E);
+    const buttonRed = Color(0xFFD62828);
 
     return Scaffold(
       appBar: AppBar(
@@ -228,9 +201,7 @@ class HomePage extends StatelessWidget {
                   color: Colors.black,
                 ),
               ),
-
-              const SizedBox(height: 55), //
-
+              const SizedBox(height: 55),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: redButton,
@@ -253,9 +224,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 60), //
-
+              const SizedBox(height: 60),
               Row(
                 children: [
                   Expanded(
@@ -280,7 +249,6 @@ class HomePage extends StatelessWidget {
                       title: "Medic",
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        // Add this line to navigate
                         Navigator.push(
                           context,
                           MaterialPageRoute(
