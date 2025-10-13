@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_shell.dart';
+import'elderly_home.dart';
 
 enum SignUpRole { caregiver, elderly }
 
@@ -40,13 +41,14 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_role == SignUpRole.elderly) {
-      // لا انتقال للألدِرلي الآن
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Elderly app coming soon')),
-      );
-      return;
-    }
+   if (_role == SignUpRole.elderly) {
+  // elderly
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const HomePage()),
+    (_) => false,
+  );
+  return;
+}
 
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 500));
