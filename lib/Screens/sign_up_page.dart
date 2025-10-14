@@ -4,9 +4,6 @@ import '../elderly_Screens/screens/elderly_home.dart';
 
 enum SignUpRole { caregiver, elderly }
 
-// محاكاة أسماء مستخدمين محجوزة (بديل مؤقت للباك إند)
-final Set<String> _takenUsernames = {'user1', 'ahmed', 'care123'};
-
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
   @override
@@ -41,23 +38,22 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_role == SignUpRole.elderly) {
-      // elderly
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const ElderlyHomePage()),
-        (_) => false,
-      );
-      return;
-    }
-
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
 
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeShell()),
-      (_) => false,
-    );
+    // 🔹 التنقل حسب الدور
+    if (_role == SignUpRole.elderly) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const ElderlyHomePage()),
+        (_) => false,
+      );
+    } else {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeShell()),
+        (_) => false,
+      );
+    }
   }
 
   @override
@@ -65,7 +61,6 @@ class _SignUpPageState extends State<SignUpPage> {
     final cs = Theme.of(context).colorScheme;
     final isElderly = _role == SignUpRole.elderly;
 
-    // أحجام متكيّفة للألدِرلي
     final titleStyle = TextStyle(
       fontWeight: FontWeight.w900,
       fontSize: isElderly ? 28 : 24,
@@ -84,7 +79,7 @@ class _SignUpPageState extends State<SignUpPage> {
           Text('Create an account', style: titleStyle),
           const SizedBox(height: 10),
 
-          // اختيار الدور
+          // 🔹 اختيار الدور
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -113,25 +108,21 @@ class _SignUpPageState extends State<SignUpPage> {
             key: _formKey,
             child: Column(
               children: [
-                // Username (unique)
+                // 🔹 Username (عادي بدون تحقق uniqueness)
                 TextFormField(
                   controller: _username,
                   style: inputTextStyle,
                   decoration: InputDecoration(
-                    labelText: 'Username (unique)',
+                    labelText: 'Username',
                     labelStyle: labelStyle,
                     prefixIcon: const Icon(Icons.alternate_email),
                   ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Required';
-                    final u = v.trim().toLowerCase();
-                    if (_takenUsernames.contains(u)) return 'Username is taken';
-                    return null;
-                  },
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
 
-                // First / Last
+                // 🔹 First / Last name
                 Row(
                   children: [
                     Expanded(
@@ -165,7 +156,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Gender (Male/Female فقط)
+                // 🔹 Gender
                 InputDecorator(
                   decoration: InputDecoration(
                     labelText: 'Gender',
@@ -178,10 +169,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       value: _gender,
                       items: const [
                         DropdownMenuItem(value: 'Male', child: Text('Male')),
-                        DropdownMenuItem(
-                          value: 'Female',
-                          child: Text('Female'),
-                        ),
+                        DropdownMenuItem(value: 'Female', child: Text('Female')),
                       ],
                       onChanged: (v) => setState(() => _gender = v ?? 'Male'),
                     ),
@@ -189,7 +177,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Phone
+                // 🔹 Phone
                 TextFormField(
                   controller: _phone,
                   keyboardType: TextInputType.phone,
@@ -205,7 +193,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Email
+                // 🔹 Email
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
@@ -221,7 +209,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Password
+                // 🔹 Password
                 TextFormField(
                   controller: _pass,
                   obscureText: _ob,
@@ -243,16 +231,14 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
           const SizedBox(height: 16),
 
+          // 🔹 زر إنشاء الحساب
           FilledButton(
             onPressed: _loading
                 ? null
                 : () {
-                    // محاكاة حجز اسم المستخدم محليًا
-                    final u = _username.text.trim().toLowerCase();
-                    if (u.isNotEmpty && !_takenUsernames.contains(u)) {
-                      _takenUsernames.add(u);
+                    if (_formKey.currentState!.validate()) {
+                      _submit();
                     }
-                    _submit();
                   },
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
