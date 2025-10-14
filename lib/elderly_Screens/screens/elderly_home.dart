@@ -72,7 +72,7 @@ class ElderlyHomePage extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.settings,
+                    icon: const Icon(Icons.logout,
                         color: Colors.black, size: 36),
                     onPressed: () {
                       HapticFeedback.selectionClick();
@@ -83,7 +83,7 @@ class ElderlyHomePage extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25)),
                           title: const Text(
-                            "Settings",
+                            "Log out",
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -194,6 +194,16 @@ class ElderlyHomePage extends StatelessWidget {
               ),
 
               const SizedBox(height: 55), //      
+               
+               
+               Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Color(0xFFEAECEE),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              const SizedBox(height: 40),
 
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -305,7 +315,7 @@ class _InfoBox extends StatelessWidget {
 }
 
 class _VerificationCodeBox extends StatefulWidget {
-  const _VerificationCodeBox({super.key});
+  const _VerificationCodeBox();
 
   @override
   State<_VerificationCodeBox> createState() => _VerificationCodeBoxState();
