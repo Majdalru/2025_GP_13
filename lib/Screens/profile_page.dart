@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
+import '/medmain.dart'; // 👈 1. Import Medmain page
+import 'meds_summary_page.dart'; // 👈 2. Import Summary page
+import 'location_page.dart'; // 👈 3. Import Location page (for emergency)
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -22,28 +25,42 @@ class ProfilePage extends StatelessWidget {
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
                 Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => HomePage(
-      elderlyName: 'Elderly Name 1',
-      onTapArrowToMedsSummary: () {
-        // مؤقتًا نخليها فاضية
-      },
-      onTapEmergency: () {
-        // مؤقتًا نخليها فاضية أو نضيف التنقل إلى صفحة الـ Location لاحقًا
-      },
-    ),
-  ),
-);
-
-
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HomePage(
+                      elderlyName: 'Elderly Name 1',
+                      // This is for the "Monthly Overview" link
+                      onTapArrowToMedsSummary: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MedsSummaryPage(),
+                          ),
+                        );
+                      },
+                      // 👇 4. ADD THE MISSING PARAMETER HERE
+                      onTapArrowToMedmain: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Medmain()),
+                        );
+                      },
+                      // This is for the emergency button
+                      onTapEmergency: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LocationPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {},
-              child: const Text('Add Profile'),
-            ),
+            ElevatedButton(onPressed: () {}, child: const Text('Add Profile')),
             const Spacer(),
             ElevatedButton(
               onPressed: () {},

@@ -4,6 +4,7 @@ import 'home_page.dart';
 import 'browse_page.dart';
 import 'meds_summary_page.dart';
 import 'location_page.dart';
+import '/medmain.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -21,14 +22,23 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       HomePage(
         elderlyName: elderlyName,
-        // سهم "Today" يفتح صفحة Summary
+        // This now handles the "Monthly Overview" link
         onTapArrowToMedsSummary: () {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MedsSummaryPage()));
-
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const MedsSummaryPage()));
         },
-        // زر الطوارئ يفتح Location
+        // 👇 2. Add the new required parameter for the arrow icon
+        onTapArrowToMedmain: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const Medmain()));
+        },
+        // This is for the emergency button
         onTapEmergency: () {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LocationPage()));
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const LocationPage()));
         },
       ),
       const BrowsePage(),
@@ -39,17 +49,30 @@ class _HomeShellState extends State<HomeShell> {
         elderlyName: elderlyName,
         onLogoutConfirmed: () {
           // TODO: تنفيذ تسجيل الخروج
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Logged out')));
         },
       ),
       appBar: AppBar(title: Text(_index == 0 ? elderlyName : 'Browse')),
-      body: AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: pages[_index]),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: pages[_index],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.apps), selectedIcon: Icon(Icons.apps_outlined), label: 'Browse'),
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.apps),
+            selectedIcon: Icon(Icons.apps_outlined),
+            label: 'Browse',
+          ),
         ],
       ),
     );
