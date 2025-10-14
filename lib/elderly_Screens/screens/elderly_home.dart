@@ -2,160 +2,31 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'media_page.dart';
-import 'elderly_med.dart'; // Import the medication screen
+import'elderly_med.dart';
 
-// Removed the incorrect main() and KhalilApp class
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class ElderlyHomePage extends StatelessWidget {
+  const ElderlyHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     const darkBlue = Color(0xFF2A4D69);
     const redButton = Color(0xFFD62828);
 
-    // Define the missing color variables
-    const appBarColor = Color(0xFF34495E);
-    const buttonRed = Color(0xFFD62828);
-
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: appBarColor,
-        elevation: 4,
-        toolbarHeight: 85,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, size: 44, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white, size: 38),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: const Color(0xFFFDFEFE),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  title: const Text(
-                    "Settings",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: appBarColor,
-                    ),
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 10),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          minimumSize: const Size(double.infinity, 65),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              backgroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              title: const Text(
-                                "Are you sure you want to log out?",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w700,
-                                  color: appBarColor,
-                                ),
-                              ),
-                              actionsAlignment: MainAxisAlignment.center,
-                              actions: [
-                                FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: Colors.grey[200],
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 35,
-                                      vertical: 15,
-                                    ),
-                                  ),
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text(
-                                    "No",
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 15),
-                                FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: buttonRed,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 35,
-                                      vertical: 15,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text(
-                                    "Yes",
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.logout,
-                          size: 34,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          "Log out",
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      backgroundColor: Colors.white,
       drawer: Drawer(
-        backgroundColor: const Color(0xFFFDFEFE),
+        backgroundColor: Colors.white,
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
           children: [
+            const SizedBox(height: 60),
             const Center(
               child: Text(
                 "Sara Ahmed",
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF34495E),
+                  color: darkBlue,
                 ),
               ),
             ),
@@ -172,7 +43,7 @@ class HomePage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF34495E),
+                color: darkBlue,
               ),
             ),
             const SizedBox(height: 10),
@@ -180,19 +51,134 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFDFEFE), Color(0xFFE8EBEE)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+
+      body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(25),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 🔹 Top Row: Menu + Settings
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu,
+                          size: 42, color: Colors.black),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings,
+                        color: Colors.black, size: 36),
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25)),
+                          title: const Text(
+                            "Settings",
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: darkBlue,
+                            ),
+                          ),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 10),
+                              FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  minimumSize: const Size(double.infinity, 65),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                      title: const Text(
+                                        "Are you sure you want to log out?",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w700,
+                                          color: darkBlue,
+                                        ),
+                                      ),
+                                      actionsAlignment:
+                                          MainAxisAlignment.center,
+                                      actions: [
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: Colors.grey[200],
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 35, vertical: 15),
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: const Text(
+                                            "No",
+                                            style: TextStyle(
+                                                fontSize: 24,
+                                                color: Colors.black87),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 15),
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: redButton,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 35, vertical: 15),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            Navigator.pop(context);
+                                          },
+                                          child: const Text(
+                                            "Yes",
+                                            style: TextStyle(
+                                                fontSize: 24,
+                                                color: Colors.white),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.logout,
+                                    size: 34, color: Colors.white),
+                                label: const Text(
+                                  "Log out",
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 65), //      
+
               const Text(
                 "Hello Sara",
                 style: TextStyle(
@@ -201,14 +187,15 @@ class HomePage extends StatelessWidget {
                   color: Colors.black,
                 ),
               ),
-              const SizedBox(height: 55),
+
+              const SizedBox(height: 55), //      
+
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: redButton,
                   minimumSize: const Size(double.infinity, 100),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
+                      borderRadius: BorderRadius.circular(25)),
                   elevation: 6,
                 ),
                 onPressed: () {
@@ -224,7 +211,9 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 60),
+
+              const SizedBox(height: 60), //      
+
               Row(
                 children: [
                   Expanded(
@@ -236,8 +225,7 @@ class HomePage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const MediaPage(),
-                          ),
+                              builder: (context) => const MediaPage()),
                         );
                       },
                     ),
@@ -247,15 +235,13 @@ class HomePage extends StatelessWidget {
                     child: _HomeCard(
                       icon: Icons.medical_services,
                       title: "Medic",
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MedicationApp(),
-                          ),
-                        );
-                      },
+                     onTap: () {
+  HapticFeedback.selectionClick();
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => MedicationApp()),
+  );
+},
                     ),
                   ),
                 ],
@@ -366,9 +352,8 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
           style: FilledButton.styleFrom(
             backgroundColor: darkBlue,
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: generateNewCode,
           child: const Text(
