@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'media_page.dart';
 import'elderly_med.dart';
+import '../../Screens/login_page.dart';
+
 
 class ElderlyHomePage extends StatelessWidget {
   const ElderlyHomePage({super.key});
@@ -100,63 +102,66 @@ class ElderlyHomePage extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(18),
                                   ),
                                 ),
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      backgroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(20)),
-                                      title: const Text(
-                                        "Are you sure you want to log out?",
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w700,
-                                          color: darkBlue,
-                                        ),
-                                      ),
-                                      actionsAlignment:
-                                          MainAxisAlignment.center,
-                                      actions: [
-                                        FilledButton(
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: Colors.grey[200],
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 35, vertical: 15),
-                                          ),
-                                          onPressed: () =>
-                                              Navigator.pop(context),
-                                          child: const Text(
-                                            "No",
-                                            style: TextStyle(
-                                                fontSize: 24,
-                                                color: Colors.black87),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 15),
-                                        FilledButton(
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: redButton,
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 35, vertical: 15),
-                                          ),
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            Navigator.pop(context);
-                                          },
-                                          child: const Text(
-                                            "Yes",
-                                            style: TextStyle(
-                                                fontSize: 24,
-                                                color: Colors.white),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                               onPressed: () {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      title: const Text(
+        "Are you sure you want to log out?",
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          color: darkBlue,
+        ),
+      ),
+      actionsAlignment: MainAxisAlignment.center,
+      actions: [
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.grey[200],
+            padding: const EdgeInsets.symmetric(
+              horizontal: 35, vertical: 15),
+          ),
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            "No",
+            style: TextStyle(
+              fontSize: 24,
+              color: Colors.black87),
+          ),
+        ),
+        const SizedBox(width: 15),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: redButton,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 35, vertical: 15),
+          ),
+          onPressed: () {
+  Navigator.pop(context); // يغلق نافذة التأكيد
+  Navigator.pop(context); // يغلق نافذة الإعدادات
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (context) => const LoginPage()),
+  ); // 🔹 يرجع المستخدم لصفحة اللوق إن
+},
+          child: const Text(
+            "Yes",
+            style: TextStyle(
+              fontSize: 24,
+              color: Colors.white),
+          ),
+        ),
+      ],
+    ),
+  );
+},
+
                                 icon: const Icon(Icons.logout,
                                     size: 34, color: Colors.white),
                                 label: const Text(
