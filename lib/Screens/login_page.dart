@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'forgot_password_page.dart';
 import 'sign_up_page.dart';
 import 'home_shell.dart';
+import '../../elderly_Screens/screens/elderly_home.dart';
+
 
 enum UserRole { caregiver, elderly }
 
@@ -27,22 +29,27 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    if (_role == UserRole.elderly) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Elderly app coming soon')));
-      return;
-    }
+  setState(() => _loading = true);
+  await Future.delayed(const Duration(milliseconds: 400));
 
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeShell()));
+  if (!mounted) return;
+
+  // 🔹 التنقل بناءً على الدور
+  if (_role == UserRole.caregiver) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HomeShell()),
+    );
+  } else if (_role == UserRole.elderly) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => ElderlyHomePage()),
+    );
   }
+
+  setState(() => _loading = false);
+}
+
 
   @override
   Widget build(BuildContext context) {
