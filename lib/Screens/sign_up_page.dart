@@ -44,7 +44,7 @@ class _SignUpPageState extends State<SignUpPage> {
     if (_role == SignUpRole.elderly) {
       // elderly
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const ElderlyHomePage()),
         (_) => false,
       );
       return;
