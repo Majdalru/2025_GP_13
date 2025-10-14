@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'Screens/login_page.dart'; // ✅ ضيفي هذا السطر بدل home_shell
+import 'Screens/login_page.dart';
 
 void main() {
   runApp(const CaregiverApp());
@@ -56,7 +56,7 @@ class CaregiverApp extends StatelessWidget {
         ),
       ),
 
-      // ✅ هنا التغيير:
+      // ✅ الصفحة الأولى المشتركة بين الطرفين
       home: const LoginPage(),
     );
   }
