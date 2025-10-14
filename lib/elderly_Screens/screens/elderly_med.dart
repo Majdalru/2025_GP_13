@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import '../elderly_Screens/screens/elderly_home.dart';
+import 'elderly_home.dart';
 
 // class MedicationAppRoot extends StatelessWidget {
 //   @override
