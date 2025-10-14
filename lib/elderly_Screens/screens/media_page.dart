@@ -7,18 +7,17 @@ class MediaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Brand color (dark blue)
     const darkBlue = Color(0xFF2A4D69);
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView( // ✅ أضفنا scroll
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top row: back button + title
+              // 🔹 Top row: back button + title
               Row(
                 children: [
                   IconButton(
@@ -41,59 +40,56 @@ class MediaPage extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
 
-              // Grid of media cards
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 30,
-                  childAspectRatio: 0.8,
-                  children: [
-                    _buildMediaCard(context, Icons.library_music, "Story", darkBlue),
-                    _buildMediaCard(context, Icons.menu_book, "Quran", darkBlue),
-                    _buildMediaCard(context, Icons.school, "Courses", darkBlue),
-                    _buildMediaCard(context, Icons.favorite, "Health", darkBlue),
-                  ],
-                ),
+              // 🔹 Grid of media cards
+              GridView.count(
+                shrinkWrap: true, // ✅ مهم جدًا
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 30,
+                childAspectRatio: 0.7,
+                children: [
+                  _buildMediaCard(context, Icons.library_music, "Story", darkBlue),
+                  _buildMediaCard(context, Icons.menu_book, "Quran", darkBlue),
+                  _buildMediaCard(context, Icons.school, "Courses", darkBlue),
+                  _buildMediaCard(context, Icons.favorite, "Health", darkBlue),
+                ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
 
-              // Favorites button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 90,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FavoritesPage(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.favorite,
-                        size: 45, color: Colors.white),
-                    label: const Text(
-                      "Favorites",
-                      style: TextStyle(
-                        fontFamily: 'NotoSansArabic',
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+              // 🔹 Favorites button
+              SizedBox(
+                width: double.infinity,
+                height: 90,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FavoritesPage(),
                       ),
+                    );
+                  },
+                  icon: const Icon(Icons.favorite,
+                      size: 45, color: Colors.white),
+                  label: const Text(
+                    "Favorites",
+                    style: TextStyle(
+                      fontFamily: 'NotoSansArabic',
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: darkBlue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      elevation: 4,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: darkBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
                     ),
+                    elevation: 4,
                   ),
                 ),
               ),
