@@ -29,7 +29,7 @@ android {
         applicationId = "com.example.flutter_khalil"
 
         // ✅ Firebase يتطلب 23 أو أعلى — خلّها صريحة 23
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
 
         versionCode = flutter.versionCode
