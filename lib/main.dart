@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // ✅ إضافة Firebase Core
+import 'firebase_options.dart'; // ✅ الملف الذي تم توليده تلقائيًا
 import 'Screens/login_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // ✅ ضروري قبل تشغيل Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // ✅ تهيئة Firebase
+  );
+
   runApp(const CaregiverApp());
 }
 
@@ -61,3 +68,4 @@ class CaregiverApp extends StatelessWidget {
     );
   }
 }
+

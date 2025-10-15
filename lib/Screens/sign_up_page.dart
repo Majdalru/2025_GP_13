@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';        // ✅ Firebase Auth
+import 'package:cloud_firestore/cloud_firestore.dart';    // ✅ Firestore
+
 import 'home_shell.dart';
 import '../elderly_Screens/screens/elderly_home.dart';
 
@@ -11,15 +14,19 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
+  // ✅ مراجع Firebase
+  final _auth = FirebaseAuth.instance;
+  final _db   = FirebaseFirestore.instance;
+
   SignUpRole _role = SignUpRole.caregiver;
 
-  final _formKey = GlobalKey<FormState>();
+  final _formKey  = GlobalKey<FormState>();
   final _username = TextEditingController();
-  final _first = TextEditingController();
-  final _last = TextEditingController();
-  final _phone = TextEditingController();
-  final _email = TextEditingController();
-  final _pass = TextEditingController();
+  final _first    = TextEditingController();
+  final _last     = TextEditingController();
+  final _phone    = TextEditingController();
+  final _email    = TextEditingController();
+  final _pass     = TextEditingController();
 
   String _gender = 'Male';
   bool _ob = true, _loading = false;
@@ -35,24 +42,70 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  // ✅ يربط الزر بـ Auth + Firestore
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
+    try {
+      // 1) إنشاء الحساب في Firebase Auth
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _pass.text.trim(),
+      );
+      final uid = cred.user!.uid;
 
-    // 🔹 التنقل حسب الدور
-    if (_role == SignUpRole.elderly) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const ElderlyHomePage()),
-        (_) => false,
+      // 2) إنشاء وثيقة المستخدم في Firestore (users/{uid})
+      final roleStr = _role == SignUpRole.elderly ? 'elderly' : 'caregiver';
+
+      await _db.collection('users').doc(uid).set({
+        'role'      : roleStr,
+        'username'  : _username.text.trim().toLowerCase(),
+        'firstName' : _first.text.trim(),
+        'lastName'  : _last.text.trim(),
+        'gender'    : _gender.toLowerCase(), // 'male' / 'female'
+        'phone'     : _phone.text.trim(),
+        'email'     : _email.text.trim(),
+        'photoUrl'  : null,
+        'isActive'  : true,
+        'createdAt' : FieldValue.serverTimestamp(),
+        'updatedAt' : FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      // 3) تنقّل حسب الدور
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created ✅')),
       );
-    } else {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeShell()),
-        (_) => false,
-      );
+
+      if (_role == SignUpRole.elderly) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ElderlyHomePage()),
+          (_) => false,
+        );
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeShell()),
+          (_) => false,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String msg = 'Error';
+      if (e.code == 'email-already-in-use') msg = 'Email already in use';
+      else if (e.code == 'invalid-email')   msg = 'Invalid email';
+      else if (e.code == 'weak-password')   msg = 'Weak password';
+      else msg = e.message ?? e.code;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -108,7 +161,7 @@ class _SignUpPageState extends State<SignUpPage> {
             key: _formKey,
             child: Column(
               children: [
-                // 🔹 Username (عادي بدون تحقق uniqueness)
+                // 🔹 Username
                 TextFormField(
                   controller: _username,
                   style: inputTextStyle,
