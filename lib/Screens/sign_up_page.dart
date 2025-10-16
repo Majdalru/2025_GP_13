@@ -12,13 +12,14 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _auth = FirebaseAuth.instance;
-  final _db = FirebaseFirestore.instance;
+  final _db   = FirebaseFirestore.instance;
 
   final _formKey = GlobalKey<FormState>();
-  final _first = TextEditingController();
-  final _last = TextEditingController();
+
   final _email = TextEditingController();
-  final _pass = TextEditingController();
+  final _pass  = TextEditingController();
+  final _first = TextEditingController();
+  final _last  = TextEditingController();
   final _phone = TextEditingController();
 
   bool _ob = true;
@@ -27,10 +28,10 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   void dispose() {
-    _first.dispose();
-    _last.dispose();
     _email.dispose();
     _pass.dispose();
+    _first.dispose();
+    _last.dispose();
     _phone.dispose();
     super.dispose();
   }
@@ -46,24 +47,42 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
       await _db.collection('users').doc(cred.user!.uid).set({
-        'role': 'caregiver',
+        'role'     : 'caregiver',
         'firstName': _first.text.trim(),
-        'lastName': _last.text.trim(),
-        'email': _email.text.trim(),
-        'phone': _phone.text.trim(),
-        'gender': _gender.toLowerCase(),
+        'lastName' : _last.text.trim(),
+        'email'    : _email.text.trim(),
+        'phone'    : _phone.text.trim(),
+        'gender'   : _gender.toLowerCase(),
         'createdAt': FieldValue.serverTimestamp(),
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Account created ✅')));
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeShell()),
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created ✅')),
       );
+
+      // يفتح الهوم ويقفل الرجوع
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => HomeShell()),
+        (_) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      final msg = switch (e.code) {
+        'email-already-in-use' => 'Email already in use.',
+        'invalid-email'        => 'Invalid email address.',
+        'weak-password'        => 'Weak password.',
+        _                      => e.message ?? 'Error: ${e.code}',
+      };
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -71,76 +90,117 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
+    const gap = SizedBox(height: 12);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Caregiver Sign Up')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction, // ✅ inline errors
           child: ListView(
             children: [
-              TextFormField(
-                controller: _first,
-                decoration: const InputDecoration(
-                    labelText: 'First name', prefixIcon: Icon(Icons.person)),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _last,
-                decoration: const InputDecoration(
-                    labelText: 'Last name', prefixIcon: Icon(Icons.person)),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _gender,
-                items: const [
-                  DropdownMenuItem(value: 'Male', child: Text('Male')),
-                  DropdownMenuItem(value: 'Female', child: Text('Female')),
-                ],
-                onChanged: (v) => setState(() => _gender = v!),
-                decoration: const InputDecoration(
-                    labelText: 'Gender', prefixIcon: Icon(Icons.wc)),
-              ),
-              const SizedBox(height: 12),
+              // ⬇️ Email أول حقل
+              const Text('Email', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
               TextFormField(
                 controller: _email,
+                keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
-                    labelText: 'Email', prefixIcon: Icon(Icons.email)),
-                validator: (v) =>
-                    v!.contains('@') ? null : 'Enter a valid email',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+                validator: (v) {
+                  final s = (v ?? '').trim();
+                  if (s.isEmpty) return 'Required';
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
+                    return 'Enter a valid email';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                    labelText: 'Phone', prefixIcon: Icon(Icons.phone)),
-                validator: (v) => RegExp(r'^05\d{8}$').hasMatch(v ?? '')
-                    ? null
-                    : 'Enter a valid 10-digit Saudi number',
-              ),
-              const SizedBox(height: 12),
+
+              gap,
+              const Text('Password', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
               TextFormField(
                 controller: _pass,
                 obscureText: _ob,
                 decoration: InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock),
+                  prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     onPressed: () => setState(() => _ob = !_ob),
                     icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
                   ),
                 ),
                 validator: (v) =>
-                    v!.length < 6 ? 'Min 6 characters' : null,
+                    (v == null || v.length < 6) ? 'Min 6 characters' : null,
               ),
+
+              gap,
+              const Text('First name', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _first,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+
+              gap,
+              const Text('Last name', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _last,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.person),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+
+              gap,
+              const Text('Gender', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                value: _gender,
+                items: const [
+                  DropdownMenuItem(value: 'Male', child: Text('Male')),
+                  DropdownMenuItem(value: 'Female', child: Text('Female')),
+                ],
+                onChanged: (v) => setState(() => _gender = v ?? 'Male'),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.wc_outlined),
+                ),
+              ),
+
+              gap,
+              const Text('Phone number', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                validator: (v) {
+                  final s = (v ?? '').trim();
+                  if (s.isEmpty) return 'Required';
+                  if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
+                    return 'Enter a valid Saudi number (05XXXXXXXX)';
+                  }
+                  return null;
+                },
+              ),
+
               const SizedBox(height: 20),
-              ElevatedButton(
+              FilledButton(
                 onPressed: _loading ? null : _createAccount,
                 child: _loading
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        width: 22, height: 22, child: CircularProgressIndicator())
                     : const Text('Create account'),
               ),
             ],
