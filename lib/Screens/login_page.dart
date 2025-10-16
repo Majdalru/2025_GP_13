@@ -3,8 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'forgot_password_page.dart';
-import 'sign_up_page.dart';          // ✅ صفحة تسجيل الـ Caregiver
-import 'elderly_sign_up_page.dart'; // ✅ صفحة تسجيل الـ Elderly
+import 'sign_up_page.dart';            // Caregiver sign up
+import 'elderly_sign_up_page.dart';   // Elderly sign up
 import 'home_shell.dart';
 import '../../elderly_Screens/screens/elderly_home.dart';
 
@@ -46,37 +46,21 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _showNiceSnack({
-    required String title,
-    required String message,
-    bool success = false,
-  }) {
+  void _toast(String title, String msg, {bool ok = false}) {
     final cs = Theme.of(context).colorScheme;
-    final bg = success ? cs.primary : Colors.red.shade600;
-    final ic = success ? Icons.check_circle : Icons.error_rounded;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        backgroundColor: bg,
-        content: Row(
+        backgroundColor: ok ? cs.primary : Colors.red.shade600,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(ic, size: 22, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 2),
-                  Text(message, style: const TextStyle(color: Colors.white)),
-                ],
-              ),
-            ),
+            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 2),
+            Text(msg, style: const TextStyle(color: Colors.white)),
           ],
         ),
         duration: const Duration(seconds: 3),
@@ -86,16 +70,10 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _loading = true);
     try {
       final email    = _email.text.trim();
       final password = _pass.text.trim();
-
-      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email)) {
-        _showNiceSnack(title: 'Invalid email', message: 'Enter a valid email address.');
-        return;
-      }
 
       final cred = await _auth.signInWithEmailAndPassword(email: email, password: password);
       final uid = cred.user!.uid;
@@ -104,20 +82,18 @@ class _LoginPageState extends State<LoginPage> {
       final role = (profile.data()?['role'] ?? 'caregiver') as String;
 
       if (!mounted) return;
-
       _role = role == 'elderly' ? UserRole.elderly : UserRole.caregiver;
-
-      _showNiceSnack(title: 'Success', message: 'Logged in successfully.', success: true);
+      _toast('Success', 'Logged in successfully.', ok: true);
 
       if (role == 'elderly') {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => ElderlyHomePage()));
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ElderlyHomePage()));
       } else {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeShell()));
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeShell()));
       }
     } on FirebaseAuthException catch (e) {
-      if (mounted) _showNiceSnack(title: 'Couldn’t sign in', message: _prettyAuthError(e));
+      if (mounted) _toast('Couldn’t sign in', _prettyAuthError(e));
     } catch (e) {
-      if (mounted) _showNiceSnack(title: 'Error', message: e.toString());
+      if (mounted) _toast('Error', e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -131,15 +107,30 @@ class _LoginPageState extends State<LoginPage> {
 
     const maxContentWidth = 480.0;
     final logoH = (w * 0.22).clamp(80, 140);
-    final isElderly = _role == UserRole.elderly;
 
-    final titleStyle      = TextStyle(fontWeight: FontWeight.w900, fontSize: isElderly ? 30 : 24);
-    final inputTextStyle  = TextStyle(fontSize: isElderly ? 18 : 15);
-    final labelStyle      = TextStyle(fontSize: isElderly ? 16 : 13, fontWeight: FontWeight.w600);
-    const fieldPadding    = EdgeInsets.symmetric(vertical: 18, horizontal: 14);
-    final  buttonStyle    = FilledButton.styleFrom(minimumSize: const Size.fromHeight(56),
-                               textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)));
+    final isElderly      = _role == UserRole.elderly;
+    // ⬇️ أحجام خاصة بالـ Elderly: label=28, input=20
+    final titleStyle     = TextStyle(fontWeight: FontWeight.w900, fontSize: isElderly ? 34 : 24);
+    final inputTextStyle = TextStyle(fontSize: isElderly ? 20 : 15);
+    final labelTextStyle = TextStyle(fontSize: isElderly ? 28 : 14, fontWeight: FontWeight.w600);
+    final helperErrStyle = TextStyle(fontSize: isElderly ? 16 : 12);
+    final fieldPadding   = EdgeInsets.symmetric(vertical: isElderly ? 22 : 16, horizontal: 14);
+    final linkTextStyle  = TextStyle(fontSize: isElderly ? 18 : 14, color: cs.primary, fontWeight: FontWeight.w600);
+
+    final buttonStyle    = FilledButton.styleFrom(
+      minimumSize: Size.fromHeight(isElderly ? 60 : 56),
+      textStyle: TextStyle(fontSize: isElderly ? 20 : 16, fontWeight: FontWeight.w700),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    );
+
+    // ديكور الحقل بدون label داخلي (label خارج الحقل)
+    InputDecoration _dec({required IconData icon}) => InputDecoration(
+      prefixIcon: Icon(icon),
+      contentPadding: fieldPadding,
+      // إزالة label/hint من داخل الحقل
+      labelText: null,
+      hintText: null,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -149,19 +140,24 @@ class _LoginPageState extends State<LoginPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
               children: [
+                // Logo
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Image.asset('assets/khalil_logo.png',
-                      height: logoH.toDouble(), width: logoH.toDouble(), fit: BoxFit.contain),
+                    child: Image.asset(
+                      'assets/khalil_logo.png',
+                      height: logoH.toDouble(),
+                      width: logoH.toDouble(),
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
 
                 Center(child: Text('Log in', style: titleStyle)),
                 const SizedBox(height: 14),
 
-                // Role chips (visual toggle)
+                // Role chips
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -171,30 +167,30 @@ class _LoginPageState extends State<LoginPage> {
                   child: Row(
                     children: [
                       _roleChip('Caregiver', _role == UserRole.caregiver,
-                          () => setState(() => _role = UserRole.caregiver)),
+                        () => setState(() => _role = UserRole.caregiver)),
                       const SizedBox(width: 8),
                       _roleChip('Elderly', _role == UserRole.elderly,
-                          () => setState(() => _role = UserRole.elderly)),
+                        () => setState(() => _role = UserRole.elderly)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
 
+                // ===== Form (labels خارج الحقول) =====
                 Form(
                   key: _formKey,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Email label خارج الحقل
+                      Text('Email', style: labelTextStyle),
+                      const SizedBox(height: 6),
                       TextFormField(
                         controller: _email,
                         keyboardType: TextInputType.emailAddress,
                         style: inputTextStyle,
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          labelStyle: labelStyle,
-                          prefixIcon: const Icon(Icons.email_outlined),
-                          contentPadding: fieldPadding,
-                        ),
+                        decoration: _dec(icon: Icons.email_outlined),
                         validator: (v) {
                           final s = (v ?? '').trim();
                           if (s.isEmpty) return 'Required';
@@ -202,34 +198,38 @@ class _LoginPageState extends State<LoginPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 2),
+                      // لضبط حجم نص الخطأ
+                      SizedBox(height: 0, child: Text('', style: helperErrStyle)),
+
+                      const SizedBox(height: 14),
+
+                      Text('Password', style: labelTextStyle),
+                      const SizedBox(height: 6),
                       TextFormField(
                         controller: _pass,
                         obscureText: _ob,
                         style: inputTextStyle,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: labelStyle,
-                          prefixIcon: const Icon(Icons.lock_outline),
+                        decoration: _dec(icon: Icons.lock_outline).copyWith(
                           suffixIcon: IconButton(
                             onPressed: () => setState(() => _ob = !_ob),
                             icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
                           ),
-                          contentPadding: fieldPadding,
                         ),
                         validator: (v) => (v == null || v.length < 6) ? 'Min 6 characters' : null,
                       ),
-                    ],
-                  ),
-                ),
 
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => ForgotPasswordPage()),
-                    ),
-                    child: const Text('Forgot password?'),
+                      // Forgot password (أكبر في وضع Elderly)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                          ),
+                          child: Text('Forgot password?', style: linkTextStyle),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -243,24 +243,30 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 16),
 
-                // ⬇️ فتح صفحة التسجيل الصحيحة حسب الدور
+                // Sign up row (تكبير النص لما Elderly)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Don’t have an account?", style: TextStyle(color: Colors.grey.shade700)),
+                    Text(
+                      "Don’t have an account?",
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: isElderly ? 18 : 14,
+                      ),
+                    ),
                     TextButton(
                       onPressed: () {
                         if (_role == UserRole.elderly) {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => ElderlySignUpPage()),
+                            MaterialPageRoute(builder: (_) => const ElderlySignUpPage()),
                           );
                         } else {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => SignUpPage()),
+                            MaterialPageRoute(builder: (_) => const SignUpPage()),
                           );
                         }
                       },
-                      child: const Text('Sign up'),
+                      child: Text('Sign up', style: linkTextStyle),
                     ),
                   ],
                 ),
