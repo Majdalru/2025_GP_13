@@ -68,4 +68,3 @@ class CaregiverApp extends StatelessWidget {
     );
   }
 }
-
