@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 plugins {
     id("com.android.application") version "8.5.2" apply false
     id("com.android.library") version "8.5.2" apply false
@@ -6,6 +8,7 @@ plugins {
     id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
+>>>>>>> 8fa34d525ee3da2058ef404cc16627ffd0ade328
 allprojects {
     repositories {
         google()
