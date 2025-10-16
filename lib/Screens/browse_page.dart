@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/medmain.dart';
 import 'meds_summary_page.dart';
 import 'location_page.dart';
+import 'upload_audio_page.dart'; // 🆕 صفحة رفع الصوتيات
 
 class BrowsePage extends StatelessWidget {
   const BrowsePage({super.key});
@@ -10,84 +11,119 @@ class BrowsePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return ListView(
+    // 🔹 عناصر التصفح (قابلة للتوسّع بسهولة)
+    final items = <_BrowseItem>[
+      _BrowseItem(
+        title: 'Medication',
+        subtitle: '',
+        icon: Icons.medication,
+        color: cs.secondary,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const Medmain()),
+        ),
+      ),
+      _BrowseItem(
+        title: 'Summary',
+        subtitle: 'Monthly overview',
+        icon: Icons.assignment_outlined,
+        color: cs.primary,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MedsSummaryPage()),
+        ),
+      ),
+      _BrowseItem(
+        title: 'Location',
+        subtitle: 'Live location & last seen',
+        icon: Icons.location_on,
+        color: Colors.teal,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LocationPage()),
+        ),
+      ),
+      _BrowseItem(
+        title: 'Manage access',
+        subtitle: '',
+        icon: Icons.manage_accounts_rounded,
+        color: Colors.indigo,
+        onTap: null, // غير قابل للنقر
+      ),
+      _BrowseItem(
+        title: 'Upload Audio for Elderly',
+        subtitle: 'Share recordings or stories',
+        icon: Icons.upload_file,
+        color: const Color(0xFF2A4D69),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const UploadAudioPage()),
+        ),
+      ),
+    ];
+
+    return ListView.separated(
       padding: const EdgeInsets.all(16),
-      children: [
-        // Medication — غير قابل للنقر
-        _browseCard(
-          context,
-          leadingBg: cs.secondary.withOpacity(.12),
-          leadingIcon: Icons.medication,
-          leadingIconColor: cs.secondary,
-          title: 'Medication',
-          subtitle: '',
-
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const Medmain(),
-              ), // <-- FIXED
-            );
-          },
-        ),
-
-        // Summary — قابل للنقر
-        _browseCard(
-          context,
-          leadingBg: cs.primary.withOpacity(.12),
-          leadingIcon: Icons.assignment_outlined,
-          leadingIconColor: cs.primary,
-          title: 'Summary',
-          subtitle: 'Monthly overview',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const MedsSummaryPage())),
-        ),
-
-        // Location — قابل للنقر
-        _browseCard(
-          context,
-          leadingBg: Colors.teal.withOpacity(.12),
-          leadingIcon: Icons.location_on,
-          leadingIconColor: Colors.teal,
-          title: 'Location',
-          subtitle: 'Live location & last seen',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const LocationPage())),
-        ),
-
-        // Manage access — غير قابل للنقر (مثل Medication)
-        _browseCard(
-          context,
-          leadingBg: Colors.indigo.withOpacity(.12),
-          leadingIcon: Icons.manage_accounts_rounded,
-          leadingIconColor: Colors.indigo,
-          title: 'Manage access',
-          subtitle: '',
-          // لا onTap
-        ),
-      ],
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final it = items[index];
+        return _BrowseCard(
+          leadingBg: it.color.withOpacity(.12),
+          leadingIconColor: it.color,
+          leadingIcon: it.icon,
+          title: it.title,
+          subtitle: it.subtitle,
+          onTap: it.onTap,
+        );
+      },
     );
   }
+}
 
-  // بطاقة موحّدة
-  Widget _browseCard(
-    BuildContext context, {
-    required Color leadingBg,
-    required Color leadingIconColor,
-    required IconData leadingIcon,
-    required String title,
-    String? subtitle,
-    VoidCallback? onTap, // null => غير قابل للنقر
-  }) {
+/// نموذج بيانات بسيط
+class _BrowseItem {
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  _BrowseItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+/// تصميم البطاقة الموحدة
+class _BrowseCard extends StatelessWidget {
+  final Color leadingBg;
+  final Color leadingIconColor;
+  final IconData leadingIcon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+
+  const _BrowseCard({
+    super.key,
+    required this.leadingBg,
+    required this.leadingIconColor,
+    required this.leadingIcon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tappable = onTap != null;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
-        onTap: onTap, // إن كانت null لن يستجيب
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
+        splashFactory: tappable ? InkRipple.splashFactory : NoSplash.splashFactory,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
@@ -112,10 +148,10 @@ class BrowsePage extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
-                    if (subtitle != null) ...[
+                    if (subtitle != null && subtitle!.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
-                        subtitle,
+                        subtitle!,
                         style: TextStyle(color: Colors.grey.shade700),
                       ),
                     ],
@@ -124,7 +160,7 @@ class BrowsePage extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right,
-                color: onTap == null ? Colors.grey.shade400 : Colors.black87,
+                color: tappable ? Colors.black87 : Colors.grey.shade400,
               ),
             ],
           ),
