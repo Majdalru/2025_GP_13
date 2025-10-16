@@ -53,7 +53,7 @@ class MediaPage extends StatelessWidget {
                 children: [
                   _buildMediaCard(context, Icons.library_music, "Story", darkBlue),
                   _buildMediaCard(context, Icons.menu_book, "Quran", darkBlue),
-                  _buildMediaCard(context, Icons.school, "Courses", darkBlue),
+                  _buildMediaCard(context, Icons.upload_file, "Caregiver", darkBlue),
                   _buildMediaCard(context, Icons.favorite, "Health", darkBlue),
                 ],
               ),
