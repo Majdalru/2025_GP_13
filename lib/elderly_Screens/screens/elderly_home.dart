@@ -2,9 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'media_page.dart';
-import'elderly_med.dart';
+import 'elderly_med.dart';
 import '../../Screens/login_page.dart';
-
 
 class ElderlyHomePage extends StatelessWidget {
   const ElderlyHomePage({super.key});
@@ -66,14 +65,12 @@ class ElderlyHomePage extends StatelessWidget {
                 children: [
                   Builder(
                     builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu,
-                          size: 42, color: Colors.black),
+                      icon: const Icon(Icons.menu, size: 42, color: Colors.black),
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.logout,
-                        color: Colors.black, size: 36),
+                    icon: const Icon(Icons.logout, color: Colors.black, size: 36),
                     onPressed: () {
                       HapticFeedback.selectionClick();
                       showDialog(
@@ -83,7 +80,7 @@ class ElderlyHomePage extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25)),
                           title: const Text(
-                            "Log out",
+                            "",
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -96,72 +93,73 @@ class ElderlyHomePage extends StatelessWidget {
                               const SizedBox(height: 10),
                               FilledButton.icon(
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: Color.fromRGBO(214, 40, 40, 1),
                                   minimumSize: const Size(double.infinity, 65),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(18),
                                   ),
                                 ),
-                               onPressed: () {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      title: const Text(
-        "Are you sure you want to log out?",
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w700,
-          color: darkBlue,
-        ),
-      ),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.grey[200],
-            padding: const EdgeInsets.symmetric(
-              horizontal: 35, vertical: 15),
-          ),
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            "No",
-            style: TextStyle(
-              fontSize: 24,
-              color: Colors.black87),
-          ),
-        ),
-        const SizedBox(width: 15),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: redButton,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 35, vertical: 15),
-          ),
-          onPressed: () {
-  Navigator.pop(context); // يغلق نافذة التأكيد
-  Navigator.pop(context); // يغلق نافذة الإعدادات
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (context) => const LoginPage()),
-  ); // 🔹 يرجع المستخدم لصفحة اللوق إن
-},
-          child: const Text(
-            "Yes",
-            style: TextStyle(
-              fontSize: 24,
-              color: Colors.white),
-          ),
-        ),
-      ],
-    ),
-  );
-},
-
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      title: const Text(
+                                        "Are you sure you want to log out?",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w700,
+                                          color: darkBlue,
+                                        ),
+                                      ),
+                                      actionsAlignment: MainAxisAlignment.center,
+                                      actions: [
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: Colors.grey[200],
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 35, vertical: 15),
+                                          ),
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text(
+                                            "No",
+                                            style: TextStyle(
+                                                fontSize: 24,
+                                                color: Colors.black87),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 15),
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: const Color.fromRGBO(214, 40, 40, 1),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 35, vertical: 15),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            Navigator.pop(context);
+                                            Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const LoginPage()),
+                                            );
+                                          },
+                                          child: const Text(
+                                            "Yes",
+                                            style: TextStyle(
+                                                fontSize: 24,
+                                                color: Colors.white),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                                 icon: const Icon(Icons.logout,
                                     size: 34, color: Colors.white),
                                 label: const Text(
@@ -182,7 +180,7 @@ class ElderlyHomePage extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 65), //      
+              const SizedBox(height: 65),
 
               const Text(
                 "Hello Sara",
@@ -193,16 +191,16 @@ class ElderlyHomePage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 55), //      
-               
-               
-               Container(
+              const SizedBox(height: 55),
+
+              Container(
                 height: 40,
                 decoration: BoxDecoration(
                   color: Color(0xFFEAECEE),
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
+
               const SizedBox(height: 40),
 
               ElevatedButton(
@@ -227,7 +225,7 @@ class ElderlyHomePage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 60), //      
+              const SizedBox(height: 60),
 
               Row(
                 children: [
@@ -250,13 +248,14 @@ class ElderlyHomePage extends StatelessWidget {
                     child: _HomeCard(
                       icon: Icons.medical_services,
                       title: "Medic",
-                     onTap: () {
-  HapticFeedback.selectionClick();
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => MedicationApp()),
-  );
-},
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => MedicationApp()),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -322,12 +321,18 @@ class _VerificationCodeBox extends StatefulWidget {
 }
 
 class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
-  int code = Random().nextInt(9000) + 1000;
+  String? code; // 🔹 الكود مخفي بالبداية
 
   void generateNewCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    String newCode =
+        List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
+
     setState(() {
-      code = Random().nextInt(9000) + 1000;
+      code = newCode;
     });
+
     HapticFeedback.selectionClick();
   }
 
@@ -337,31 +342,33 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: darkBlue.withOpacity(0.6), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
+        if (code != null)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: darkBlue.withOpacity(0.6), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Text(
+              code!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                color: darkBlue,
+                letterSpacing: 3,
               ),
-            ],
-          ),
-          child: Text(
-            code.toString(),
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: darkBlue,
-              letterSpacing: 3,
             ),
           ),
-        ),
         const SizedBox(height: 15),
         FilledButton(
           style: FilledButton.styleFrom(
@@ -371,9 +378,9 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: generateNewCode,
-          child: const Text(
-            "Generate New Code",
-            style: TextStyle(fontSize: 20, color: Colors.white),
+          child: Text(
+            code == null ? "Generate Code" : "Generate New Code",
+            style: const TextStyle(fontSize: 20, color: Colors.white),
           ),
         ),
       ],
