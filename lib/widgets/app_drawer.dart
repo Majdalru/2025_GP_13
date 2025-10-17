@@ -190,13 +190,14 @@ class AppDrawer extends StatelessWidget {
           key: formKey,
           child: TextFormField(
             controller: controller,
-            maxLength: 4,
+            maxLength: 6,
             textAlign: TextAlign.center,
             style: const TextStyle(letterSpacing: 6, fontWeight: FontWeight.w700),
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(hintText: '____'),
-            validator: (v) => (v?.length == 4) ? null : 'Enter 4 digits',
+            keyboardType: TextInputType.text,
+inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')), // ✅ حروف وأرقام
+          ],            decoration: const InputDecoration(hintText: '______'),
+            validator: (v) => (v?.length == 6) ? null : 'Enter 6 characters',
           ),
         ),
         actions: [
