@@ -1,17 +1,59 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'media_page.dart';
 import 'elderly_med.dart';
 import '../../Screens/login_page.dart';
 
-class ElderlyHomePage extends StatelessWidget {
+class ElderlyHomePage extends StatefulWidget {
   const ElderlyHomePage({super.key});
+
+  @override
+  State<ElderlyHomePage> createState() => _ElderlyHomePageState();
+}
+
+class _ElderlyHomePageState extends State<ElderlyHomePage> {
+  String? fullName;
+  String? gender;
+  String? phone;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserData();
+  }
+
+  Future<void> fetchUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+
+    if (doc.exists) {
+      setState(() {
+        fullName = '${doc['firstName']} ${doc['lastName']}';
+        gender = doc['gender'];
+        phone = doc['phone'];
+        loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     const darkBlue = Color(0xFF2A4D69);
     const redButton = Color(0xFFD62828);
+
+    if (loading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -21,10 +63,10 @@ class ElderlyHomePage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
           children: [
             const SizedBox(height: 60),
-            const Center(
+            Center(
               child: Text(
-                "Sara Ahmed",
-                style: TextStyle(
+                fullName ?? "User",
+                style: const TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
                   color: darkBlue,
@@ -32,9 +74,9 @@ class ElderlyHomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 40),
-            const _InfoBox(label: "Gender", value: "Female"),
+            _InfoBox(label: "Gender", value: gender ?? "N/A"),
             const SizedBox(height: 20),
-            const _InfoBox(label: "Mobile", value: "+966 555 123 456"),
+            _InfoBox(label: "Mobile", value: phone ?? "N/A"),
             const SizedBox(height: 20),
             const _InfoBox(label: "Caregiver", value: "Khaled"),
             const SizedBox(height: 35),
@@ -53,19 +95,21 @@ class ElderlyHomePage extends StatelessWidget {
         ),
       ),
 
+      // ====== BODY ======
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(25),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Top Row: Menu + Settings
+              // 🔹 Menu + Logout
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Builder(
                     builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu, size: 42, color: Colors.black),
+                      icon:
+                          const Icon(Icons.menu, size: 42, color: Colors.black),
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
@@ -79,97 +123,58 @@ class ElderlyHomePage extends StatelessWidget {
                           backgroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25)),
-                          title: const Text(
-                            "",
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: darkBlue,
-                            ),
-                          ),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const SizedBox(height: 10),
-                              FilledButton.icon(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: Color.fromRGBO(214, 40, 40, 1),
-                                  minimumSize: const Size(double.infinity, 65),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
+                              const Text(
+                                "Are you sure you want to log out?",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkBlue,
                                 ),
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      backgroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      title: const Text(
-                                        "Are you sure you want to log out?",
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w700,
-                                          color: darkBlue,
-                                        ),
-                                      ),
-                                      actionsAlignment: MainAxisAlignment.center,
-                                      actions: [
-                                        FilledButton(
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: Colors.grey[200],
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 35, vertical: 15),
-                                          ),
-                                          onPressed: () => Navigator.pop(context),
-                                          child: const Text(
-                                            "No",
-                                            style: TextStyle(
-                                                fontSize: 24,
-                                                color: Colors.black87),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 15),
-                                        FilledButton(
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: const Color.fromRGBO(214, 40, 40, 1),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 35, vertical: 15),
-                                          ),
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            Navigator.pop(context);
-                                            Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const LoginPage()),
-                                            );
-                                          },
-                                          child: const Text(
-                                            "Yes",
-                                            style: TextStyle(
-                                                fontSize: 24,
-                                                color: Colors.white),
-                                          ),
-                                        ),
-                                      ],
+                              ),
+                              const SizedBox(height: 20),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Colors.grey[200],
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 35, vertical: 15),
                                     ),
-                                  );
-                                },
-                                icon: const Icon(Icons.logout,
-                                    size: 34, color: Colors.white),
-                                label: const Text(
-                                  "Log out",
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text(
+                                      "No",
+                                      style: TextStyle(
+                                          fontSize: 22, color: Colors.black87),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 15),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: redButton,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 35, vertical: 15),
+                                    ),
+                                    onPressed: () {
+                                      FirebaseAuth.instance.signOut();
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => const LoginPage()),
+                                        (_) => false,
+                                      );
+                                    },
+                                    child: const Text(
+                                      "Yes",
+                                      style: TextStyle(
+                                          fontSize: 22, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -182,9 +187,9 @@ class ElderlyHomePage extends StatelessWidget {
 
               const SizedBox(height: 65),
 
-              const Text(
-                "Hello Sara",
-                style: TextStyle(
+              Text(
+                "Hello ${fullName?.split(' ').first ?? ''}",
+                style: const TextStyle(
                   fontSize: 42,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -268,6 +273,8 @@ class ElderlyHomePage extends StatelessWidget {
   }
 }
 
+// ===== Widgets (نفس القديمة تمامًا) =====
+
 class _InfoBox extends StatelessWidget {
   final String label;
   final String value;
@@ -321,7 +328,7 @@ class _VerificationCodeBox extends StatefulWidget {
 }
 
 class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
-  String? code; // 🔹 الكود مخفي بالبداية
+  String? code;
 
   void generateNewCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -329,10 +336,7 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
     String newCode =
         List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
 
-    setState(() {
-      code = newCode;
-    });
-
+    setState(() => code = newCode);
     HapticFeedback.selectionClick();
   }
 
