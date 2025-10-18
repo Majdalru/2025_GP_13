@@ -20,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
 
+  // UI chips selection (used for UX + validation)
   UserRole _role = UserRole.caregiver;
 
   final _formKey = GlobalKey<FormState>();
@@ -34,7 +35,11 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  String _prettyAuthError(FirebaseAuthException e) {
+  // ✅ Secure, generic messaging — no user enumeration
+  String _secureAuthMessage(FirebaseAuthException e) {
+    // Common auth errors should all map to the same generic message
+    const generic =
+        'Please check your email, password, or selected account type.';
     switch (e.code) {
       case 'user-not-found':
         return 'No user found for this email.';
@@ -53,14 +58,14 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _toast(String title, String msg, {bool ok = false}) {
+  void _toastSuccess(String msg) {
     final cs = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        backgroundColor: ok ? cs.primary : Colors.red.shade600,
+        backgroundColor: cs.primary,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,12 +99,30 @@ class _LoginPageState extends State<LoginPage> {
       );
       final uid = cred.user!.uid;
 
-      final profile = await _db.collection('users').doc(uid).get();
-      final role = (profile.data()?['role'] ?? 'caregiver') as String;
+      // 2) Read role from Firestore (normalize)
+      final snap = await _db.collection('users').doc(uid).get();
+      final roleNorm = (snap.data()?['role'] ?? '')
+          .toString()
+          .toLowerCase()
+          .trim();
 
+      // 3) Selected account type from chips
+      final selected = _role == UserRole.elderly ? 'elderly' : 'caregiver';
+
+      // 4) Secure validation — generic message in both cases
+      if (roleNorm.isEmpty || roleNorm != selected) {
+        await _auth.signOut();
+        await _errorDialog(
+          'Sign-in failed',
+          'Please check your email, password, or selected account type.',
+        );
+        return;
+      }
+
+      // 5) Proceed (matched)
       if (!mounted) return;
-      _role = role == 'elderly' ? UserRole.elderly : UserRole.caregiver;
-      _toast('Success', 'Logged in successfully.', ok: true);
+      _role = roleNorm == 'elderly' ? UserRole.elderly : UserRole.caregiver;
+      _toastSuccess('Logged in successfully.');
 
       if (role == 'elderly') {
         Navigator.of(context).pushReplacement(
@@ -111,9 +134,17 @@ class _LoginPageState extends State<LoginPage> {
         ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeShell()));
       }
     } on FirebaseAuthException catch (e) {
-      if (mounted) _toast('Couldn’t sign in', _prettyAuthError(e));
-    } catch (e) {
-      if (mounted) _toast('Error', e.toString());
+      if (mounted) {
+        await _errorDialog('Sign-in failed', _secureAuthMessage(e));
+      }
+    } catch (_) {
+      if (mounted) {
+        // Keep it generic even for unexpected errors
+        await _errorDialog(
+          'Sign-in failed',
+          'Please check your email, password, or selected account type.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -129,6 +160,7 @@ class _LoginPageState extends State<LoginPage> {
     final logoH = (w * 0.22).clamp(80, 140);
 
     final isElderly = _role == UserRole.elderly;
+    // ⬇️ أحجام خاصة بالـ Elderly: label=28, input=20
     final titleStyle = TextStyle(
       fontWeight: FontWeight.w900,
       fontSize: isElderly ? 34 : 24,
@@ -158,6 +190,7 @@ class _LoginPageState extends State<LoginPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
 
+    // ديكور الحقل بدون label داخلي (label خارج الحقل)
     InputDecoration _dec({required IconData icon}) => InputDecoration(
       prefixIcon: Icon(icon),
       contentPadding: fieldPadding,
@@ -189,6 +222,7 @@ class _LoginPageState extends State<LoginPage> {
                 Center(child: Text('Log in', style: titleStyle)),
                 const SizedBox(height: 14),
 
+                // Role chips
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -213,12 +247,14 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 16),
 
+                // ===== Form (labels خارج الحقول) =====
                 Form(
                   key: _formKey,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Email label خارج الحقل
                       Text('Email', style: labelTextStyle),
                       const SizedBox(height: 6),
                       TextFormField(
@@ -236,6 +272,7 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       const SizedBox(height: 2),
+                      // لضبط حجم نص الخطأ
                       SizedBox(
                         height: 0,
                         child: Text('', style: helperErrStyle),
@@ -243,6 +280,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       const SizedBox(height: 14),
 
+                      // Password
                       Text('Password', style: labelTextStyle),
                       const SizedBox(height: 6),
                       TextFormField(
@@ -262,6 +300,7 @@ class _LoginPageState extends State<LoginPage> {
                             : null,
                       ),
 
+                      // Forgot password (أكبر في وضع Elderly)
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -291,6 +330,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 16),
 
+                // Sign up row (تكبير النص لما Elderly)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

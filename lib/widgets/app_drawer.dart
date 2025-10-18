@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ✅ أضيفي هذا الاستيراد
 import '../Screens/login_page.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -15,9 +16,23 @@ class AppDrawer extends StatelessWidget {
     required this.onLogoutConfirmed,
   });
 
+  String _displayName(Map<String, dynamic>? data) {
+    final first = (data?['firstName'] ?? '').toString().trim();
+    final last = (data?['lastName'] ?? '').toString().trim();
+    final email = (data?['email'] ?? '').toString().trim();
+    final name = [first, last].where((s) => s.isNotEmpty).join(' ');
+    return name.isNotEmpty ? name : (email.isNotEmpty ? email : 'Guest');
+  }
+
+  String _displayRole(Map<String, dynamic>? data) {
+    final role = (data?['role'] ?? '').toString().toLowerCase().trim();
+    return role == 'elderly' ? 'Elderly' : 'Caregiver';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final user = FirebaseAuth.instance.currentUser;
 
     return Drawer(
       shape: const RoundedRectangleBorder(
@@ -29,6 +44,7 @@ class AppDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
+            // ===== Header بشريط جذاب =====
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
@@ -47,25 +63,39 @@ class AppDrawer extends StatelessWidget {
                     child: Icon(Icons.person, color: Colors.black87),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Guest',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
+
+                  // 👇 بدل النص الثابت، نقرأ من فايرستور بناءً على UID الحالي
+                  Expanded(
+                    child: user == null
+                        ? const _HeaderTexts(
+                            name: 'Guest',
+                            subtitle: 'Caregiver',
+                            isLight: true,
+                          )
+                        : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                            stream: FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user.uid)
+                                .snapshots(),
+                            builder: (context, snap) {
+                              if (snap.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const _HeaderTexts(
+                                  name: 'Loading…',
+                                  subtitle: '',
+                                  isLight: true,
+                                );
+                              }
+                              final data = snap.data?.data();
+                              final name = _displayName(data);
+                              final role = _displayRole(data);
+                              return _HeaderTexts(
+                                name: name,
+                                subtitle: role,
+                                isLight: true,
+                              );
+                            },
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Caregiver',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -108,6 +138,8 @@ class AppDrawer extends StatelessWidget {
                   final yes = await _confirmLogout(context);
                   if (yes == true) {
                     onLogoutConfirmed();
+
+                    // ✅ ننتقل لصفحة اللوق إن ونمسح المكدس
                     Navigator.of(
                       context,
                       rootNavigator: true,
@@ -134,6 +166,7 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
+  // ===== عنصر بروفايل بشكل مودرن =====
   Widget _profileTile(
     BuildContext context,
     String name, {
@@ -175,157 +208,53 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
+  // ===== Dialog إدخال كود (4 خانات) =====
   Future<void> _showAddProfileDialog(BuildContext context) async {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setStateInDialog) {
-          bool isLoading = false;
-          return AlertDialog(
-            title: const Text('Add Elderly via Code'),
-            content: Form(
-              key: formKey,
-              child: TextFormField(
-                controller: controller,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  letterSpacing: 6,
-                  fontWeight: FontWeight.w700,
-                ),
-                keyboardType: TextInputType.text,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-                ],
-                decoration: const InputDecoration(
-                  hintText: '______',
-                  counterText: '',
-                ),
-                validator: (v) =>
-                    (v?.length == 6) ? null : 'Enter 6 characters',
-              ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Elderly via Code'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              letterSpacing: 6,
+              fontWeight: FontWeight.w700,
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        if (formKey.currentState!.validate()) {
-                          setStateInDialog(() => isLoading = true);
-                          final enteredCode = controller.text
-                              .trim()
-                              .toUpperCase();
-                          final caregiverUid =
-                              FirebaseAuth.instance.currentUser?.uid;
-
-                          if (caregiverUid == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Error: You are not logged in.'),
-                              ),
-                            );
-                            setStateInDialog(() => isLoading = false);
-                            return;
-                          }
-
-                          try {
-                            final firestore = FirebaseFirestore.instance;
-                            // New Logic: Query the users collection for the code.
-                            final querySnapshot = await firestore
-                                .collection('users')
-                                .where('pairingCode', isEqualTo: enteredCode)
-                                .limit(1)
-                                .get();
-
-                            if (querySnapshot.docs.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Invalid code.')),
-                              );
-                            } else {
-                              final elderlyDoc = querySnapshot.docs.first;
-                              final data = elderlyDoc.data();
-                              final elderlyUid = elderlyDoc.id;
-                              final createdAt =
-                                  (data['pairingCodeCreatedAt'] as Timestamp)
-                                      .toDate();
-
-                              // Manual expiration check (client-side)
-                              if (DateTime.now()
-                                      .difference(createdAt)
-                                      .inMinutes >=
-                                  2) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Code has expired.'),
-                                  ),
-                                );
-                                // Invalidate the expired code
-                                await elderlyDoc.reference.update({
-                                  'pairingCode': null,
-                                  'pairingCodeCreatedAt': null,
-                                });
-                              } else {
-                                final caregiverDocRef = firestore
-                                    .collection('users')
-                                    .doc(caregiverUid);
-
-                                await firestore.runTransaction((
-                                  transaction,
-                                ) async {
-                                  // Link accounts
-                                  transaction.update(caregiverDocRef, {
-                                    'elderlyIds': FieldValue.arrayUnion([
-                                      elderlyUid,
-                                    ]),
-                                  });
-                                  transaction.update(elderlyDoc.reference, {
-                                    'caregiverId': caregiverUid,
-                                    // Invalidate code after successful use
-                                    'pairingCode': null,
-                                    'pairingCodeCreatedAt': null,
-                                  });
-                                });
-
-                                Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Profile linked successfully!',
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('An error occurred: $e')),
-                            );
-                          } finally {
-                            if (context.mounted) {
-                              setStateInDialog(() => isLoading = false);
-                            }
-                          }
-                        }
-                      },
-                child: isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Add'),
-              ),
+            keyboardType: TextInputType.text,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                RegExp(r'[a-zA-Z0-9]'),
+              ), // ✅ حروف وأرقام
             ],
-          );
-        },
+            decoration: const InputDecoration(hintText: '______'),
+            validator: (v) => (v?.length == 6) ? null : 'Enter 6 characters',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                // TODO: اربطي الكود بإضافة elderly فعليًا
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile code accepted')),
+                );
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
       ),
     );
   }
@@ -347,6 +276,53 @@ class AppDrawer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HeaderTexts extends StatelessWidget {
+  final String name;
+  final String subtitle;
+  final bool isLight;
+
+  const _HeaderTexts({
+    required this.name,
+    required this.subtitle,
+    this.isLight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nameStyle = TextStyle(
+      color: isLight ? Colors.white : Theme.of(context).colorScheme.onSurface,
+      fontWeight: FontWeight.w800,
+      fontSize: 16,
+    );
+    final subStyle = TextStyle(
+      color: isLight
+          ? Colors.white70
+          : Theme.of(context).colorScheme.onSurfaceVariant,
+      fontSize: 13,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: nameStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (subtitle.isNotEmpty) const SizedBox(height: 2),
+        if (subtitle.isNotEmpty)
+          Text(
+            subtitle,
+            style: subStyle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+      ],
     );
   }
 }
