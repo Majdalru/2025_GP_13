@@ -12,14 +12,14 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _auth = FirebaseAuth.instance;
-  final _db   = FirebaseFirestore.instance;
+  final _db = FirebaseFirestore.instance;
 
   final _formKey = GlobalKey<FormState>();
 
   final _email = TextEditingController();
-  final _pass  = TextEditingController();
+  final _pass = TextEditingController();
   final _first = TextEditingController();
-  final _last  = TextEditingController();
+  final _last = TextEditingController();
   final _phone = TextEditingController();
 
   bool _ob = true;
@@ -47,41 +47,43 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
       await _db.collection('users').doc(cred.user!.uid).set({
-        'role'     : 'caregiver',
+        'role': 'caregiver',
         'firstName': _first.text.trim(),
-        'lastName' : _last.text.trim(),
-        'email'    : _email.text.trim(),
-        'phone'    : _phone.text.trim(),
-        'gender'   : _gender.toLowerCase(),
+        'lastName': _last.text.trim(),
+        'email': _email.text.trim(),
+        'phone': _phone.text.trim(),
+        'gender': _gender.toLowerCase(),
         'createdAt': FieldValue.serverTimestamp(),
+        'elderlyIds': [], // Initialize with an empty list
       });
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created ✅')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Account created ✅')));
 
-      // يفتح الهوم ويقفل الرجوع
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => HomeShell()),
+        MaterialPageRoute(builder: (_) => const HomeShell()),
         (_) => false,
       );
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
         'email-already-in-use' => 'Email already in use.',
-        'invalid-email'        => 'Invalid email address.',
-        'weak-password'        => 'Weak password.',
-        _                      => e.message ?? 'Error: ${e.code}',
+        'invalid-email' => 'Invalid email address.',
+        'weak-password' => 'Weak password.',
+        _ => e.message ?? 'Error: ${e.code}',
       };
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -98,11 +100,13 @@ class _SignUpPageState extends State<SignUpPage> {
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction, // ✅ inline errors
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: ListView(
             children: [
-              // ⬇️ Email أول حقل
-              const Text('Email', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Email',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _email,
@@ -121,7 +125,10 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
 
               gap,
-              const Text('Password', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Password',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _pass,
@@ -138,7 +145,10 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
 
               gap,
-              const Text('First name', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'First name',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _first,
@@ -150,7 +160,10 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
 
               gap,
-              const Text('Last name', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Last name',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _last,
@@ -162,7 +175,10 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
 
               gap,
-              const Text('Gender', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Gender',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _gender,
@@ -177,7 +193,10 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
 
               gap,
-              const Text('Phone number', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Phone number',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _phone,
@@ -200,7 +219,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 onPressed: _loading ? null : _createAccount,
                 child: _loading
                     ? const SizedBox(
-                        width: 22, height: 22, child: CircularProgressIndicator())
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(),
+                      )
                     : const Text('Create account'),
               ),
             ],

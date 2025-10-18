@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ✅ أضيفي هذا الاستيراد
 import '../Screens/login_page.dart';
-
 
 class AppDrawer extends StatelessWidget {
   final String elderlyName;
@@ -29,7 +29,6 @@ class AppDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // ===== Header بشريط جذاب =====
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
@@ -71,8 +70,6 @@ class AppDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            // ===== عنوان Profiles + زر Add =====
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
@@ -92,8 +89,6 @@ class AppDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            // ===== قائمة البروفايلات =====
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -104,8 +99,6 @@ class AppDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            // ===== زر تسجيل الخروج =====
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: FilledButton.tonalIcon(
@@ -114,18 +107,21 @@ class AppDrawer extends StatelessWidget {
                 onPressed: () async {
                   final yes = await _confirmLogout(context);
                   if (yes == true) {
-                    // (اختياري) نادِ الكولباك لو عندك تنظيف حالة
                     onLogoutConfirmed();
-
-                    // ✅ ننتقل لصفحة اللوق إن ونمسح المكدس
-                    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushAndRemoveUntil(
                       MaterialPageRoute(builder: (_) => const LoginPage()),
                       (route) => false,
                     );
                   }
                 },
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -138,8 +134,11 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // ===== عنصر بروفايل بشكل مودرن =====
-  Widget _profileTile(BuildContext context, String name, {bool selected = false}) {
+  Widget _profileTile(
+    BuildContext context,
+    String name, {
+    bool selected = false,
+  }) {
     final cs = Theme.of(context).colorScheme;
 
     return Card(
@@ -168,61 +167,169 @@ class AppDrawer extends StatelessWidget {
           color: selected ? cs.primary : Colors.black54,
         ),
         onTap: () {
-          // TODO: تغيير الـelderly المختار
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Switched to "$name"')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Switched to "$name"')));
         },
       ),
     );
   }
 
-  // ===== Dialog إدخال كود (4 خانات) =====
   Future<void> _showAddProfileDialog(BuildContext context) async {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Elderly via Code'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            maxLength: 6,
-            textAlign: TextAlign.center,
-            style: const TextStyle(letterSpacing: 6, fontWeight: FontWeight.w700),
-            keyboardType: TextInputType.text,
-inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')), // ✅ حروف وأرقام
-          ],            decoration: const InputDecoration(hintText: '______'),
-            validator: (v) => (v?.length == 6) ? null : 'Enter 6 characters',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                // TODO: اربطي الكود بإضافة elderly فعليًا
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile code accepted')),
-                );
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateInDialog) {
+          bool isLoading = false;
+          return AlertDialog(
+            title: const Text('Add Elderly via Code'),
+            content: Form(
+              key: formKey,
+              child: TextFormField(
+                controller: controller,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  letterSpacing: 6,
+                  fontWeight: FontWeight.w700,
+                ),
+                keyboardType: TextInputType.text,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                ],
+                decoration: const InputDecoration(
+                  hintText: '______',
+                  counterText: '',
+                ),
+                validator: (v) =>
+                    (v?.length == 6) ? null : 'Enter 6 characters',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (formKey.currentState!.validate()) {
+                          setStateInDialog(() => isLoading = true);
+                          final enteredCode = controller.text
+                              .trim()
+                              .toUpperCase();
+                          final caregiverUid =
+                              FirebaseAuth.instance.currentUser?.uid;
+
+                          if (caregiverUid == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Error: You are not logged in.'),
+                              ),
+                            );
+                            setStateInDialog(() => isLoading = false);
+                            return;
+                          }
+
+                          try {
+                            final firestore = FirebaseFirestore.instance;
+                            // New Logic: Query the users collection for the code.
+                            final querySnapshot = await firestore
+                                .collection('users')
+                                .where('pairingCode', isEqualTo: enteredCode)
+                                .limit(1)
+                                .get();
+
+                            if (querySnapshot.docs.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Invalid code.')),
+                              );
+                            } else {
+                              final elderlyDoc = querySnapshot.docs.first;
+                              final data = elderlyDoc.data();
+                              final elderlyUid = elderlyDoc.id;
+                              final createdAt =
+                                  (data['pairingCodeCreatedAt'] as Timestamp)
+                                      .toDate();
+
+                              // Manual expiration check (client-side)
+                              if (DateTime.now()
+                                      .difference(createdAt)
+                                      .inMinutes >=
+                                  2) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Code has expired.'),
+                                  ),
+                                );
+                                // Invalidate the expired code
+                                await elderlyDoc.reference.update({
+                                  'pairingCode': null,
+                                  'pairingCodeCreatedAt': null,
+                                });
+                              } else {
+                                final caregiverDocRef = firestore
+                                    .collection('users')
+                                    .doc(caregiverUid);
+
+                                await firestore.runTransaction((
+                                  transaction,
+                                ) async {
+                                  // Link accounts
+                                  transaction.update(caregiverDocRef, {
+                                    'elderlyIds': FieldValue.arrayUnion([
+                                      elderlyUid,
+                                    ]),
+                                  });
+                                  transaction.update(elderlyDoc.reference, {
+                                    'caregiverId': caregiverUid,
+                                    // Invalidate code after successful use
+                                    'pairingCode': null,
+                                    'pairingCodeCreatedAt': null,
+                                  });
+                                });
+
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Profile linked successfully!',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('An error occurred: $e')),
+                            );
+                          } finally {
+                            if (context.mounted) {
+                              setStateInDialog(() => isLoading = false);
+                            }
+                          }
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Add'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  // ===== تأكيد تسجيل الخروج =====
   Future<bool?> _confirmLogout(BuildContext context) {
     return showDialog<bool>(
       context: context,
@@ -230,8 +337,14 @@ inputFormatters: [
         title: const Text('Are you sure?'),
         content: const Text('Do you really want to log out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes'),
+          ),
         ],
       ),
     );

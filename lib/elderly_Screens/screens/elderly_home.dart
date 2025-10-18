@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   String? fullName;
   String? gender;
   String? phone;
+  String? caregiverName; // To display caregiver's name
   bool loading = true;
 
   @override
@@ -28,18 +30,37 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
   Future<void> fetchUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      setState(() => loading = false);
+      return;
+    }
 
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
 
     if (doc.exists) {
-      setState(() {
-        fullName = '${doc['firstName']} ${doc['lastName']}';
-        gender = doc['gender'];
-        phone = doc['phone'];
-        loading = false;
-      });
+      final data = doc.data()!;
+      fullName = '${data['firstName']} ${data['lastName']}';
+      gender = data['gender'];
+      phone = data['phone'];
+
+      if (data['caregiverId'] != null) {
+        final caregiverDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(data['caregiverId'])
+            .get();
+        if (caregiverDoc.exists) {
+          caregiverName =
+              '${caregiverDoc['firstName']} ${caregiverDoc['lastName']}';
+        } else {
+          caregiverName = 'Not Found';
+        }
+      } else {
+        caregiverName = 'Not Linked';
+      }
+      setState(() => loading = false);
     }
   }
 
@@ -78,7 +99,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             const SizedBox(height: 20),
             _InfoBox(label: "Mobile", value: phone ?? "N/A"),
             const SizedBox(height: 20),
-            const _InfoBox(label: "Caregiver", value: "Khaled"),
+            _InfoBox(label: "Caregiver", value: caregiverName ?? "N/A"),
             const SizedBox(height: 35),
             const Text(
               "Verification Code",
@@ -90,31 +111,35 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               ),
             ),
             const SizedBox(height: 10),
-            const _VerificationCodeBox(),
+            const _PairingCodeBox(),
           ],
         ),
       ),
-
-      // ====== BODY ======
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(25),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Menu + Logout
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Builder(
                     builder: (context) => IconButton(
-                      icon:
-                          const Icon(Icons.menu, size: 42, color: Colors.black),
+                      icon: const Icon(
+                        Icons.menu,
+                        size: 42,
+                        color: Colors.black,
+                      ),
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.black, size: 36),
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Colors.black,
+                      size: 36,
+                    ),
                     onPressed: () {
                       HapticFeedback.selectionClick();
                       showDialog(
@@ -122,7 +147,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                         builder: (context) => AlertDialog(
                           backgroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25)),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -143,13 +169,17 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     style: FilledButton.styleFrom(
                                       backgroundColor: Colors.grey[200],
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 35, vertical: 15),
+                                        horizontal: 35,
+                                        vertical: 15,
+                                      ),
                                     ),
                                     onPressed: () => Navigator.pop(context),
                                     child: const Text(
                                       "No",
                                       style: TextStyle(
-                                          fontSize: 22, color: Colors.black87),
+                                        fontSize: 22,
+                                        color: Colors.black87,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 15),
@@ -157,21 +187,26 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     style: FilledButton.styleFrom(
                                       backgroundColor: redButton,
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 35, vertical: 15),
+                                        horizontal: 35,
+                                        vertical: 15,
+                                      ),
                                     ),
                                     onPressed: () {
                                       FirebaseAuth.instance.signOut();
                                       Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (_) => const LoginPage()),
+                                          builder: (_) => const LoginPage(),
+                                        ),
                                         (_) => false,
                                       );
                                     },
                                     child: const Text(
                                       "Yes",
                                       style: TextStyle(
-                                          fontSize: 22, color: Colors.white),
+                                        fontSize: 22,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -201,7 +236,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               Container(
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Color(0xFFEAECEE),
+                  color: const Color(0xFFEAECEE),
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
@@ -213,7 +248,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   backgroundColor: redButton,
                   minimumSize: const Size(double.infinity, 100),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25)),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                   elevation: 6,
                 ),
                 onPressed: () {
@@ -243,7 +279,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const MediaPage()),
+                            builder: (context) => const MediaPage(),
+                          ),
                         );
                       },
                     ),
@@ -258,7 +295,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => MedicationApp()),
+                            builder: (context) => MedicationApp(),
+                          ),
                         );
                       },
                     ),
@@ -272,8 +310,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     );
   }
 }
-
-// ===== Widgets (نفس القديمة تمامًا) =====
 
 class _InfoBox extends StatelessWidget {
   final String label;
@@ -320,24 +356,91 @@ class _InfoBox extends StatelessWidget {
   }
 }
 
-class _VerificationCodeBox extends StatefulWidget {
-  const _VerificationCodeBox();
+class _PairingCodeBox extends StatefulWidget {
+  const _PairingCodeBox();
 
   @override
-  State<_VerificationCodeBox> createState() => _VerificationCodeBoxState();
+  State<_PairingCodeBox> createState() => _PairingCodeBoxState();
 }
 
-class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
-  String? code;
+class _PairingCodeBoxState extends State<_PairingCodeBox> {
+  String? _code;
+  Timer? _timer;
+  int _countdown = 300; // 5 minutes in seconds
+  bool _isLoading = false;
 
-  void generateNewCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final random = Random();
-    String newCode =
-        List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
-    setState(() => code = newCode);
+  void _startTimer() {
+    _countdown = 300; // Reset to 5 minutes
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_countdown > 0) {
+        setState(() => _countdown--);
+      } else {
+        timer.cancel();
+        setState(() => _code = null);
+      }
+    });
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = (seconds / 60).floor().toString().padLeft(2, '0');
+    final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$remainingSeconds';
+  }
+
+  Future<void> _generateNewCode() async {
+    setState(() => _isLoading = true);
     HapticFeedback.selectionClick();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("You need to be logged in.")),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final random = Random();
+    final newCode = List.generate(
+      6,
+      (index) => chars[random.nextInt(chars.length)],
+    ).join();
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+            'pairingCode': newCode,
+            'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
+          });
+
+      if (mounted) {
+        setState(() {
+          _code = newCode;
+          _isLoading = false;
+        });
+        _startTimer();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error generating code: $e")));
+      }
+    }
   }
 
   @override
@@ -346,7 +449,7 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (code != null)
+        if (_code != null)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
@@ -354,23 +457,25 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(15),
               border: Border.all(color: darkBlue.withOpacity(0.6), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  _code!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                    letterSpacing: 3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Expires in: ${_formatDuration(_countdown)}',
+                  style: const TextStyle(color: Colors.red),
                 ),
               ],
-            ),
-            child: Text(
-              code!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-                color: darkBlue,
-                letterSpacing: 3,
-              ),
             ),
           ),
         const SizedBox(height: 15),
@@ -378,14 +483,24 @@ class _VerificationCodeBoxState extends State<_VerificationCodeBox> {
           style: FilledButton.styleFrom(
             backgroundColor: darkBlue,
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          onPressed: generateNewCode,
-          child: Text(
-            code == null ? "Generate Code" : "Generate New Code",
-            style: const TextStyle(fontSize: 20, color: Colors.white),
-          ),
+          onPressed: _isLoading ? null : _generateNewCode,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _code == null ? "Generate Code" : "Generate New Code",
+                  style: const TextStyle(fontSize: 20, color: Colors.white),
+                ),
         ),
       ],
     );
