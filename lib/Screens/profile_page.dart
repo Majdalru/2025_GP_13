@@ -1,75 +1,69 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
-import '/medmain.dart'; // 👈 1. Import Medmain page
-import 'meds_summary_page.dart'; // 👈 2. Import Summary page
-import 'location_page.dart'; // 👈 3. Import Location page (for emergency)
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+/// نص الاسم (firstName + lastName) ينسحب تلقائيًا من users/{uid}.
+/// لو المستخدم مو داخل، يعرض Guest. ولو ما فيه اسم محفوظ، يعرض الإيميل.
+class CaregiverNameText extends StatelessWidget {
+  final TextStyle? style;
+  const CaregiverNameText({super.key, this.style});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profiles')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Guest', style: TextStyle(fontSize: 24)),
-            const SizedBox(height: 20),
-            const Text('Profiles:', style: TextStyle(fontSize: 18)),
-            const SizedBox(height: 10),
-            ListTile(
-              title: const Text('Elderly Name 1'),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomePage(
-                      elderlyName: 'Elderly Name 1',
-                      // This is for the "Monthly Overview" link
-                      onTapArrowToMedsSummary: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MedsSummaryPage(),
-                          ),
-                        );
-                      },
-                      // 👇 4. ADD THE MISSING PARAMETER HERE
-                      onTapArrowToMedmain: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const Medmain()),
-                        );
-                      },
-                      // This is for the emergency button
-                      onTapEmergency: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LocationPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: () {}, child: const Text('Add Profile')),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Log out'),
-            ),
-          ],
-        ),
-      ),
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return Text('Guest', style: style);
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return Text('Loading…', style: style);
+        }
+        final data = snap.data?.data();
+        final first = (data?['firstName'] ?? '').toString().trim();
+        final last  = (data?['lastName']  ?? '').toString().trim();
+        final email = (data?['email']     ?? '').toString().trim();
+
+        final name = [first, last].where((s) => s.isNotEmpty).join(' ');
+        return Text(
+          name.isNotEmpty ? name : (email.isNotEmpty ? email : 'Guest'),
+          style: style,
+        );
+      },
+    );
+  }
+}
+
+/// نص الدور (role) من users/{uid}. افتراضيًا "Caregiver" لو ما لُقي شيء.
+class RoleSubtitleText extends StatelessWidget {
+  final TextStyle? style;
+  const RoleSubtitleText({super.key, this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return Text('Caregiver', style: style); // fallback
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData) return Text('Caregiver', style: style);
+        final role = (snap.data!.data()?['role'] ?? '').toString().toLowerCase().trim();
+        final label = role == 'elderly'
+            ? 'Elderly'
+            : 'Caregiver'; // أي شيء غير elderly اعتبره caregiver
+        return Text(label, style: style);
+      },
     );
   }
 }

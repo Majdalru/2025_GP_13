@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// ✅ أضيفي هذا الاستيراد
+// ✅ login page to navigate to on logout
 import '../Screens/login_page.dart';
 
+// ✅ Firebase imports
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppDrawer extends StatelessWidget {
   final String elderlyName;
@@ -15,9 +18,23 @@ class AppDrawer extends StatelessWidget {
     required this.onLogoutConfirmed,
   });
 
+  String _displayName(Map<String, dynamic>? data) {
+    final first = (data?['firstName'] ?? '').toString().trim();
+    final last  = (data?['lastName']  ?? '').toString().trim();
+    final email = (data?['email']     ?? '').toString().trim();
+    final name  = [first, last].where((s) => s.isNotEmpty).join(' ');
+    return name.isNotEmpty ? name : (email.isNotEmpty ? email : 'Guest');
+  }
+
+  String _displayRole(Map<String, dynamic>? data) {
+    final role = (data?['role'] ?? '').toString().toLowerCase().trim();
+    return role == 'elderly' ? 'Elderly' : 'Caregiver';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final user = FirebaseAuth.instance.currentUser;
 
     return Drawer(
       shape: const RoundedRectangleBorder(
@@ -29,7 +46,7 @@ class AppDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // ===== Header بشريط جذاب =====
+            // ===== Header with gradient, reads caregiver name/role from Firestore =====
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
@@ -48,25 +65,40 @@ class AppDrawer extends StatelessWidget {
                     child: Icon(Icons.person, color: Colors.black87),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Guest',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
+
+                  // 👇 بدل النص الثابت، نقرأ من فايرستور بناءً على UID الحالي
+                  Expanded(
+                    child: user == null
+                        ? const _HeaderTexts(
+                            name: 'Guest',
+                            subtitle: 'Caregiver',
+                            isLight: true,
+                          )
+                        : StreamBuilder<
+                            DocumentSnapshot<Map<String, dynamic>>>(
+                            stream: FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user.uid)
+                                .snapshots(),
+                            builder: (context, snap) {
+                              if (snap.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const _HeaderTexts(
+                                  name: 'Loading…',
+                                  subtitle: '',
+                                  isLight: true,
+                                );
+                              }
+                              final data = snap.data?.data();
+                              final name = _displayName(data);
+                              final role = _displayRole(data);
+                              return _HeaderTexts(
+                                name: name,
+                                subtitle: role,
+                                isLight: true,
+                              );
+                            },
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Caregiver',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -114,18 +146,26 @@ class AppDrawer extends StatelessWidget {
                 onPressed: () async {
                   final yes = await _confirmLogout(context);
                   if (yes == true) {
-                    // (اختياري) نادِ الكولباك لو عندك تنظيف حالة
                     onLogoutConfirmed();
-
-                    // ✅ ننتقل لصفحة اللوق إن ونمسح المكدس
-                    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                      (route) => false,
-                    );
+                    try {
+                      await FirebaseAuth.instance.signOut();
+                    } finally {
+                      // انتقل لصفحة اللوق إن وافرغ الـstack
+                      // (rootNavigator: true) لو كان فيه Navigator داخل الـScaffold
+                      if (context.mounted) {
+                        Navigator.of(context, rootNavigator: true)
+                            .pushAndRemoveUntil(
+                          MaterialPageRoute(
+                              builder: (_) => const LoginPage()),
+                          (route) => false,
+                        );
+                      }
+                    }
                   }
                 },
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -139,7 +179,8 @@ class AppDrawer extends StatelessWidget {
   }
 
   // ===== عنصر بروفايل بشكل مودرن =====
-  Widget _profileTile(BuildContext context, String name, {bool selected = false}) {
+  Widget _profileTile(BuildContext context, String name,
+      {bool selected = false}) {
     final cs = Theme.of(context).colorScheme;
 
     return Card(
@@ -177,7 +218,7 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // ===== Dialog إدخال كود (4 خانات) =====
+  // ===== Dialog إدخال كود (6 خانات) =====
   Future<void> _showAddProfileDialog(BuildContext context) async {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -192,11 +233,14 @@ class AppDrawer extends StatelessWidget {
             controller: controller,
             maxLength: 6,
             textAlign: TextAlign.center,
-            style: const TextStyle(letterSpacing: 6, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+                letterSpacing: 6, fontWeight: FontWeight.w700),
             keyboardType: TextInputType.text,
-inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')), // ✅ حروف وأرقام
-          ],            decoration: const InputDecoration(hintText: '______'),
+            inputFormatters: [
+              // ✅ حروف وأرقام فقط
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+            ],
+            decoration: const InputDecoration(hintText: '______'),
             validator: (v) => (v?.length == 6) ? null : 'Enter 6 characters',
           ),
         ),
@@ -230,10 +274,50 @@ inputFormatters: [
         title: const Text('Are you sure?'),
         content: const Text('Do you really want to log out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('No')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Yes')),
         ],
       ),
+    );
+  }
+}
+
+class _HeaderTexts extends StatelessWidget {
+  final String name;
+  final String subtitle;
+  final bool isLight;
+
+  const _HeaderTexts({
+    required this.name,
+    required this.subtitle,
+    this.isLight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nameStyle = TextStyle(
+      color: isLight ? Colors.white : Theme.of(context).colorScheme.onSurface,
+      fontWeight: FontWeight.w800,
+      fontSize: 16,
+    );
+    final subStyle = TextStyle(
+      color: isLight ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant,
+      fontSize: 13,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name, style: nameStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        if (subtitle.isNotEmpty)
+          const SizedBox(height: 2),
+        if (subtitle.isNotEmpty)
+          Text(subtitle, style: subStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ],
     );
   }
 }
