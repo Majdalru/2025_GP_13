@@ -184,7 +184,7 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ),
             ),
-      const BrowsePage(),
+       BrowsePage(selectedProfile: _selectedProfile),
     ];
 
     return Scaffold(
