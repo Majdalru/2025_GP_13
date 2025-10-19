@@ -58,10 +58,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
       final data = doc.data()!;
       final first = (data['firstName'] ?? '').toString().trim();
-      final last  = (data['lastName']  ?? '').toString().trim();
+      final last = (data['lastName'] ?? '').toString().trim();
       fullName = [first, last].where((s) => s.isNotEmpty).join(' ');
       gender = (data['gender'] ?? '').toString();
-      phone  = (data['phone']  ?? '').toString();
+      phone = (data['phone'] ?? '').toString();
 
       // احضري كل الكيرقيفرز من caregiverIds[]
       final ids = (data['caregiverIds'] is List)
@@ -79,10 +79,12 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           for (final d in qs.docs) {
             final x = d.data();
             final f = (x['firstName'] ?? '').toString().trim();
-            final l = (x['lastName']  ?? '').toString().trim();
+            final l = (x['lastName'] ?? '').toString().trim();
             final email = (x['email'] ?? '').toString().trim();
             final n = [f, l].where((s) => s.isNotEmpty).join(' ');
-            names.add(n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'));
+            names.add(
+              n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'),
+            );
           }
         }
       }
@@ -93,9 +95,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       });
     } catch (e) {
       setState(() => loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading profile: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
     }
   }
 
@@ -165,12 +167,20 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                 children: [
                   Builder(
                     builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu, size: 42, color: Colors.black),
+                      icon: const Icon(
+                        Icons.menu,
+                        size: 42,
+                        color: Colors.black,
+                      ),
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.black, size: 36),
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Colors.black,
+                      size: 36,
+                    ),
                     onPressed: () {
                       HapticFeedback.selectionClick();
                       showDialog(
@@ -199,26 +209,46 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   FilledButton(
                                     style: FilledButton.styleFrom(
                                       backgroundColor: Colors.grey[200],
-                                      padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 15),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 35,
+                                        vertical: 15,
+                                      ),
                                     ),
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text("No", style: TextStyle(fontSize: 22, color: Colors.black87)),
+                                    child: const Text(
+                                      "No",
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 15),
                                   FilledButton(
                                     style: FilledButton.styleFrom(
                                       backgroundColor: redButton,
-                                      padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 15),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 35,
+                                        vertical: 15,
+                                      ),
                                     ),
                                     onPressed: () {
                                       FirebaseAuth.instance.signOut();
                                       Navigator.pushAndRemoveUntil(
                                         context,
-                                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                                        MaterialPageRoute(
+                                          builder: (_) => const LoginPage(),
+                                        ),
                                         (_) => false,
                                       );
                                     },
-                                    child: const Text("Yes", style: TextStyle(fontSize: 22, color: Colors.white)),
+                                    child: const Text(
+                                      "Yes",
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -259,7 +289,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: redButton,
                   minimumSize: const Size(double.infinity, 100),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                   elevation: 6,
                 ),
                 onPressed: () => HapticFeedback.heavyImpact(),
@@ -284,7 +316,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                       title: "Media",
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MediaPage()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MediaPage()),
+                        );
                       },
                     ),
                   ),
@@ -295,7 +330,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                       title: "Medic",
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => Medmain()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => Medmain()),
+                        );
                       },
                     ),
                   ),
@@ -320,7 +358,14 @@ class _InfoBox extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: darkBlue)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: darkBlue,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -329,9 +374,18 @@ class _InfoBox extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(color: darkBlue.withOpacity(0.5), width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: Offset(0, 3))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 6,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
-          child: Text(value, style: const TextStyle(fontSize: 22, color: Colors.black87)),
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 22, color: Colors.black87),
+          ),
         ),
       ],
     );
@@ -352,7 +406,11 @@ class _CaregiversBox extends StatelessWidget {
       children: [
         const Text(
           'Caregivers',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: darkBlue),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: darkBlue,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -365,25 +423,40 @@ class _CaregiversBox extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
               border: Border.all(color: darkBlue.withOpacity(0.5), width: 1.5),
             ),
-            child: const Text('No caregivers linked', style: TextStyle(fontSize: 18, color: Colors.black54)),
+            child: const Text(
+              'No caregivers linked',
+              style: TextStyle(fontSize: 18, color: Colors.black54),
+            ),
           )
         else
           Column(
             children: names.map((name) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 14,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: darkBlue.withOpacity(0.5), width: 1.5),
+                  border: Border.all(
+                    color: darkBlue.withOpacity(0.5),
+                    width: 1.5,
+                  ),
                 ),
                 child: Row(
                   children: [
                     const Icon(Icons.person, color: darkBlue),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(name, style: const TextStyle(fontSize: 18, color: Colors.black87)),
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -451,13 +524,19 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
 
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random();
-    final newCode = List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
+    final newCode = List.generate(
+      6,
+      (index) => chars[random.nextInt(chars.length)],
+    ).join();
 
     try {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'pairingCode': newCode,
-        'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
-      });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+            'pairingCode': newCode,
+            'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
+          });
 
       if (mounted) {
         setState(() {
@@ -469,9 +548,9 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error generating code: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error generating code: $e")));
       }
     }
   }
@@ -504,7 +583,10 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text('Expires in: ${_formatDuration(_countdown)}', style: const TextStyle(color: Colors.red)),
+                Text(
+                  'Expires in: ${_formatDuration(_countdown)}',
+                  style: const TextStyle(color: Colors.red),
+                ),
               ],
             ),
           ),
@@ -513,13 +595,24 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
           style: FilledButton.styleFrom(
             backgroundColor: darkBlue,
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onPressed: _isLoading ? null : _generateNewCode,
           child: _isLoading
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : Text(_code == null ? "Generate Code" : "Generate New Code",
-                  style: const TextStyle(fontSize: 20, color: Colors.white)),
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _code == null ? "Generate Code" : "Generate New Code",
+                  style: const TextStyle(fontSize: 20, color: Colors.white),
+                ),
         ),
       ],
     );
@@ -530,7 +623,11 @@ class _HomeCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
-  const _HomeCard({required this.icon, required this.title, required this.onTap});
+  const _HomeCard({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -551,7 +648,14 @@ class _HomeCard extends StatelessWidget {
             children: [
               Icon(icon, size: 90, color: darkBlue),
               const SizedBox(height: 10),
-              Text(title, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: darkBlue)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w600,
+                  color: darkBlue,
+                ),
+              ),
             ],
           ),
         ),
@@ -559,4 +663,3 @@ class _HomeCard extends StatelessWidget {
     );
   }
 }
-
