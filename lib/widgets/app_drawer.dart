@@ -36,6 +36,7 @@ class AppDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
+            // ===== Header ديناميكي يقرأ من Firestore =====
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
@@ -46,37 +47,71 @@ class AppDrawer extends StatelessWidget {
                   end: Alignment.centerRight,
                 ),
               ),
-              child: const Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: Colors.black87),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Caregiver',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
+              child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                stream: (FirebaseAuth.instance.currentUser == null)
+                    ? null
+                    : FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(FirebaseAuth.instance.currentUser!.uid)
+                        .snapshots(),
+                builder: (context, snap) {
+                  // القيم الافتراضية
+                  String displayName = 'Guest';
+                  String roleLabel = 'Caregiver';
+
+                  if (snap.hasData && snap.data!.exists) {
+                    final data = snap.data!.data()!;
+                    final first = (data['firstName'] ?? '').toString().trim();
+                    final last = (data['lastName'] ?? '').toString().trim();
+                    final email = (data['email'] ?? '').toString().trim();
+                    final role = (data['role'] ?? '').toString().toLowerCase();
+
+                    final name =
+                        [first, last].where((s) => s.isNotEmpty).join(' ');
+                    displayName = name.isNotEmpty
+                        ? name
+                        : (email.isNotEmpty ? email : 'Guest');
+                    roleLabel =
+                        (role == 'elderly') ? 'Elderly' : 'Caregiver';
+                  }
+
+                  return Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 26,
+                        backgroundColor: Colors.white,
+                        child: Icon(Icons.person, color: Colors.black87),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              roleLabel,
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Account',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
+
+            // ===== عنوان Linked Profiles + زر Link =====
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
@@ -96,6 +131,8 @@ class AppDrawer extends StatelessWidget {
                 ],
               ),
             ),
+
+            // ===== قائمة البروفايلات =====
             Expanded(
               child: linkedProfiles.isEmpty
                   ? const Center(child: Text("No profiles linked yet."))
@@ -111,6 +148,8 @@ class AppDrawer extends StatelessWidget {
                       }).toList(),
                     ),
             ),
+
+            // ===== زر تسجيل الخروج =====
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: FilledButton.tonalIcon(
@@ -300,14 +339,10 @@ class AppDrawer extends StatelessWidget {
                                     transaction,
                                   ) async {
                                     transaction.update(caregiverDocRef, {
-                                      'elderlyIds': FieldValue.arrayUnion([
-                                        elderlyUid,
-                                      ]),
+                                      'elderlyIds': FieldValue.arrayUnion([elderlyUid]),
                                     });
                                     transaction.update(elderlyDoc.reference, {
-                                      'caregiverIds': FieldValue.arrayUnion([
-                                        caregiverUid,
-                                      ]),
+                                      'caregiverIds': FieldValue.arrayUnion([caregiverUid]),
                                       'pairingCode': null,
                                       'pairingCodeCreatedAt': null,
                                     });
@@ -316,9 +351,7 @@ class AppDrawer extends StatelessWidget {
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text(
-                                        'Profile linked successfully!',
-                                      ),
+                                      content: Text('Profile linked successfully!'),
                                     ),
                                   );
                                   onProfileLinked();
