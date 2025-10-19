@@ -95,9 +95,11 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       });
     } catch (e) {
       setState(() => loading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+      }
     }
   }
 
@@ -136,10 +138,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             const SizedBox(height: 20),
             _InfoBox(label: "Mobile", value: phone ?? "N/A"),
             const SizedBox(height: 20),
-
-            // === كل الكيرقيفرز تحت بعض ===
             _CaregiversBox(names: caregiverNames),
-
             const SizedBox(height: 35),
             const Text(
               "Verification Code",
@@ -161,7 +160,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ===== شريط علوي =====
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -260,9 +258,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 65),
-
               Text(
                 "Hello ${fullName?.split(' ').first ?? ''}",
                 style: const TextStyle(
@@ -271,9 +267,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   color: Colors.black,
                 ),
               ),
-
               const SizedBox(height: 55),
-
               Container(
                 height: 40,
                 decoration: BoxDecoration(
@@ -281,10 +275,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-
               const SizedBox(height: 40),
-
-              // ===== SOS =====
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: redButton,
@@ -305,9 +296,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 60),
-
               Row(
                 children: [
                   Expanded(
@@ -330,10 +319,22 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                       title: "Medic",
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => Medmain()),
-                        );
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (uid != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ElderlyMedicationPage(elderlyId: uid),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Error: Not logged in."),
+                            ),
+                          );
+                        }
                       },
                     ),
                   ),
@@ -347,6 +348,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   }
 }
 
+// All other widgets (_InfoBox, _CaregiversBox, _PairingCodeBox, _HomeCard) remain the same
 class _InfoBox extends StatelessWidget {
   final String label;
   final String value;
@@ -378,7 +380,7 @@ class _InfoBox extends StatelessWidget {
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
                 blurRadius: 6,
-                offset: Offset(0, 3),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -392,7 +394,6 @@ class _InfoBox extends StatelessWidget {
   }
 }
 
-/// يعرض كل caregivers في كروت تحت بعض
 class _CaregiversBox extends StatelessWidget {
   final List<String> names;
   const _CaregiversBox({required this.names});
@@ -413,7 +414,6 @@ class _CaregiversBox extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-
         if (names.isEmpty)
           Container(
             width: double.infinity,

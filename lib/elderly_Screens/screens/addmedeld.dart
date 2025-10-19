@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
-import 'elderly_med.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/medication.dart'; // Import the new model
 
 // --- Main Stateful Widget for AddMedScreen ---
 class AddMedScreen extends StatefulWidget {
   final Medication? medicationToEdit;
+  final String elderlyId; // Pass the elderly user's ID
 
-  const AddMedScreen({super.key, this.medicationToEdit});
+  const AddMedScreen({
+    super.key,
+    this.medicationToEdit,
+    required this.elderlyId,
+  });
 
   @override
   State<AddMedScreen> createState() => _AddMedScreenState();
@@ -16,6 +23,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   int _currentPageIndex = 0;
   late final bool _isEditing;
 
+  // Form data
   String? _medicationName;
   List<String> _selectedDays = [];
   String? _frequency;
@@ -32,7 +40,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
       _medicationName = med.name;
       _selectedDays = List.from(med.days);
       _frequency = med.frequency;
-      _selectedTimes = List.from(med.times);
+      // Ensure selectedTimes is mutable
+      _selectedTimes = List<TimeOfDay?>.from(med.times);
       _notes = med.notes;
     }
   }
@@ -43,6 +52,99 @@ class _AddMedScreenState extends State<AddMedScreen> {
     super.dispose();
   }
 
+  // --- Firestore Logic ---
+  Future<void> _saveMedication() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You must be logged in to save.')),
+      );
+      return;
+    }
+
+    if (_isEditing) {
+      // --- UPDATE LOGIC ---
+      final docRef = FirebaseFirestore.instance
+          .collection('medications')
+          .doc(widget.elderlyId);
+
+      final updatedMed = Medication(
+        id: widget.medicationToEdit!.id, // Keep the original ID
+        name: _medicationName ?? 'Unnamed',
+        days: _selectedDays,
+        frequency: _frequency,
+        times: _selectedTimes.whereType<TimeOfDay>().toList(),
+        notes: _notes,
+        addedBy: currentUser.uid, // The user who last edited
+        createdAt:
+            widget.medicationToEdit!.createdAt, // Keep original creation time
+        updatedAt: Timestamp.now(), // Set new update time
+      );
+
+      try {
+        // To update an item in an array, we must read, modify, and write the whole array back
+        final doc = await docRef.get();
+        final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
+
+        final List<Map<String, dynamic>> updatedMedsList = currentMedsList.map((
+          med,
+        ) {
+          if (med['id'] == updatedMed.id) {
+            return updatedMed.toMap(); // Replace with the updated medication
+          }
+          return med as Map<String, dynamic>;
+        }).toList();
+
+        await docRef.update({'medsList': updatedMedsList});
+
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error updating medication: $e')),
+          );
+        }
+      }
+    } else {
+      // --- ADD NEW LOGIC ---
+      final newMed = Medication(
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Unique ID
+        name: _medicationName ?? 'Unnamed',
+        days: _selectedDays,
+        frequency: _frequency,
+        times: _selectedTimes.whereType<TimeOfDay>().toList(),
+        notes: _notes,
+        addedBy: currentUser.uid,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      );
+
+      final docRef = FirebaseFirestore.instance
+          .collection('medications')
+          .doc(widget.elderlyId);
+
+      try {
+        // Use set with merge:true to create the doc if it doesn't exist
+        await docRef.set({
+          'medsList': FieldValue.arrayUnion([newMed.toMap()]),
+        }, SetOptions(merge: true));
+
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error saving medication: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  // --- UI Navigation and State Management (mostly unchanged) ---
   void _goToNextPage() {
     if (_currentPageIndex < 5) {
       _pageController.nextPage(
@@ -133,32 +235,28 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 
   void _removeCustomTimeField(int index) {
-    if (_selectedTimes.length > 1 && index > 0) {
+    if (_selectedTimes.length > 1 && index >= 0) {
+      // Safety check
       setState(() {
         _selectedTimes.removeAt(index);
       });
     }
   }
 
-  void _saveMedication() {
-    final updatedMedication = Medication(
-      name: _medicationName ?? 'Unnamed Medication',
-      days: _selectedDays,
-      frequency: _frequency,
-      times: _selectedTimes.whereType<TimeOfDay>().toList(),
-      notes: _notes,
-    );
-    Navigator.pop(context, updatedMedication);
-  }
-
   @override
   Widget build(BuildContext context) {
+    // UI code remains largely the same, but the final save action is different.
+    // ...
     final ButtonStyle tealButtonStyle = ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFF5FA5A0),
       foregroundColor: Colors.white,
       minimumSize: const Size.fromHeight(70),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+      textStyle: const TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+      ),
       elevation: 6,
     );
 
@@ -183,7 +281,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'Cancel',
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -247,11 +349,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                       ? _removeCustomTimeField
                       : null,
                   onNext: () {
-                    setState(() {
-                      _selectedTimes = _selectedTimes
-                          .where((t) => t != null)
-                          .toList();
-                    });
+                    // This is just for UI validation, no need to change
                     _goToNextPage();
                   },
                 ),
@@ -272,7 +370,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   notes: _notes,
                   isEditing: _isEditing,
                   buttonStyle: tealButtonStyle,
-                  onSave: _saveMedication,
+                  onSave:
+                      _saveMedication, // This now calls the Firestore function
                 ),
               ],
             ),
@@ -283,7 +382,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 }
 
-// --- Stepper and Header Widgets ---
+// --- Stepper and Header Widgets (Unchanged) ---
 class _Stepper extends StatelessWidget {
   final int currentIndex;
   final int stepCount;
@@ -355,11 +454,7 @@ class _StepHeader extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           subtitle,
-          style: const TextStyle(
-            fontSize: 20,
-            color: Colors.grey,
-            height: 1.3,
-          ),
+          style: const TextStyle(fontSize: 20, color: Colors.grey, height: 1.3),
         ),
         const SizedBox(height: 28),
       ],
@@ -367,7 +462,7 @@ class _StepHeader extends StatelessWidget {
   }
 }
 
-// --- Step 1: Medicine Name ---
+// --- Step 1: Medicine Name (Unchanged) ---
 class _Step1MedName extends StatefulWidget {
   final ValueChanged<String> onNext;
   final String? initialValue;
@@ -453,7 +548,7 @@ class _Step1MedNameState extends State<_Step1MedName> {
   }
 }
 
-// --- Step 2: Select Days ---
+// --- Step 2: Select Days (Unchanged) ---
 class _Step2SelectDays extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<List<String>> onNext;
@@ -540,10 +635,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
               ),
               ..._daysOfWeek.map(
                 (day) => CheckboxListTile(
-                  title: Text(
-                    day,
-                    style: const TextStyle(fontSize: 22),
-                  ),
+                  title: Text(day, style: const TextStyle(fontSize: 22)),
                   value: _selectedDays.contains(day),
                   onChanged: (bool? value) => _onDaySelected(value, day),
                   activeColor: const Color(0xFF5FA5A0),
@@ -569,7 +661,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
   }
 }
 
-// --- Step 3: Frequency ---
+// --- Step 3: Frequency (Unchanged) ---
 class _Step3HowManyTimesPerDay extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String> onNext;
@@ -630,10 +722,7 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
               ),
               ..._frequencyOptions.map(
                 (option) => RadioListTile<String>(
-                  title: Text(
-                    option,
-                    style: const TextStyle(fontSize: 22),
-                  ),
+                  title: Text(option, style: const TextStyle(fontSize: 22)),
                   value: option,
                   groupValue: _selectedFrequency,
                   onChanged: (String? value) =>
@@ -661,7 +750,7 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
   }
 }
 
-// --- Step 4: Set Times ---
+// --- Step 4: Set Times (Unchanged) ---
 class _Step4SetTimes extends StatefulWidget {
   final String? medicationName;
   final String? frequency;
@@ -697,9 +786,7 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF5FA5A0),
-            ),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF5FA5A0)),
           ),
           child: child!,
         );
@@ -767,7 +854,7 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
                           ),
                         ),
                       ),
-                      if (isCustom && index > 0 && widget.onRemoveTime != null)
+                      if (isCustom && widget.onRemoveTime != null)
                         Container(
                           margin: const EdgeInsets.only(left: 12),
                           decoration: BoxDecoration(
@@ -834,7 +921,7 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
   }
 }
 
-// --- Step 5: Add Notes ---
+// --- Step 5: Add Notes (Unchanged) ---
 class _Step5AddNotes extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String?> onNext;
@@ -919,7 +1006,7 @@ class _Step5AddNotesState extends State<_Step5AddNotes> {
   }
 }
 
-// --- Step 6: Summary ---
+// --- Step 6: Summary (Unchanged) ---
 class _Step6Summary extends StatelessWidget {
   final String? medicationName;
   final List<String> selectedDays;

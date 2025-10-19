@@ -1,60 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/medmain.dart';
+import '../medmain.dart'; // Corrected import
 import 'meds_summary_page.dart';
 import 'location_page.dart';
-import 'upload_audio_page.dart'; // 🆕 صفحة رفع الصوتيات
+import 'upload_audio_page.dart';
+import 'home_shell.dart'; // Import to get the ElderlyProfile model
 
 class BrowsePage extends StatelessWidget {
-  const BrowsePage({super.key});
+  // Accept the selected profile from HomeShell
+  final ElderlyProfile? selectedProfile;
+
+  const BrowsePage({super.key, this.selectedProfile});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // 🔹 عناصر التصفح (قابلة للتوسّع بسهولة)
     final items = <_BrowseItem>[
       _BrowseItem(
         title: 'Medication',
-        subtitle: '',
+        subtitle: 'Manage medication list',
         icon: Icons.medication,
         color: cs.secondary,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const Medmain()),
-        ),
+        onTap: () {
+          // Check if a profile is selected before navigating
+          if (selectedProfile != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => Medmain(elderlyProfile: selectedProfile!),
+              ),
+            );
+          } else {
+            // Show a message if no profile is selected
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Please select an elderly profile from the drawer menu first.',
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        },
       ),
       _BrowseItem(
         title: 'Summary',
         subtitle: 'Monthly overview',
         icon: Icons.assignment_outlined,
         color: cs.primary,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const MedsSummaryPage()),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const MedsSummaryPage())),
       ),
       _BrowseItem(
         title: 'Location',
         subtitle: 'Live location & last seen',
         icon: Icons.location_on,
         color: Colors.teal,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const LocationPage()),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const LocationPage())),
       ),
       _BrowseItem(
         title: 'Manage access',
         subtitle: '',
         icon: Icons.manage_accounts_rounded,
         color: Colors.indigo,
-        onTap: null, // غير قابل للنقر
+        onTap: null, // Not tappable
       ),
       _BrowseItem(
         title: 'Upload Audio for Elderly',
         subtitle: 'Share recordings or stories',
         icon: Icons.upload_file,
         color: const Color(0xFF2A4D69),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const UploadAudioPage()),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const UploadAudioPage())),
       ),
     ];
 
@@ -77,7 +97,6 @@ class BrowsePage extends StatelessWidget {
   }
 }
 
-/// نموذج بيانات بسيط
 class _BrowseItem {
   final String title;
   final String? subtitle;
@@ -94,7 +113,6 @@ class _BrowseItem {
   });
 }
 
-/// تصميم البطاقة الموحدة
 class _BrowseCard extends StatelessWidget {
   final Color leadingBg;
   final Color leadingIconColor;
@@ -104,7 +122,6 @@ class _BrowseCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _BrowseCard({
-    super.key,
     required this.leadingBg,
     required this.leadingIconColor,
     required this.leadingIcon,
@@ -123,7 +140,9 @@ class _BrowseCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        splashFactory: tappable ? InkRipple.splashFactory : NoSplash.splashFactory,
+        splashFactory: tappable
+            ? InkRipple.splashFactory
+            : NoSplash.splashFactory,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

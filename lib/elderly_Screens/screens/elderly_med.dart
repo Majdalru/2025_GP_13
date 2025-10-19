@@ -1,52 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'addmedeld.dart';
-
-// --- Medication Class (Model) ---
-class Medication {
-  final String name;
-  final List<String> days;
-  final String? frequency;
-  final List<TimeOfDay> times;
-  final String? notes;
-
-  Medication({
-    required this.name,
-    required this.days,
-    this.frequency,
-    required this.times,
-    this.notes,
-  });
-}
-
-enum MedStatus { taken, late, missed }
-
-class TodaysMedication {
-  final String name;
-  final TimeOfDay time;
-  MedStatus? status;
-
-  TodaysMedication({required this.name, required this.time, this.status});
-}
+import '../../models/medication.dart'; // Import the new model
 
 // --- Main Page Widget ---
-class Medmain extends StatefulWidget {
-  const Medmain({super.key});
+class ElderlyMedicationPage extends StatefulWidget {
+  // We need the elderlyId to know which document to read/write to.
+  final String elderlyId;
+  const ElderlyMedicationPage({super.key, required this.elderlyId});
 
   @override
-  State<Medmain> createState() => _MedmainState();
+  State<ElderlyMedicationPage> createState() => _ElderlyMedicationPageState();
 }
 
-class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
+class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final List<Medication> _medicationList = [
-    Medication(
-      name: 'Aspirin',
-      days: ['Monday', 'Wednesday', 'Friday'],
-      frequency: 'Once daily',
-      times: [const TimeOfDay(hour: 8, minute: 0)],
-      notes: 'Take with a full glass of water.',
-    ),
-  ];
 
   @override
   void initState() {
@@ -60,36 +30,54 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  // Navigation to Add/Edit screen now passes the elderlyId
   void _navigateAndAddMedication(BuildContext context) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddMedScreen()),
-    );
-    if (result != null && result is Medication) {
-      setState(() {
-        _medicationList.add(result);
-      });
-    }
-  }
-
-  void _navigateAndEditMedication(Medication medication, int index) async {
-    final result = await Navigator.push(
+    Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddMedScreen(medicationToEdit: medication),
+        builder: (context) => AddMedScreen(elderlyId: widget.elderlyId),
       ),
     );
-    if (result != null && result is Medication) {
-      setState(() {
-        _medicationList[index] = result;
-      });
-    }
   }
 
-  void _deleteMedication(int index) {
-    setState(() {
-      _medicationList.removeAt(index);
-    });
+  void _navigateAndEditMedication(Medication medication) async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddMedScreen(
+          elderlyId: widget.elderlyId,
+          medicationToEdit: medication,
+        ),
+      ),
+    );
+  }
+
+  // Deletion logic updated for Firestore
+  void _deleteMedication(Medication medicationToDelete) async {
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(widget.elderlyId);
+
+    try {
+      // Use FieldValue.arrayRemove to delete the specific medication map
+      await docRef.update({
+        'medsList': FieldValue.arrayRemove([medicationToDelete.toMap()]),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Medication deleted'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting medication: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -114,9 +102,7 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
           },
         ),
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(10),
-          ),
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
       ),
       body: Column(
@@ -126,7 +112,8 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
             child: TabBarView(
               controller: _tabController,
               children: [
-                const TodaysMedsTab(),
+                const TodaysMedsTab(), // This can be updated later for real data
+                // --- Med List Tab with StreamBuilder ---
                 Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
@@ -163,18 +150,73 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
                       ),
                       const SizedBox(height: 24),
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: _medicationList.length,
-                          itemBuilder: (context, index) {
-                            final medication = _medicationList[index];
-                            return MedicationCard(
-                              medication: medication,
-                              onEdit: () =>
-                                  _navigateAndEditMedication(medication, index),
-                              onDelete: () => _deleteMedication(index),
-                            );
-                          },
-                        ),
+                        // This StreamBuilder will listen to the medication document
+                        child:
+                            StreamBuilder<
+                              DocumentSnapshot<Map<String, dynamic>>
+                            >(
+                              stream: FirebaseFirestore.instance
+                                  .collection('medications')
+                                  .doc(widget.elderlyId)
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                                if (!snapshot.hasData ||
+                                    !snapshot.data!.exists) {
+                                  return const Center(
+                                    child: Text(
+                                      "No medications added yet.",
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                }
+                                if (snapshot.hasError) {
+                                  return const Center(
+                                    child: Text("Error loading medications."),
+                                  );
+                                }
+
+                                final data = snapshot.data!.data();
+                                final medsList =
+                                    (data?['medsList'] as List?)
+                                        ?.map(
+                                          (medMap) => Medication.fromMap(
+                                            medMap as Map<String, dynamic>,
+                                          ),
+                                        )
+                                        .toList() ??
+                                    [];
+
+                                if (medsList.isEmpty) {
+                                  return const Center(
+                                    child: Text(
+                                      "No medications added yet.",
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                }
+
+                                return ListView.builder(
+                                  itemCount: medsList.length,
+                                  itemBuilder: (context, index) {
+                                    final medication = medsList[index];
+                                    return MedicationCard(
+                                      medication: medication,
+                                      onEdit: () => _navigateAndEditMedication(
+                                        medication,
+                                      ),
+                                      onDelete: () =>
+                                          _deleteMedication(medication),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                       ),
                     ],
                   ),
@@ -188,7 +230,7 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
   }
 }
 
-// --- CUSTOM TAB BAR WIDGET ---
+// --- CUSTOM TAB BAR WIDGET (Unchanged) ---
 class CustomSegmentedControl extends StatefulWidget {
   final TabController tabController;
   const CustomSegmentedControl({super.key, required this.tabController});
@@ -252,9 +294,7 @@ class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
           duration: const Duration(milliseconds: 300),
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF5FA5A0)
-                : Colors.transparent,
+            color: isSelected ? const Color(0xFF5FA5A0) : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
             boxShadow: isSelected
                 ? [
@@ -282,7 +322,7 @@ class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
   }
 }
 
-// --- MEDICATION CARD WIDGET ---
+// --- MEDICATION CARD WIDGET (Unchanged) ---
 class MedicationCard extends StatelessWidget {
   final Medication medication;
   final VoidCallback onEdit;
@@ -352,11 +392,7 @@ class MedicationCard extends StatelessWidget {
     );
     final valueStyle = DefaultTextStyle.of(
       context,
-    ).style.copyWith(
-      fontSize: 22,
-      color: const Color(0xFF212121),
-      height: 1.4,
-    );
+    ).style.copyWith(fontSize: 22, color: const Color(0xFF212121), height: 1.4);
 
     return Card(
       elevation: 6,
@@ -505,471 +541,16 @@ class MedicationCard extends StatelessWidget {
   }
 }
 
-// --- TODAY'S MEDS TAB ---
-class TodaysMedsTab extends StatefulWidget {
+// --- TODAY'S MEDS TAB (Placeholder, can be developed later) ---
+class TodaysMedsTab extends StatelessWidget {
   const TodaysMedsTab({super.key});
 
   @override
-  State<TodaysMedsTab> createState() => _TodaysMedsTabState();
-}
-
-class _TodaysMedsTabState extends State<TodaysMedsTab> {
-  final List<TodaysMedication> upcomingMeds = [
-    TodaysMedication(
-      name: 'Aspirin',
-      time: const TimeOfDay(hour: 18, minute: 0),
-    ),
-    TodaysMedication(
-      name: 'Vitamin D',
-      time: const TimeOfDay(hour: 21, minute: 0),
-    ),
-  ];
-
-  final List<TodaysMedication> historyMeds = [
-    TodaysMedication(
-      name: 'Metformin',
-      time: const TimeOfDay(hour: 8, minute: 5),
-      status: MedStatus.taken,
-    ),
-    TodaysMedication(
-      name: 'Lisinopril',
-      time: const TimeOfDay(hour: 8, minute: 20),
-      status: MedStatus.late,
-    ),
-    TodaysMedication(
-      name: 'Simvastatin',
-      time: const TimeOfDay(hour: 13, minute: 0),
-      status: MedStatus.missed,
-    ),
-    TodaysMedication(
-      name: 'Atorvastatin',
-      time: const TimeOfDay(hour: 13, minute: 5),
-      status: MedStatus.taken,
-    ),
-  ];
-
-  // دالة لتحديد الحالة بناءً على الوقت
-  MedStatus? _checkMedicationStatus(TimeOfDay medTime) {
-    final now = TimeOfDay.now();
-    final currentMinutes = now.hour * 60 + now.minute;
-    final medMinutes = medTime.hour * 60 + medTime.minute;
-    final difference = currentMinutes - medMinutes;
-
-    if (difference > 180) { // أكثر من 3 ساعات
-      return MedStatus.missed;
-    } else if (difference > 60) { // أكثر من ساعة
-      return MedStatus.late;
-    }
-    return null; // لا يزال في الوقت المحدد
-  }
-
-  void _markAsTaken(int index) {
-    setState(() {
-      final med = upcomingMeds[index];
-      med.status = MedStatus.taken;
-      historyMeds.insert(0, med);
-      upcomingMeds.removeAt(index);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24.0),
-      children: [
-        _UpcomingMedsCard(
-          meds: upcomingMeds,
-          onMarkAsTaken: _markAsTaken,
-          checkStatus: _checkMedicationStatus,
-        ),
-        const SizedBox(height: 28),
-        _HistoryMedsCard(meds: historyMeds),
-      ],
-    );
-  }
-}
-
-// --- UPCOMING MEDS CARD ---
-class _UpcomingMedsCard extends StatelessWidget {
-  final List<TodaysMedication> meds;
-  final Function(int) onMarkAsTaken;
-  final MedStatus? Function(TimeOfDay) checkStatus;
-
-  const _UpcomingMedsCard({
-    required this.meds,
-    required this.onMarkAsTaken,
-    required this.checkStatus,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 6,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: const Color(0xFF5FA5A0).withOpacity(0.2),
-          width: 2,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF5FA5A0).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: const Icon(
-                    Icons.alarm,
-                    color: Color(0xFF5FA5A0),
-                    size: 36,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Text(
-                  "Upcoming",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF5FA5A0),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 32, thickness: 2),
-            if (meds.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12.0),
-                child: Text(
-                  "No upcoming medications.",
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 22,
-                  ),
-                ),
-              )
-            else
-              Column(
-                children: List.generate(meds.length, (index) {
-                  final med = meds[index];
-                  final isNext = index == 0;
-                  final currentStatus = checkStatus(med.time);
-                  
-                  return Opacity(
-                    opacity: isNext ? 1.0 : 0.6,
-                    child: _MedicationItemFrameWithButton(
-                      name: med.name,
-                      formattedTime: med.time.format(context),
-                      isHighlighted: isNext,
-                      currentStatus: currentStatus,
-                      onTaken: () => onMarkAsTaken(index),
-                    ),
-                  );
-                }),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// --- HISTORY CARD ---
-class _HistoryMedsCard extends StatelessWidget {
-  final List<TodaysMedication> meds;
-  const _HistoryMedsCard({required this.meds});
-
-  @override
-  Widget build(BuildContext context) {
-    final taken = meds.where((m) => m.status == MedStatus.taken).toList();
-    final late = meds.where((m) => m.status == MedStatus.late).toList();
-    final missed = meds.where((m) => m.status == MedStatus.missed).toList();
-
-    return Card(
-      elevation: 6,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: const Color(0xFF1B3A52).withOpacity(0.2),
-          width: 2,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B3A52).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: const Icon(
-                    Icons.history,
-                    color: Color(0xFF1B3A52),
-                    size: 36,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Text(
-                  "History",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1B3A52),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 32, thickness: 2),
-            _buildStatusSection(
-              context,
-              "Taken",
-              taken,
-              const Color(0xFF5FA5A0),
-              Icons.check_circle_outline,
-            ),
-            const SizedBox(height: 20),
-            _buildStatusSection(
-              context,
-              "Late",
-              late,
-              const Color(0xFFEF6C00),
-              Icons.warning_amber_rounded,
-            ),
-            const SizedBox(height: 20),
-            _buildStatusSection(
-              context,
-              "Missed",
-              missed,
-              const Color(0xFFC62828),
-              Icons.cancel_outlined,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusSection(
-    BuildContext context,
-    String title,
-    List<TodaysMedication> meds,
-    Color color,
-    IconData icon,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (meds.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 28.0),
-            child: Text(
-              "None",
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-                fontSize: 20,
-              ),
-            ),
-          )
-        else
-          Column(
-            children: meds.map((med) {
-              return _MedicationItemFrame(
-                name: med.name,
-                formattedTime: med.time.format(context),
-                color: color,
-              );
-            }).toList(),
-          ),
-      ],
-    );
-  }
-}
-
-// --- MEDICATION ITEM FRAME WITH BUTTON ---
-class _MedicationItemFrameWithButton extends StatelessWidget {
-  final String name;
-  final String formattedTime;
-  final bool isHighlighted;
-  final MedStatus? currentStatus;
-  final VoidCallback onTaken;
-
-  const _MedicationItemFrameWithButton({
-    required this.name,
-    required this.formattedTime,
-    this.isHighlighted = false,
-    this.currentStatus,
-    required this.onTaken,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Color borderColor = const Color(0xFF5FA5A0);
-    Color bgColor = const Color(0xFF5FA5A0).withOpacity(0.1);
-    String statusText = '';
-    
-    if (currentStatus == MedStatus.late) {
-      borderColor = const Color(0xFFEF6C00);
-      bgColor = const Color(0xFFEF6C00).withOpacity(0.1);
-      statusText = ' (Late)';
-    } else if (currentStatus == MedStatus.missed) {
-      borderColor = const Color(0xFFC62828);
-      bgColor = const Color(0xFFC62828).withOpacity(0.1);
-      statusText = ' (Missed)';
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16.0),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isHighlighted ? bgColor : const Color(0xFFF5F5F5),
-        border: Border.all(
-          color: isHighlighted ? borderColor : Colors.grey.shade300,
-          width: isHighlighted ? 3 : 2,
-        ),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  name + statusText,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: isHighlighted ? 24 : 22,
-                    color: const Color(0xFF212121),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-              Text(
-                formattedTime,
-                style: TextStyle(
-                  fontSize: isHighlighted ? 24 : 22,
-                  fontWeight: FontWeight.bold,
-                  color: borderColor,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: onTaken,
-            icon: const Icon(Icons.check_circle, size: 28),
-            label: const Text('Mark as Taken'),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: const Color(0xFF5FA5A0),
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              textStyle: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- MEDICATION ITEM FRAME (للـ History) ---
-class _MedicationItemFrame extends StatelessWidget {
-  final String name;
-  final String formattedTime;
-  final Color? color;
-
-  const _MedicationItemFrame({
-    required this.name,
-    required this.formattedTime,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        border: Border.all(
-          color: Colors.grey.shade300,
-          width: 2,
-        ),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              name,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-                color: Color(0xFF212121),
-                letterSpacing: 0.3,
-              ),
-            ),
-          ),
-          Text(
-            formattedTime,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: color ?? Theme.of(context).colorScheme.primary,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
+    return const Center(
+      child: Text(
+        "Today's Medication schedule will be shown here.",
+        style: TextStyle(fontSize: 18),
       ),
     );
   }

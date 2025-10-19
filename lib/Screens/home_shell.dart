@@ -41,7 +41,9 @@ class _HomeShellState extends State<HomeShell> {
   List<List<T>> _chunk<T>(List<T> items, int size) {
     final chunks = <List<T>>[];
     for (var i = 0; i < items.length; i += size) {
-      chunks.add(items.sublist(i, i + size > items.length ? items.length : i + size));
+      chunks.add(
+        items.sublist(i, i + size > items.length ? items.length : i + size),
+      );
     }
     return chunks;
   }
@@ -56,10 +58,14 @@ class _HomeShellState extends State<HomeShell> {
     }
 
     try {
-      final meRef = FirebaseFirestore.instance.collection('users').doc(caregiverUid);
+      final meRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(caregiverUid);
       final meSnap = await meRef.get();
 
-      final elderlyIds = List<String>.from(meSnap.data()?['elderlyIds'] ?? const <String>[]);
+      final elderlyIds = List<String>.from(
+        meSnap.data()?['elderlyIds'] ?? const <String>[],
+      );
 
       debugPrint('🧩 elderlyIds on caregiver $caregiverUid => $elderlyIds');
 
@@ -80,20 +86,23 @@ class _HomeShellState extends State<HomeShell> {
             .where(FieldPath.documentId, whereIn: batch)
             .get();
 
-        // علشان لو في ID ما رجع (غير موجود/مرفوض) نطبع سطر عنه
         final returnedIds = q.docs.map((d) => d.id).toSet();
         for (final missed in batch.where((id) => !returnedIds.contains(id))) {
-          debugPrint('⚠️ elderly doc not returned (missing/permission): $missed');
+          debugPrint(
+            '⚠️ elderly doc not returned (missing/permission): $missed',
+          );
         }
 
         for (final d in q.docs) {
           try {
             final x = d.data();
             final first = (x['firstName'] ?? '').toString().trim();
-            final last  = (x['lastName']  ?? '').toString().trim();
-            final email = (x['email']     ?? '').toString().trim();
-            final name  = [first, last].where((s) => s.isNotEmpty).join(' ');
-            final display = name.isNotEmpty ? name : (email.isNotEmpty ? email : 'Unknown');
+            final last = (x['lastName'] ?? '').toString().trim();
+            final email = (x['email'] ?? '').toString().trim();
+            final name = [first, last].where((s) => s.isNotEmpty).join(' ');
+            final display = name.isNotEmpty
+                ? name
+                : (email.isNotEmpty ? email : 'Unknown');
 
             profiles.add(ElderlyProfile(uid: d.id, name: display));
             debugPrint('✅ loaded elderly: ${d.id} -> $display');
@@ -103,22 +112,27 @@ class _HomeShellState extends State<HomeShell> {
         }
       }
 
-      // رتّبيهم اختياريًا
-      profiles.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      profiles.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
 
       setState(() {
         _linkedProfiles = profiles;
-        // احتفظ بالمختار إن كان لسه موجود، وإلا أول واحد
-        if (_selectedProfile == null || !_linkedProfiles.any((e) => e.uid == _selectedProfile!.uid)) {
-          _selectedProfile = _linkedProfiles.isNotEmpty ? _linkedProfiles.first : null;
+        if (_selectedProfile == null ||
+            !_linkedProfiles.any((e) => e.uid == _selectedProfile!.uid)) {
+          _selectedProfile = _linkedProfiles.isNotEmpty
+              ? _linkedProfiles.first
+              : null;
         }
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching profiles: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching profiles: $e')));
+      }
       debugPrint('❗ fetch error: $e');
     }
   }
@@ -140,22 +154,33 @@ class _HomeShellState extends State<HomeShell> {
                 );
               },
               onTapArrowToMedmain: () {
+                // **NAVIGATION UPDATE**
+                // Pass the selected profile to the caregiver's medication page
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const Medmain()),
+                  MaterialPageRoute(
+                    builder: (_) => Medmain(elderlyProfile: _selectedProfile!),
+                  ),
                 );
               },
               onTapEmergency: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const LocationPage()),
-                );
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const LocationPage()));
               },
             )
           : const Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'No elderly profile linked. Please link a profile using the drawer menu.',
-                  textAlign: TextAlign.center,
+                child: Column(
+                  children: [
+                    Icon(Icons.info_outline, size: 48, color: Colors.grey),
+                    SizedBox(height: 16),
+                    Text(
+                      'No elderly profile selected.\n\nPlease link a profile using the drawer menu.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -168,13 +193,14 @@ class _HomeShellState extends State<HomeShell> {
         selectedProfile: _selectedProfile,
         onProfileSelected: _selectProfile,
         onLogoutConfirmed: () {},
-        // بعد الربط من الدروار رجّعي تحميل القائمة
         onProfileLinked: _fetchLinkedProfiles,
       ),
       appBar: AppBar(
-        title: Text(_bottomNavIndex == 0
-            ? (_selectedProfile?.name ?? 'Dashboard')
-            : 'Browse'),
+        title: Text(
+          _bottomNavIndex == 0
+              ? (_selectedProfile?.name ?? 'Dashboard')
+              : 'Browse',
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
