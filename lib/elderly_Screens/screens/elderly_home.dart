@@ -295,7 +295,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                       title: "Medic",
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => MedicationApp()));
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => Medmain()));
                       },
                     ),
                   ),
@@ -559,3 +559,4 @@ class _HomeCard extends StatelessWidget {
     );
   }
 }
+
