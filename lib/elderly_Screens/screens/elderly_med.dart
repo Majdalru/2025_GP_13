@@ -1,1688 +1,976 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
+import 'addmedeld.dart';
 
-void main() {
-  runApp(MedicationAppRoot());
-}
-
-class MedicationAppRoot extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Medication Plan',
-      theme: ThemeData(
-        primaryColor: Color(0xFF6B7FD7),
-        scaffoldBackgroundColor: Color(0xFFF8F9FD),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: MedicationApp(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
+// --- Medication Class (Model) ---
 class Medication {
-  String id;
-  String name;
-  List<String> times;
-  List<String> days;
-  String notes;
-  Map<String, String> status;
+  final String name;
+  final List<String> days;
+  final String? frequency;
+  final List<TimeOfDay> times;
+  final String? notes;
 
   Medication({
-    required this.id,
     required this.name,
-    required this.times,
     required this.days,
-    required this.notes,
-    required this.status,
+    this.frequency,
+    required this.times,
+    this.notes,
   });
-
-  factory Medication.fromJson(Map<String, dynamic> j) {
-    return Medication(
-      id: j['id'],
-      name: j['name'],
-      times: List<String>.from(j['times'] ?? []),
-      days: List<String>.from(j['days'] ?? []),
-      notes: j['notes'] ?? '',
-      status: Map<String, String>.from(j['status'] ?? {}),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'times': times,
-        'days': days,
-        'notes': notes,
-        'status': status,
-      };
 }
 
-const List<String> DAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday"
-];
+enum MedStatus { taken, late, missed }
 
-class MedicationApp extends StatefulWidget {
+class TodaysMedication {
+  final String name;
+  final TimeOfDay time;
+  MedStatus? status;
+
+  TodaysMedication({required this.name, required this.time, this.status});
+}
+
+// --- Main Page Widget ---
+class Medmain extends StatefulWidget {
+  const Medmain({super.key});
+
   @override
-  _MedicationAppState createState() => _MedicationAppState();
+  State<Medmain> createState() => _MedmainState();
 }
 
-class _MedicationAppState extends State<MedicationApp> {
-  String view = "list"; // list | today | add
-  List<Medication> medications = [];
-  bool showDeleteConfirm = false;
-  String deleteId = "";
-  String deleteName = "";
-  String searchQuery = "";
-
-  // form state
-  String? editingId;
-  int step = 1;
-  String medicineName = "";
-  List<String> selectedDays = [];
-  String frequency = "once";
-  List<TimeOfDay> times = [TimeOfDay(hour: 12, minute: 0)];
-  String notes = "";
+class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final List<Medication> _medicationList = [
+    Medication(
+      name: 'Aspirin',
+      days: ['Monday', 'Wednesday', 'Friday'],
+      frequency: 'Once daily',
+      times: [const TimeOfDay(hour: 8, minute: 0)],
+      notes: 'Take with a full glass of water.',
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadFromPrefs();
+    _tabController = TabController(length: 2, vsync: this);
   }
 
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString('medications');
-    if (stored != null) {
-      try {
-        final list = jsonDecode(stored) as List;
-        setState(() {
-          medications = list.map((e) => Medication.fromJson(e)).toList();
-        });
-      } catch (e) {
-        // ignore parse errors
-      }
-    }
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
-  Future<void> _saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final enc = jsonEncode(medications.map((m) => m.toJson()).toList());
-    await prefs.setString('medications', enc);
-  }
-
-  void resetForm() {
-    setState(() {
-      step = 1;
-      medicineName = "";
-      selectedDays = [];
-      frequency = "once";
-      times = [TimeOfDay(hour: 12, minute: 0)];
-      notes = "";
-      editingId = null;
-    });
-  }
-
-  String _timeToString(TimeOfDay time) {
-    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
-    return '$hour:$minute $period';
-  }
-
-  TimeOfDay _stringToTime(String timeStr) {
-    try {
-      final parts = timeStr.split(' ');
-      final timeParts = parts[0].split(':');
-      int hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-      final isPM = parts[1] == 'PM';
-      
-      if (isPM && hour != 12) hour += 12;
-      if (!isPM && hour == 12) hour = 0;
-      
-      return TimeOfDay(hour: hour, minute: minute);
-    } catch (e) {
-      return TimeOfDay(hour: 12, minute: 0);
-    }
-  }
-
-  void _distributeTimesEvenly(int count) {
-    if (count == 1) {
-      times = [TimeOfDay(hour: 12, minute: 0)];
-    } else if (count == 2) {
-      times = [
-        TimeOfDay(hour: 9, minute: 0),
-        TimeOfDay(hour: 21, minute: 0),
-      ];
-    } else if (count == 3) {
-      times = [
-        TimeOfDay(hour: 8, minute: 0),
-        TimeOfDay(hour: 14, minute: 0),
-        TimeOfDay(hour: 20, minute: 0),
-      ];
-    } else {
-      // For custom, distribute evenly throughout the day
-      times = List.generate(count, (i) {
-        final interval = 14 / (count - 1); // From 8 AM to 10 PM
-        final hour = (8 + (i * interval)).round();
-        return TimeOfDay(hour: hour, minute: 0);
-      });
-    }
-  }
-
-  void _recalculateTimes(int changedIndex) {
-    if (times.length <= 1) return;
-    
-    final changedTime = times[changedIndex];
-    final changedMinutes = changedTime.hour * 60 + changedTime.minute;
-    
-    if (changedIndex == 0) {
-      // Changed first time - adjust all others proportionally
-      final totalMinutes = 14 * 60; // 14 hours span
-      final interval = totalMinutes / (times.length - 1);
-      
-      for (int i = 1; i < times.length; i++) {
-        final newMinutes = changedMinutes + (interval * i).round();
-        final hour = (newMinutes ~/ 60) % 24;
-        final minute = newMinutes % 60;
-        times[i] = TimeOfDay(hour: hour, minute: minute);
-      }
-    } else if (changedIndex == times.length - 1) {
-      // Changed last time - adjust all others proportionally
-      final totalMinutes = changedMinutes - (times[0].hour * 60 + times[0].minute);
-      final interval = totalMinutes / (times.length - 1);
-      
-      for (int i = 1; i < times.length - 1; i++) {
-        final firstMinutes = times[0].hour * 60 + times[0].minute;
-        final newMinutes = firstMinutes + (interval * i).round();
-        final hour = (newMinutes ~/ 60) % 24;
-        final minute = newMinutes % 60;
-        times[i] = TimeOfDay(hour: hour, minute: minute);
-      }
-    } else {
-      // Changed middle time - adjust times after it
-      final prevMinutes = times[changedIndex - 1].hour * 60 + times[changedIndex - 1].minute;
-      final timeBetween = changedMinutes - prevMinutes;
-      
-      for (int i = changedIndex + 1; i < times.length; i++) {
-        final prevTimeMinutes = times[i - 1].hour * 60 + times[i - 1].minute;
-        final newMinutes = prevTimeMinutes + timeBetween;
-        final hour = (newMinutes ~/ 60) % 24;
-        final minute = newMinutes % 60;
-        times[i] = TimeOfDay(hour: hour, minute: minute);
-      }
-    }
-  }
-
-  void handleEditClick(String id) {
-    final medication = medications.firstWhere((m) => m.id == id, orElse: () => Medication(id: '', name: '', times: [], days: [], notes: '', status: {}));
-    if (medication.id == '') return;
-    setState(() {
-      editingId = id;
-      medicineName = medication.name;
-      selectedDays = List.from(medication.days);
-      times = medication.times.map((t) => _stringToTime(t)).toList();
-      if (times.isEmpty) times = [TimeOfDay(hour: 12, minute: 0)];
-      notes = medication.notes;
-      if (medication.times.length == 1) frequency = "once";
-      else if (medication.times.length == 2) frequency = "twice";
-      else if (medication.times.length == 3) frequency = "three";
-      else frequency = "custom";
-      view = "add";
-      step = 1;
-    });
-  }
-
-  void handleDeleteClick(String id, String name) {
-    setState(() {
-      deleteId = id;
-      deleteName = name;
-      showDeleteConfirm = true;
-    });
-  }
-
-  void confirmDelete() async {
-    setState(() {
-      medications.removeWhere((m) => m.id == deleteId);
-      showDeleteConfirm = false;
-      deleteId = "";
-      deleteName = "";
-    });
-    await _saveToPrefs();
-  }
-
-  void cancelDelete() {
-    setState(() {
-      showDeleteConfirm = false;
-      deleteId = "";
-      deleteName = "";
-    });
-  }
-
-  String _todayKey() {
-    final now = DateTime.now();
-    return DateFormat('yyyy-MM-dd').format(now);
-  }
-
-  String _getTodayName() {
-    final now = DateTime.now();
-    return DAYS[now.weekday % 7];
-  }
-
-  List<Medication> _getTodayMedications() {
-    final today = _getTodayName();
-    return medications.where((med) => med.days.contains(today)).toList();
-  }
-
-  void handleStatusChange(String id, String status) async {
-    final today = _todayKey();
-    setState(() {
-      medications = medications.map((med) {
-        if (med.id == id) {
-          final newStatus = Map<String, String>.from(med.status);
-          newStatus[today] = status;
-          return Medication(
-            id: med.id,
-            name: med.name,
-            times: med.times,
-            days: med.days,
-            notes: med.notes,
-            status: newStatus,
-          );
-        }
-        return med;
-      }).toList();
-    });
-    await _saveToPrefs();
-  }
-
-  String getMedicationStatus(Medication med) {
-    final today = _todayKey();
-    return med.status[today] ?? "pending";
-  }
-
-  int getTimesCount() {
-    if (frequency == "once") return 1;
-    if (frequency == "twice") return 2;
-    if (frequency == "three") return 3;
-    return times.length;
-  }
-
-  void handleNext() {
-    if (step == 1 && medicineName.trim().isEmpty) return;
-    if (step == 2 && selectedDays.isEmpty) return;
-    if (step == 3) {
-      final count = getTimesCount();
-      setState(() {
-        _distributeTimesEvenly(count);
-      });
-    }
-    setState(() {
-      if (step < 5) step += 1;
-    });
-  }
-
-  void handleDayToggle(String day) {
-    setState(() {
-      if (selectedDays.contains(day)) selectedDays.remove(day);
-      else selectedDays.add(day);
-    });
-  }
-
-  Future<void> _selectTime(int index) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: times[index],
-      builder: (BuildContext context, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.3),
-          child: child!,
-        );
-      },
+  void _navigateAndAddMedication(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddMedScreen()),
     );
-    if (picked != null) {
+    if (result != null && result is Medication) {
       setState(() {
-        times[index] = picked;
-        if (times.length > 1) {
-          _recalculateTimes(index);
-        }
+        _medicationList.add(result);
       });
     }
   }
 
-  void handleAdd() async {
-    final medication = Medication(
-      id: editingId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      name: medicineName,
-      times: times.map((t) => _timeToString(t)).toList(),
-      days: selectedDays,
-      notes: notes,
-      status: {},
-    );
-
-    setState(() {
-      final storedIndex = medications.indexWhere((m) => m.id == medication.id);
-      if (storedIndex != -1) {
-        medications[storedIndex] = medication;
-      } else {
-        medications.add(medication);
-      }
-    });
-
-    await _saveToPrefs();
-    resetForm();
-    setState(() {
-      view = "today";
-    });
-  }
-
-  List<bool> progressDots() {
-    return List.generate(5, (i) => i < step);
-  }
-
-  Color statusBgColor(String status) {
-    if (status == "taken") return Color(0xFFE8F5E9);
-    if (status == "missed") return Color(0xFFFFEBEE);
-    return Color(0xFFFFF3E0);
-  }
-
-  Color statusTextColor(String status) {
-    if (status == "taken") return Color(0xFF2E7D32);
-    if (status == "missed") return Color(0xFFC62828);
-    return Color(0xFFE65100);
-  }
-
-  Widget buildTodayView() {
-    final todayMeds = _getTodayMedications();
-    final todayName = _getTodayName();
-
-    return Scaffold(
-      backgroundColor: Color(0xFFF8F9FD),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        toolbarHeight: 80,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF6B7FD7), size: 32),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Today\'s Medications',
-              style: TextStyle(
-                color: Color(0xFF2D3142),
-                fontWeight: FontWeight.bold,
-                fontSize: 28,
-              ),
-            ),
-            Text(
-              todayName,
-              style: TextStyle(
-                color: Color(0xFF8F92A1),
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  view = "list";
-                });
-              },
-              icon: Icon(Icons.list_rounded, size: 28, color: Color(0xFF6B7FD7)),
-              label: Text(
-                'All Meds',
-                style: TextStyle(fontSize: 18, color: Color(0xFF6B7FD7), fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
+  void _navigateAndEditMedication(Medication medication, int index) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddMedScreen(medicationToEdit: medication),
       ),
-      body: todayMeds.isEmpty
-          ? Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Color(0xFFF5F6FA),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.celebration_rounded,
-                        size: 80,
-                        color: Color(0xFF66BB6A),
-                      ),
-                    ),
-                    SizedBox(height: 28),
-                    Text(
-                      'No Medications Today',
-                      style: TextStyle(
-                        fontSize: 28,
-                        color: Color(0xFF2D3142),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'Enjoy your day!',
-                      style: TextStyle(fontSize: 22, color: Color(0xFF8F92A1)),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : ListView.builder(
-              padding: EdgeInsets.all(20),
-              itemCount: todayMeds.length,
-              itemBuilder: (context, idx) {
-                final med = todayMeds[idx];
-                final status = getMedicationStatus(med);
-                
-                return Container(
-                  margin: EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0xFF6B7FD7).withOpacity(0.1),
-                        blurRadius: 20,
-                        offset: Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(18),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
-                                    ),
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Icon(
-                                    Icons.medication_liquid_rounded,
-                                    color: Colors.white,
-                                    size: 36,
-                                  ),
-                                ),
-                                SizedBox(width: 18),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        med.name,
-                                        style: TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF2D3142),
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.access_time_rounded, size: 22, color: Color(0xFF8F92A1)),
-                                          SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              med.times.join(' • '),
-                                              style: TextStyle(
-                                                color: Color(0xFF8F92A1),
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (med.notes.isNotEmpty) ...[
-                              SizedBox(height: 18),
-                              Container(
-                                padding: EdgeInsets.all(18),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFF5F6FA),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.info_outline_rounded, size: 24, color: Color(0xFF6B7FD7)),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        med.notes,
-                                        style: TextStyle(
-                                          color: Color(0xFF5C5F72),
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            SizedBox(height: 18),
-                            Container(
-                              padding: EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-                              decoration: BoxDecoration(
-                                color: statusBgColor(status),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    status == "taken" ? Icons.check_circle_rounded : 
-                                    status == "missed" ? Icons.cancel_rounded : Icons.schedule_rounded,
-                                    size: 28,
-                                    color: statusTextColor(status),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    status == "taken" ? "Taken" : status == "missed" ? "Missed" : "Pending",
-                                    style: TextStyle(
-                                      color: statusTextColor(status),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 22,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (status == "pending")
-                        Container(
-                          padding: EdgeInsets.fromLTRB(24, 0, 24, 24),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () => handleStatusChange(med.id, "taken"),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xFF66BB6A),
-                                    padding: EdgeInsets.symmetric(vertical: 20),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                                    elevation: 0,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.check_circle_rounded, size: 32),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Mark as Taken',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 24,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 14),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton(
-                                  onPressed: () => handleStatusChange(med.id, "missed"),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.symmetric(vertical: 20),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                                    side: BorderSide(color: Color(0xFFEF5777), width: 3),
-                                    backgroundColor: Colors.white,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.cancel_rounded, color: Color(0xFFEF5777), size: 32),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Mark as Missed',
-                                        style: TextStyle(
-                                          color: Color(0xFFEF5777),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 24,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: Container(
-        height: 70,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0xFF6B7FD7).withOpacity(0.4),
-              blurRadius: 16,
-              offset: Offset(0, 8),
-            )
-          ],
+    );
+    if (result != null && result is Medication) {
+      setState(() {
+        _medicationList[index] = result;
+      });
+    }
+  }
+
+  void _deleteMedication(int index) {
+    setState(() {
+      _medicationList.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        toolbarHeight: 110,
+        backgroundColor: const Color(0xFF1B3A52),
+        title: const Text("Medications"),
+        titleTextStyle: const TextStyle(
+          fontSize: 34,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
         ),
-        child: FloatingActionButton.extended(
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
           onPressed: () {
-            resetForm();
-            setState(() {
-              view = "add";
-            });
+            Navigator.pop(context);
           },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: Icon(Icons.add_rounded, size: 36),
-          label: Text(
-            'Add Medication',
-            style: TextStyle(fontSize: 24),
-          ),
         ),
-      ),
-    );
-  }
-
-  Widget buildListView() {
-    final filteredMeds = medications.where((med) {
-      return med.name.toLowerCase().contains(searchQuery.toLowerCase());
-    }).toList();
-
-    return Scaffold(
-      backgroundColor: Color(0xFFF8F9FD),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        toolbarHeight: 80,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF6B7FD7), size: 32),
-            onPressed: () {
-              setState(() {
-                view = "today";
-              });
-            },
-          ),
-        ),
-        title: Text(
-          'All Medications',
-          style: TextStyle(
-            color: Color(0xFF2D3142),
-            fontWeight: FontWeight.bold,
-            fontSize: 32,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(10),
           ),
         ),
       ),
       body: Column(
         children: [
-          Container(
-            padding: EdgeInsets.fromLTRB(24, 20, 24, 24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: Offset(0, 2),
-                )
+          CustomSegmentedControl(tabController: _tabController),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                const TodaysMedsTab(),
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _navigateAndAddMedication(context),
+                        icon: const Icon(Icons.add, size: 32),
+                        label: const Text('Add New Medication'),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0xFF5FA5A0),
+                          textStyle: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                          minimumSize: const Size.fromHeight(70),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          elevation: 6,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      const Text(
+                        'Medication List',
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1B3A52),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _medicationList.length,
+                          itemBuilder: (context, index) {
+                            final medication = _medicationList[index];
+                            return MedicationCard(
+                              medication: medication,
+                              onEdit: () =>
+                                  _navigateAndEditMedication(medication, index),
+                              onDelete: () => _deleteMedication(index),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-            child: TextField(
-              onChanged: (value) => setState(() => searchQuery = value),
-              style: TextStyle(fontSize: 22, color: Color(0xFF2D3142)),
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                hintStyle: TextStyle(fontSize: 22, color: Color(0xFFB0B3C1)),
-                prefixIcon: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Icon(Icons.search_rounded, size: 36, color: Color(0xFF6B7FD7)),
-                ),
-                suffixIcon: searchQuery.isNotEmpty 
-                  ? IconButton(
-                      icon: Icon(Icons.clear, size: 32, color: Color(0xFFB0B3C1)),
-                      onPressed: () => setState(() => searchQuery = ""),
-                      padding: EdgeInsets.all(16),
-                    )
-                  : null,
-                filled: true,
-                fillColor: Color(0xFFF5F6FA),
-                contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: Color(0xFF6B7FD7), width: 3),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: filteredMeds.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              color: Color(0xFFF5F6FA),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              searchQuery.isEmpty ? Icons.medication_rounded : Icons.search_off_rounded,
-                              size: 80,
-                              color: Color(0xFFB0B3C1),
-                            ),
-                          ),
-                          SizedBox(height: 28),
-                          Text(
-                            searchQuery.isEmpty 
-                              ? 'No Medications'
-                              : 'Not Found',
-                            style: TextStyle(
-                              fontSize: 28,
-                              color: Color(0xFF2D3142),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            searchQuery.isEmpty
-                              ? 'Press + to add medication'
-                              : 'Try different words',
-                            style: TextStyle(fontSize: 22, color: Color(0xFF8F92A1)),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.all(20),
-                    itemCount: filteredMeds.length,
-                    itemBuilder: (context, idx) {
-                      final med = filteredMeds[idx];
-                      
-                      return Container(
-                        margin: EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF6B7FD7).withOpacity(0.1),
-                              blurRadius: 20,
-                              offset: Offset(0, 4),
-                            )
-                          ],
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(18),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
-                                      ),
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    child: Icon(
-                                      Icons.medication_liquid_rounded,
-                                      color: Colors.white,
-                                      size: 36,
-                                    ),
-                                  ),
-                                  SizedBox(width: 18),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          med.name,
-                                          style: TextStyle(
-                                            fontSize: 26,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF2D3142),
-                                          ),
-                                        ),
-                                        SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Icon(Icons.access_time_rounded, size: 22, color: Color(0xFF8F92A1)),
-                                            SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                med.times.join(' • '),
-                                                style: TextStyle(
-                                                  color: Color(0xFF8F92A1),
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Material(
-                                      color: Color(0xFFF5F6FA),
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: InkWell(
-                                        onTap: () => handleEditClick(med.id),
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 16),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.edit_rounded, color: Color(0xFF6B7FD7), size: 28),
-                                              SizedBox(width: 10),
-                                              Text(
-                                                'Edit',
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF6B7FD7),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Material(
-                                      color: Color(0xFFFFEBEE),
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: InkWell(
-                                        onTap: () => handleDeleteClick(med.id, med.name),
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 16),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.delete_rounded, color: Color(0xFFEF5777), size: 28),
-                                              SizedBox(width: 10),
-                                              Text(
-                                                'Delete',
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFFEF5777),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (med.notes.isNotEmpty) ...[
-                                SizedBox(height: 18),
-                                Container(
-                                  padding: EdgeInsets.all(18),
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFFF5F6FA),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.info_outline_rounded, size: 24, color: Color(0xFF6B7FD7)),
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          med.notes,
-                                          style: TextStyle(
-                                            color: Color(0xFF5C5F72),
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
           ),
         ],
       ),
-      floatingActionButton: Container(
-        height: 70,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
+    );
+  }
+}
+
+// --- CUSTOM TAB BAR WIDGET ---
+class CustomSegmentedControl extends StatefulWidget {
+  final TabController tabController;
+  const CustomSegmentedControl({super.key, required this.tabController});
+
+  @override
+  State<CustomSegmentedControl> createState() => _CustomSegmentedControlState();
+}
+
+class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.tabController.index;
+    widget.tabController.addListener(_handleTabSelection);
+  }
+
+  @override
+  void dispose() {
+    widget.tabController.removeListener(_handleTabSelection);
+    super.dispose();
+  }
+
+  void _handleTabSelection() {
+    setState(() {
+      _selectedIndex = widget.tabController.index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0xFF6B7FD7).withOpacity(0.4),
-              blurRadius: 16,
-              offset: Offset(0, 8),
-            )
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            resetForm();
-            setState(() {
-              view = "add";
-            });
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: Icon(Icons.add_rounded, size: 36),
-          label: Text(
-            'Add Medication',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ),
+        ],
+      ),
+      child: Row(
+        children: [_buildTab(0, "Today's Meds"), _buildTab(1, "Med list")],
       ),
     );
   }
 
-  Widget buildAddView() {
-    final dots = progressDots();
-    return Scaffold(
-      backgroundColor: Color(0xFFF8F9FD),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        toolbarHeight: 80,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF6B7FD7), size: 32),
-            onPressed: () {
-              resetForm();
-              setState(() {
-                view = "today";
-              });
-            },
-          ),
-        ),
-        title: Text(
-          editingId != null ? 'Edit Medication' : 'Add Medication',
-          style: TextStyle(
-            color: Color(0xFF2D3142),
-            fontWeight: FontWeight.bold,
-            fontSize: 28,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Row(
-              children: dots.asMap().entries.map((entry) {
-                final active = entry.value;
-                return Expanded(
-                  child: Container(
-                    height: 10,
-                    margin: EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      gradient: active ? LinearGradient(
-                        colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
-                      ) : null,
-                      color: active ? null : Color(0xFFE8E9F0),
-                      borderRadius: BorderRadius.circular(12),
+  Widget _buildTab(int index, String text) {
+    bool isSelected = _selectedIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          widget.tabController.animateTo(index);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFF5FA5A0)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF5FA5A0).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-            SizedBox(height: 28),
-            Container(
-              padding: EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF6B7FD7).withOpacity(0.08),
-                    blurRadius: 20,
-                    offset: Offset(0, 4),
-                  )
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (step == 1) ...[
-                    _buildStepHeader('Step 1', 'Enter Medication Name'),
-                    SizedBox(height: 24),
-                    _buildLabel('Medication Name'),
-                    SizedBox(height: 12),
-                    TextField(
-                      onChanged: (v) => setState(() => medicineName = v),
-                      controller: TextEditingController.fromValue(TextEditingValue(text: medicineName, selection: TextSelection.collapsed(offset: medicineName.length))),
-                      style: TextStyle(fontSize: 24, color: Color(0xFF2D3142), fontWeight: FontWeight.w600),
-                      decoration: InputDecoration(
-                        hintText: 'e.g., Aspirin',
-                        hintStyle: TextStyle(fontSize: 24, color: Color(0xFFB0B3C1)),
-                        filled: true,
-                        fillColor: Color(0xFFF5F6FA),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide(color: Color(0xFF6B7FD7), width: 3),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 28),
-                    _buildPrimaryButton('Next', medicineName.trim().isEmpty ? null : handleNext),
-                  ],
-                  if (step == 2) ...[
-                    _buildStepHeader('Step 2', 'Select Days'),
-                    SizedBox(height: 24),
-                    Column(
-                      children: DAYS.map((day) {
-                        final selected = selectedDays.contains(day);
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 14),
-                          child: Material(
-                            color: selected ? Color(0xFF6B7FD7).withOpacity(0.1) : Color(0xFFF5F6FA),
-                            borderRadius: BorderRadius.circular(18),
-                            child: InkWell(
-                              onTap: () => handleDayToggle(day),
-                              borderRadius: BorderRadius.circular(18),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: selected ? Color(0xFF6B7FD7) : Colors.transparent,
-                                    width: 3,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        gradient: selected ? LinearGradient(
-                                          colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
-                                        ) : null,
-                                        color: selected ? null : Colors.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: selected ? null : Border.all(color: Color(0xFFE8E9F0), width: 2),
-                                      ),
-                                      child: selected ? Icon(Icons.check, color: Colors.white, size: 22) : null,
-                                    ),
-                                    SizedBox(width: 18),
-                                    Text(
-                                      day,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 22,
-                                        color: selected ? Color(0xFF2D3142) : Color(0xFF8F92A1),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    SizedBox(height: 24),
-                    _buildPrimaryButton('Next', selectedDays.isEmpty ? null : handleNext),
-                  ],
-                  if (step == 3) ...[
-                    _buildStepHeader('Step 3', 'How Many Times Per Day?'),
-                    SizedBox(height: 24),
-                    Column(
-                      children: [
-                        _freqOption('once', 'Once Daily'),
-                        _freqOption('twice', 'Twice Daily'),
-                        _freqOption('three', 'Three Times Daily'),
-                        _freqOption('custom', 'Custom'),
-                      ],
-                    ),
-                    SizedBox(height: 24),
-                    _buildPrimaryButton('Next', handleNext),
-                  ],
-                  if (step == 4) ...[
-                    _buildStepHeader('Step 4', 'Set Times'),
-                    SizedBox(height: 12),
-                    Text(
-                      'Times will adjust automatically when you change one',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF8F92A1),
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    Column(
-                      children: List.generate(times.length, (index) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('Time ${index + 1}'),
-                            SizedBox(height: 12),
-                            Material(
-                              color: Color(0xFFF5F6FA),
-                              borderRadius: BorderRadius.circular(18),
-                              child: InkWell(
-                                onTap: () => _selectTime(index),
-                                borderRadius: BorderRadius.circular(18),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: Colors.transparent),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.access_time_rounded, size: 32, color: Color(0xFF6B7FD7)),
-                                      SizedBox(width: 16),
-                                      Text(
-                                        _timeToString(times[index]),
-                                        style: TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF2D3142),
-                                        ),
-                                      ),
-                                      Spacer(),
-                                      Icon(Icons.arrow_forward_ios_rounded, size: 24, color: Color(0xFF8F92A1)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 20),
-                          ],
-                        );
-                      }),
-                    ),
-                    _buildPrimaryButton('Next', handleNext),
-                  ],
-                  if (step == 5) ...[
-                    _buildStepHeader('Step 5', 'Add Notes (Optional)'),
-                    SizedBox(height: 24),
-                    _buildLabel('Notes'),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: TextEditingController.fromValue(TextEditingValue(text: notes, selection: TextSelection.collapsed(offset: notes.length))),
-                      onChanged: (v) => setState(() => notes = v),
-                      maxLines: 4,
-                      style: TextStyle(fontSize: 22, color: Color(0xFF2D3142), fontWeight: FontWeight.w500),
-                      decoration: InputDecoration(
-                        hintText: 'e.g., Take with food',
-                        hintStyle: TextStyle(fontSize: 22, color: Color(0xFFB0B3C1)),
-                        filled: true,
-                        fillColor: Color(0xFFF5F6FA),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide(color: Color(0xFF6B7FD7), width: 3),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 28),
-                    Container(
-                      padding: EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFFF5F6FA), Color(0xFFEEEFF7)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.summarize_rounded, color: Color(0xFF6B7FD7), size: 32),
-                              SizedBox(width: 12),
-                              Text(
-                                'Summary',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 26,
-                                  color: Color(0xFF2D3142),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 20),
-                          _summaryRow(Icons.medication_liquid_rounded, 'Medication', medicineName),
-                          SizedBox(height: 14),
-                          _summaryRow(Icons.access_time_rounded, 'Times', times.map((t) => _timeToString(t)).join(", ")),
-                          SizedBox(height: 14),
-                          _summaryRow(Icons.calendar_today_rounded, 'Days', selectedDays.join(", ")),
-                          if (notes.isNotEmpty) ...[
-                            SizedBox(height: 14),
-                            _summaryRow(Icons.note_rounded, 'Notes', notes),
-                          ],
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 28),
-                    Column(
-                      children: [
-                        _buildPrimaryButton(editingId != null ? 'Update Medication' : 'Add Medication', handleAdd),
-                        SizedBox(height: 14),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              resetForm();
-                              setState(() {
-                                view = "today";
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 20),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                              side: BorderSide(color: Color(0xFFE8E9F0), width: 3),
-                            ),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF8F92A1),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStepHeader(String stepNum, String title) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          stepNum,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF6B7FD7),
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2D3142),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF5C5F72),
-      ),
-    );
-  }
-
-  Widget _buildPrimaryButton(String text, VoidCallback? onPressed) {
-    return SizedBox(
-      width: double.infinity,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: onPressed != null ? LinearGradient(
-            colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
-          ) : null,
-          color: onPressed == null ? Color(0xFFE8E9F0) : null,
-          boxShadow: onPressed != null ? [
-            BoxShadow(
-              color: Color(0xFF6B7FD7).withOpacity(0.4),
-              blurRadius: 12,
-              offset: Offset(0, 6),
-            )
-          ] : null,
-        ),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            padding: EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  ]
+                : [],
           ),
           child: Text(
             text,
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 24,
+              color: isSelected ? Colors.white : const Color(0xFF616161),
               fontWeight: FontWeight.bold,
-              color: onPressed != null ? Colors.white : Color(0xFFB0B3C1),
+              fontSize: 22,
+              letterSpacing: 0.5,
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _summaryRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 26, color: Color(0xFF6B7FD7)),
-        SizedBox(width: 14),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: TextStyle(fontSize: 20, color: Color(0xFF5C5F72), height: 1.4),
-              children: [
-                TextSpan(
-                  text: '$label: ',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
-                ),
-                TextSpan(text: value),
-              ],
-            ),
+// --- MEDICATION CARD WIDGET ---
+class MedicationCard extends StatelessWidget {
+  final Medication medication;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const MedicationCard({
+    super.key,
+    required this.medication,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _freqOption(String value, String label) {
-    final active = frequency == value;
-    return Container(
-      margin: EdgeInsets.only(bottom: 14),
-      child: Material(
-        color: active ? Color(0xFF6B7FD7).withOpacity(0.1) : Color(0xFFF5F6FA),
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          onTap: () {
-            setState(() {
-              frequency = value;
-            });
-          },
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: active ? Color(0xFF6B7FD7) : Colors.transparent,
-                width: 3,
+          title: const Text(
+            'Confirm Deletion',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'Are you sure you want to delete "${medication.name}"?',
+            style: const TextStyle(fontSize: 20),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: active ? LinearGradient(
-                      colors: [Color(0xFF6B7FD7), Color(0xFF8B9FE8)],
-                    ) : null,
-                    color: active ? null : Colors.white,
-                    border: active ? null : Border.all(color: Color(0xFFE8E9F0), width: 2),
-                  ),
-                  child: active ? Center(
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ) : null,
+            TextButton(
+              child: const Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                SizedBox(width: 18),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    color: active ? Color(0xFF2D3142) : Color(0xFF8F92A1),
-                  ),
-                ),
-              ],
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                onDelete();
+              },
             ),
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        if (view == "today") buildTodayView(),
-        if (view == "list") buildListView(),
-        if (view == "add") buildAddView(),
-        if (showDeleteConfirm)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: cancelDelete,
-              child: Container(
-                color: Colors.black.withOpacity(0.7),
-                alignment: Alignment.center,
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 32),
-                    padding: EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 30,
-                          offset: Offset(0, 10),
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(22),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFFFEBEE),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.warning_amber_rounded,
-                            color: Color(0xFFEF5777),
-                            size: 56,
-                          ),
-                        ),
-                        SizedBox(height: 24),
-                        Text(
-                          'Delete Medication?',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2D3142),
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'Are you sure you want to delete',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Color(0xFF5C5F72),
-                            height: 1.4,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          '"$deleteName"?',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            color: Color(0xFF2D3142),
-                            fontWeight: FontWeight.bold,
-                            height: 1.4,
-                          ),
-                        ),
-                        SizedBox(height: 28),
-                        Column(
-                          children: [
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: confirmDelete,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFFEF5777),
-                                  padding: EdgeInsets.symmetric(vertical: 20),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: Text(
-                                  'Yes, Delete',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: cancelDelete,
-                                style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: 20),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  side: BorderSide(color: Color(0xFFE8E9F0), width: 3),
-                                ),
-                                child: Text(
-                                  'Cancel',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF8F92A1),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+    final timeString = medication.times
+        .map((t) => t.format(context))
+        .join(', ');
+    final labelStyle = DefaultTextStyle.of(context).style.copyWith(
+      fontSize: 22,
+      fontWeight: FontWeight.bold,
+      color: const Color(0xFF1B3A52),
+      letterSpacing: 0.3,
+    );
+    final valueStyle = DefaultTextStyle.of(
+      context,
+    ).style.copyWith(
+      fontSize: 22,
+      color: const Color(0xFF212121),
+      height: 1.4,
+    );
+
+    return Card(
+      elevation: 6,
+      margin: const EdgeInsets.only(bottom: 24),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: const Color(0xFF5FA5A0).withOpacity(0.2),
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B3A52).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Icon(
+                    Icons.medication,
+                    color: Color(0xFF1B3A52),
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    medication.name,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B3A52),
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(
+                  color: const Color(0xFF5FA5A0).withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: valueStyle,
+                      children: <TextSpan>[
+                        TextSpan(text: 'Frequency: ', style: labelStyle),
+                        TextSpan(text: medication.frequency ?? 'N/A'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  RichText(
+                    text: TextSpan(
+                      style: valueStyle,
+                      children: <TextSpan>[
+                        TextSpan(text: 'Times: ', style: labelStyle),
+                        TextSpan(text: timeString),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (medication.notes != null && medication.notes!.isNotEmpty)
+                    RichText(
+                      text: TextSpan(
+                        style: valueStyle,
+                        children: <TextSpan>[
+                          TextSpan(text: 'Notes: ', style: labelStyle),
+                          TextSpan(text: medication.notes!),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit, size: 28),
+                    label: const Text('Edit'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: const Color(0xFF5FA5A0),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      textStyle: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showDeleteConfirmation(context),
+                    icon: const Icon(Icons.delete, size: 28),
+                    label: const Text('Delete'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: const Color(0xFFC62828),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      textStyle: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- TODAY'S MEDS TAB ---
+class TodaysMedsTab extends StatefulWidget {
+  const TodaysMedsTab({super.key});
+
+  @override
+  State<TodaysMedsTab> createState() => _TodaysMedsTabState();
+}
+
+class _TodaysMedsTabState extends State<TodaysMedsTab> {
+  final List<TodaysMedication> upcomingMeds = [
+    TodaysMedication(
+      name: 'Aspirin',
+      time: const TimeOfDay(hour: 18, minute: 0),
+    ),
+    TodaysMedication(
+      name: 'Vitamin D',
+      time: const TimeOfDay(hour: 21, minute: 0),
+    ),
+  ];
+
+  final List<TodaysMedication> historyMeds = [
+    TodaysMedication(
+      name: 'Metformin',
+      time: const TimeOfDay(hour: 8, minute: 5),
+      status: MedStatus.taken,
+    ),
+    TodaysMedication(
+      name: 'Lisinopril',
+      time: const TimeOfDay(hour: 8, minute: 20),
+      status: MedStatus.late,
+    ),
+    TodaysMedication(
+      name: 'Simvastatin',
+      time: const TimeOfDay(hour: 13, minute: 0),
+      status: MedStatus.missed,
+    ),
+    TodaysMedication(
+      name: 'Atorvastatin',
+      time: const TimeOfDay(hour: 13, minute: 5),
+      status: MedStatus.taken,
+    ),
+  ];
+
+  // دالة لتحديد الحالة بناءً على الوقت
+  MedStatus? _checkMedicationStatus(TimeOfDay medTime) {
+    final now = TimeOfDay.now();
+    final currentMinutes = now.hour * 60 + now.minute;
+    final medMinutes = medTime.hour * 60 + medTime.minute;
+    final difference = currentMinutes - medMinutes;
+
+    if (difference > 180) { // أكثر من 3 ساعات
+      return MedStatus.missed;
+    } else if (difference > 60) { // أكثر من ساعة
+      return MedStatus.late;
+    }
+    return null; // لا يزال في الوقت المحدد
+  }
+
+  void _markAsTaken(int index) {
+    setState(() {
+      final med = upcomingMeds[index];
+      med.status = MedStatus.taken;
+      historyMeds.insert(0, med);
+      upcomingMeds.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24.0),
+      children: [
+        _UpcomingMedsCard(
+          meds: upcomingMeds,
+          onMarkAsTaken: _markAsTaken,
+          checkStatus: _checkMedicationStatus,
+        ),
+        const SizedBox(height: 28),
+        _HistoryMedsCard(meds: historyMeds),
+      ],
+    );
+  }
+}
+
+// --- UPCOMING MEDS CARD ---
+class _UpcomingMedsCard extends StatelessWidget {
+  final List<TodaysMedication> meds;
+  final Function(int) onMarkAsTaken;
+  final MedStatus? Function(TimeOfDay) checkStatus;
+
+  const _UpcomingMedsCard({
+    required this.meds,
+    required this.onMarkAsTaken,
+    required this.checkStatus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 6,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: const Color(0xFF5FA5A0).withOpacity(0.2),
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF5FA5A0).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Icon(
+                    Icons.alarm,
+                    color: Color(0xFF5FA5A0),
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Text(
+                  "Upcoming",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5FA5A0),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 32, thickness: 2),
+            if (meds.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12.0),
+                child: Text(
+                  "No upcoming medications.",
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 22,
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: List.generate(meds.length, (index) {
+                  final med = meds[index];
+                  final isNext = index == 0;
+                  final currentStatus = checkStatus(med.time);
+                  
+                  return Opacity(
+                    opacity: isNext ? 1.0 : 0.6,
+                    child: _MedicationItemFrameWithButton(
+                      name: med.name,
+                      formattedTime: med.time.format(context),
+                      isHighlighted: isNext,
+                      currentStatus: currentStatus,
+                      onTaken: () => onMarkAsTaken(index),
+                    ),
+                  );
+                }),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- HISTORY CARD ---
+class _HistoryMedsCard extends StatelessWidget {
+  final List<TodaysMedication> meds;
+  const _HistoryMedsCard({required this.meds});
+
+  @override
+  Widget build(BuildContext context) {
+    final taken = meds.where((m) => m.status == MedStatus.taken).toList();
+    final late = meds.where((m) => m.status == MedStatus.late).toList();
+    final missed = meds.where((m) => m.status == MedStatus.missed).toList();
+
+    return Card(
+      elevation: 6,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: const Color(0xFF1B3A52).withOpacity(0.2),
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B3A52).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Icon(
+                    Icons.history,
+                    color: Color(0xFF1B3A52),
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Text(
+                  "History",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1B3A52),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 32, thickness: 2),
+            _buildStatusSection(
+              context,
+              "Taken",
+              taken,
+              const Color(0xFF5FA5A0),
+              Icons.check_circle_outline,
+            ),
+            const SizedBox(height: 20),
+            _buildStatusSection(
+              context,
+              "Late",
+              late,
+              const Color(0xFFEF6C00),
+              Icons.warning_amber_rounded,
+            ),
+            const SizedBox(height: 20),
+            _buildStatusSection(
+              context,
+              "Missed",
+              missed,
+              const Color(0xFFC62828),
+              Icons.cancel_outlined,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusSection(
+    BuildContext context,
+    String title,
+    List<TodaysMedication> meds,
+    Color color,
+    IconData icon,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (meds.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 28.0),
+            child: Text(
+              "None",
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+                fontSize: 20,
+              ),
+            ),
+          )
+        else
+          Column(
+            children: meds.map((med) {
+              return _MedicationItemFrame(
+                name: med.name,
+                formattedTime: med.time.format(context),
+                color: color,
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+}
+
+// --- MEDICATION ITEM FRAME WITH BUTTON ---
+class _MedicationItemFrameWithButton extends StatelessWidget {
+  final String name;
+  final String formattedTime;
+  final bool isHighlighted;
+  final MedStatus? currentStatus;
+  final VoidCallback onTaken;
+
+  const _MedicationItemFrameWithButton({
+    required this.name,
+    required this.formattedTime,
+    this.isHighlighted = false,
+    this.currentStatus,
+    required this.onTaken,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Color borderColor = const Color(0xFF5FA5A0);
+    Color bgColor = const Color(0xFF5FA5A0).withOpacity(0.1);
+    String statusText = '';
+    
+    if (currentStatus == MedStatus.late) {
+      borderColor = const Color(0xFFEF6C00);
+      bgColor = const Color(0xFFEF6C00).withOpacity(0.1);
+      statusText = ' (Late)';
+    } else if (currentStatus == MedStatus.missed) {
+      borderColor = const Color(0xFFC62828);
+      bgColor = const Color(0xFFC62828).withOpacity(0.1);
+      statusText = ' (Missed)';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isHighlighted ? bgColor : const Color(0xFFF5F5F5),
+        border: Border.all(
+          color: isHighlighted ? borderColor : Colors.grey.shade300,
+          width: isHighlighted ? 3 : 2,
+        ),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  name + statusText,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isHighlighted ? 24 : 22,
+                    color: const Color(0xFF212121),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              Text(
+                formattedTime,
+                style: TextStyle(
+                  fontSize: isHighlighted ? 24 : 22,
+                  fontWeight: FontWeight.bold,
+                  color: borderColor,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onTaken,
+            icon: const Icon(Icons.check_circle, size: 28),
+            label: const Text('Mark as Taken'),
+            style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFF5FA5A0),
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              textStyle: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- MEDICATION ITEM FRAME (للـ History) ---
+class _MedicationItemFrame extends StatelessWidget {
+  final String name;
+  final String formattedTime;
+  final Color? color;
+
+  const _MedicationItemFrame({
+    required this.name,
+    required this.formattedTime,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: Color(0xFF212121),
+                letterSpacing: 0.3,
               ),
             ),
           ),
-      ],
+          Text(
+            formattedTime,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color ?? Theme.of(context).colorScheme.primary,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
