@@ -1,167 +1,129 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({super.key});
+  final bool isElderly; // ✅ نحدد هل المستخدم ألدرلي
+
+  const ForgotPasswordPage({super.key, required this.isElderly});
 
   @override
   State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
+  final _email = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final _username = TextEditingController();      
-  final _newPass = TextEditingController();
-  final _confirm = TextEditingController();
-  bool _ob1 = true, _ob2 = true;
+  bool _loading = false;
 
   @override
   void dispose() {
-    _username.dispose();                      
-    _newPass.dispose();
-    _confirm.dispose();
+    _email.dispose();
     super.dispose();
   }
 
-  void _save() {
+  /// ✅ نفس ستايل Dialog المستخدم في صفحة Login
+  Future<void> _showCenteredDialog(String title, String message) {
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // هنا عادةً ترسل (_username.text, _newPass.text) للباك-إند
-    // وتتعامل مع الاستجابة (نجاح/فشل)
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password reset successfully')),
-    );
-    Navigator.pop(context); // يرجّع لصفحة تسجيل الدخول
+    setState(() => _loading = true);
+    try {
+      await FirebaseAuth.instance
+          .sendPasswordResetEmail(email: _email.text.trim());
+
+      // ✅ Popup بدلاً من SnackBar
+      await _showCenteredDialog(
+        'Email sent',
+        'A password reset link has been sent to your email.',
+      );
+
+      Navigator.pop(context); // يرجع لصفحة تسجيل الدخول
+    } on FirebaseAuthException catch (e) {
+      await _showCenteredDialog('Error', e.message ?? 'Something went wrong');
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final size = MediaQuery.of(context).size;
-    final w = size.width;
-
-    const maxContentWidth = 480.0;
-    final logoH = (w * 0.22).clamp(80, 140);
-
-    const fieldContentPadding = EdgeInsets.symmetric(vertical: 18, horizontal: 14);
-    final inputTextStyle = Theme.of(context).textTheme.bodyLarge;
-    final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600);
+    bool isElderly = widget.isElderly;
+    final titleStyle = TextStyle(
+      fontSize: isElderly ? 28 : 22,
+      fontWeight: FontWeight.bold,
+    );
+    final textStyle = TextStyle(fontSize: isElderly ? 20 : 14);
+    final buttonTextStyle =
+        TextStyle(fontSize: isElderly ? 20 : 16, fontWeight: FontWeight.w600);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Reset password')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: maxContentWidth),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            children: [
-              const SizedBox(height: 16),
-
-              // LOGO
-              Container(
-                height: logoH.toDouble(),
-                decoration: BoxDecoration(
-                  color: cs.primary.withOpacity(.05),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Image.asset(
-                  'assets/khalil_logo.png',
-                  height: (logoH * 0.72).toDouble(),
-                  fit: BoxFit.contain,
-                ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Image.asset(
+                'assets/khalil_logo.png',
+                height: isElderly ? 140 : 100,
+                filterQuality: FilterQuality.high,
               ),
-              const SizedBox(height: 20),
+            ),
+            const SizedBox(height: 24),
 
-              Text(
-                'Create a new password',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
+            Text("We'll send a password reset link to your email.", style: titleStyle),
+            const SizedBox(height: 14),
 
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    // ✅ Username أولاً
-                    TextFormField(
-                      controller: _username,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.username],
-                      keyboardType: TextInputType.text, // لو ايميل: TextInputType.emailAddress
-                      style: inputTextStyle,
-                      decoration: InputDecoration(
-                        labelText: 'Username',
-                        labelStyle: labelStyle,
-                        prefixIcon: const Icon(Icons.person),
-                        contentPadding: fieldContentPadding,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Username is required';
-                        if (v.trim().length < 3) return 'Min 3 characters';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // New password
-                    TextFormField(
-                      controller: _newPass,
-                      obscureText: _ob1,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.newPassword],
-                      style: inputTextStyle,
-                      decoration: InputDecoration(
-                        labelText: 'New password',
-                        labelStyle: labelStyle,
-                        prefixIcon: const Icon(Icons.lock_reset),
-                        contentPadding: fieldContentPadding,
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _ob1 = !_ob1),
-                          icon: Icon(_ob1 ? Icons.visibility_off : Icons.visibility),
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.length < 6) return 'Min 6 characters';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Confirm password
-                    TextFormField(
-                      controller: _confirm,
-                      obscureText: _ob2,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.newPassword],
-                      style: inputTextStyle,
-                      decoration: InputDecoration(
-                        labelText: 'Confirm password',
-                        labelStyle: labelStyle,
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        contentPadding: fieldContentPadding,
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _ob2 = !_ob2),
-                          icon: Icon(_ob2 ? Icons.visibility_off : Icons.visibility),
-                        ),
-                      ),
-                      validator: (v) => (v != _newPass.text) ? 'Passwords do not match' : null,
-                    ),
-                  ],
+            Form(
+              key: _formKey,
+              child: TextFormField(
+                controller: _email,
+                style: textStyle,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email address',
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
+                    return 'Enter a valid email';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 20),
 
-              FilledButton(
-                onPressed: _save,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(56),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Reset password'),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _loading ? null : _resetPassword,
+                child: _loading
+                    ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                    : Text('Send reset link', style: buttonTextStyle),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

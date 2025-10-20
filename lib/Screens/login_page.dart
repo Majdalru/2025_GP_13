@@ -40,8 +40,15 @@ class _LoginPageState extends State<LoginPage> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-        content: Text(message),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: DefaultTextStyle.merge(
+          style: const TextStyle(fontWeight: FontWeight.w800),
+          child: Text(title),
+        ),
+        content: DefaultTextStyle.merge(
+          style: const TextStyle(height: 1.3),
+          child: Text(message),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
         ],
@@ -131,11 +138,11 @@ class _LoginPageState extends State<LoginPage> {
 
     final isElderly      = _role == UserRole.elderly;
 
-    // أحجام Elderly أكبر للوضوح (بدون تكبير إضافي للحقول نفسها)
+    // أحجام Elderly أكبر للوضوح
     final titleStyle     = TextStyle(fontWeight: FontWeight.w900, fontSize: isElderly ? 34 : 24);
     final inputTextStyle = TextStyle(fontSize: isElderly ? 20 : 15);
     final labelTextStyle = TextStyle(fontSize: isElderly ? 28 : 14, fontWeight: FontWeight.w600);
-    final helperErrStyle = TextStyle(fontSize: isElderly ? 16 : 12); // ← هنا التكبير للـ Elderly فقط
+    final helperErrStyle = TextStyle(fontSize: isElderly ? 16 : 12);
     final fieldPadding   = EdgeInsets.symmetric(vertical: isElderly ? 22 : 16, horizontal: 14);
     final linkTextStyle  = TextStyle(fontSize: isElderly ? 18 : 14, color: cs.primary, fontWeight: FontWeight.w600);
 
@@ -151,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
       contentPadding: fieldPadding,
       labelText: null,
       hintText: null,
-      errorStyle: helperErrStyle, // 👈 هذا اللي يكبّر نص الخطأ عند Elderly
+      errorStyle: helperErrStyle, // 👈 يكبّر نص الخطأ عند Elderly
       errorMaxLines: 2,
     );
 
@@ -172,6 +179,7 @@ class _LoginPageState extends State<LoginPage> {
                       height: logoH.toDouble(),
                       width: logoH.toDouble(),
                       fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
                     ),
                   ),
                 ),
@@ -242,7 +250,11 @@ class _LoginPageState extends State<LoginPage> {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                            MaterialPageRoute(
+                              builder: (_) => ForgotPasswordPage(
+                                isElderly: _role == UserRole.elderly, // 👈 يورّث وضع Elderly
+                              ),
+                            ),
                           ),
                           child: Text('Forgot password?', style: linkTextStyle),
                         ),
