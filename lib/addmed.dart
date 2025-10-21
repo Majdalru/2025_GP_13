@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/medication.dart'; // Import the new model
+import 'services/medication_scheduler.dart'; // ✅ أضف هذا
 
 // This screen is now for the CAREGIVER to add/edit meds for an elderly person
 class AddMedScreen extends StatefulWidget {
@@ -95,6 +96,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         }).toList();
 
         await docRef.update({'medsList': updatedMedsList});
+        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
         if (mounted) Navigator.of(context).pop();
       } catch (e) {
@@ -122,6 +124,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         await docRef.set({
           'medsList': FieldValue.arrayUnion([newMed.toMap()]),
         }, SetOptions(merge: true));
+        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
         if (mounted) Navigator.of(context).pop();
       } catch (e) {

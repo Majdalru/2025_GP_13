@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/medication.dart'; // Import the new model
+import '../../services/medication_scheduler.dart';
+
 
 // --- Main Stateful Widget for AddMedScreen ---
 class AddMedScreen extends StatefulWidget {
@@ -97,6 +99,10 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
         await docRef.update({'medsList': updatedMedsList});
 
+
+         // ✅ جدول التنبيهات بعد التحديث
+        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
+
         if (mounted) {
           Navigator.of(context).pop();
         }
@@ -130,6 +136,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
         await docRef.set({
           'medsList': FieldValue.arrayUnion([newMed.toMap()]),
         }, SetOptions(merge: true));
+
+
+        // ✅ جدول التنبيهات بعد الإضافة
+        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
+
 
         if (mounted) {
           Navigator.of(context).pop();

@@ -8,6 +8,7 @@ import 'browse_page.dart';
 import 'meds_summary_page.dart';
 import 'location_page.dart';
 import '../medmain.dart';
+import '../services/medication_scheduler.dart';
 
 // Model for Elderly Profile data
 class ElderlyProfile {
@@ -35,6 +36,7 @@ class _HomeShellState extends State<HomeShell> {
   void initState() {
     super.initState();
     _fetchLinkedProfiles();
+    _scheduleNotificationsForUser();
   }
 
   // --- helpers ---
@@ -226,4 +228,40 @@ class _HomeShellState extends State<HomeShell> {
       ),
     );
   }
+
+
+
+  Future<void> _scheduleNotificationsForUser() async {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return;
+
+  try {
+    // جلب معلومات المستخدم الحالي
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+    
+    final role = userDoc.data()?['role'] as String?;
+
+    if (role == 'elderly') {
+      // إذا كان كبير السن، جدول تنبيهاته
+      await MedicationScheduler().scheduleAllMedications(currentUser.uid);
+      debugPrint('✅ Scheduled notifications for elderly: ${currentUser.uid}');
+    } else if (role == 'caregiver') {
+      // إذا كان caregiver، جدول تنبيهات كل الـ elderly المرتبطين به
+      final elderlyIds = List<String>.from(
+        userDoc.data()?['elderlyIds'] ?? [],
+      );
+      
+      for (final elderlyId in elderlyIds) {
+        await MedicationScheduler().scheduleAllMedications(elderlyId);
+        debugPrint('✅ Scheduled notifications for elderly: $elderlyId');
+      }
+    }
+  } catch (e) {
+    debugPrint('❌ Error scheduling notifications: $e');
+  }
+}
+
 }

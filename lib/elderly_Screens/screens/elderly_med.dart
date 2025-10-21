@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'addmedeld.dart';
 import '../../models/medication.dart'; // Import the new model
+import '../../services/medication_scheduler.dart';
+import '../../widgets/todays_meds_tab.dart'; 
 
 // --- Main Page Widget ---
 class ElderlyMedicationPage extends StatefulWidget {
@@ -63,6 +65,13 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       await docRef.update({
         'medsList': FieldValue.arrayRemove([medicationToDelete.toMap()]),
       });
+
+
+ // ✅ حدث جدولة التنبيهات بعد الحذف
+    await MedicationScheduler().scheduleAllMedications(
+      widget.elderlyId, // أو widget.elderlyProfile.uid
+    );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -105,14 +114,20 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
       ),
+     
+      
+
+
       body: Column(
         children: [
+                
+
           CustomSegmentedControl(tabController: _tabController),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                const TodaysMedsTab(), // This can be updated later for real data
+                TodaysMedsTab(elderlyId: widget.elderlyId), // This can be updated later for real data
                 // --- Med List Tab with StreamBuilder ---
                 Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -536,21 +551,6 @@ class MedicationCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// --- TODAY'S MEDS TAB (Placeholder, can be developed later) ---
-class TodaysMedsTab extends StatelessWidget {
-  const TodaysMedsTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        "Today's Medication schedule will be shown here.",
-        style: TextStyle(fontSize: 18),
       ),
     );
   }

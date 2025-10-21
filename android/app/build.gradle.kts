@@ -12,12 +12,14 @@ android {
     namespace = "com.example.flutter_khalil"
 
     // القيم هذه يوفّرها Flutter plugin
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -30,10 +32,12 @@ android {
 
         // ✅ Firebase يتطلب 23 أو أعلى — خلّها صريحة 23
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 34
 
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -46,4 +50,12 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ✅ إضافة core library desugaring (مهم جداً!)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    
+    // ✅ إضافة multidex support
+    implementation("androidx.multidex:multidex:2.0.1")
 }

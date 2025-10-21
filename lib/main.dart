@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // ✅ إضافة Firebase Core
 import 'firebase_options.dart'; // ✅ الملف الذي تم توليده تلقائيًا
 import 'Screens/login_page.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ✅ ضروري قبل تشغيل Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform, // ✅ تهيئة Firebase
   );
+
+  await NotificationService().initialize();
 
   runApp(const CaregiverApp());
 }
