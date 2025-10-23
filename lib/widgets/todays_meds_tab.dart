@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import '../models/medication.dart'; // Make sure DoseStatus is defined here
 import '../services/medication_scheduler.dart';
-import 'package:collection/collection.dart'; // For groupBy, firstWhereOrNull
+import 'package:collection/collection.dart'; // For firstWhereOrNull
 
 // Combined data class for display
 class MedicationDose {
@@ -55,58 +55,22 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
   final MedicationScheduler _scheduler = MedicationScheduler();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  @override
-  void initState() {
-    super.initState();
-    // Debug notifications on startup
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _debugNotifications();
-    });
-  }
-
-  Future<void> _debugNotifications() async {
-    try {
-      final pending = await _scheduler.getPendingNotifications();
-      debugPrint('=== PENDING NOTIFICATIONS (${pending.length}) ===');
-      for (final notif in pending) {
-        debugPrint(
-          'ID: ${notif.id}, Title: ${notif.title}, Body: ${notif.body}',
-        );
-      }
-      debugPrint('================================');
-    } catch (e) {
-      debugPrint('Error debugging notifications: $e');
-    }
-  }
-
   Stream<List<MedicationDose>> _getTodaysDosesStream() {
     final now = DateTime.now();
     final todayKey = DateFormat('yyyy-MM-dd').format(now);
     final todayName = DateFormat('EEEE').format(now); // e.g., 'Monday'
 
-    // Stream for medications
     final medsStream = _firestore
         .collection('medications')
         .doc(widget.elderlyId)
         .snapshots();
 
-    // Also watch the log for real-time updates
-    final logStream = _firestore
-        .collection('medication_log')
-        .doc(widget.elderlyId)
-        .collection('daily_log')
-        .doc(todayKey)
-        .snapshots();
-
-    // Combine both streams
     return medsStream.asyncMap((medsSnapshot) async {
-      // 1. Get medications scheduled for today
       final List<Medication> scheduledMeds = [];
       if (medsSnapshot.exists && medsSnapshot.data()?['medsList'] != null) {
         final allMeds = (medsSnapshot.data()!['medsList'] as List)
             .map((m) => Medication.fromMap(m as Map<String, dynamic>))
             .toList();
-
         scheduledMeds.addAll(
           allMeds.where(
             (med) =>
@@ -116,13 +80,10 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
       }
 
       if (scheduledMeds.isEmpty) {
-        debugPrint(
-          "No medications scheduled for today for ${widget.elderlyId}.",
-        );
+        // debugPrint("No meds scheduled today for ${widget.elderlyId}.");
         return <MedicationDose>[];
       }
 
-      // 2. Get today's log data (if exists)
       DocumentSnapshot<Map<String, dynamic>> logDoc;
       Map<String, dynamic> logData = {};
       try {
@@ -139,13 +100,16 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         debugPrint("Error fetching log document for $todayKey: $e");
       }
 
-      // 3. Create MedicationDose objects
       final doses = <MedicationDose>[];
       final currentTime = DateTime.now();
 
       for (final med in scheduledMeds) {
         for (int i = 0; i < med.times.length; i++) {
           final time = med.times[i];
+          // Ensure time is valid before creating dose
+          // (The _parseTimeOfDay in Medication.fromMap should handle bad data)
+          // if (time == null) continue; // Skip if time couldn't be parsed
+
           final dose = MedicationDose(
             medication: med,
             scheduledTime: time,
@@ -153,20 +117,17 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
           );
 
           final scheduledDT = dose.scheduledDateTime;
-          final fiveMinLate = scheduledDT.add(const Duration(minutes: 5));
-          final tenMinLate = scheduledDT.add(const Duration(minutes: 10));
+          final missedThresholdTime = scheduledDT.add(
+            const Duration(minutes: 10),
+          );
 
-          // Update status from log first
           final doseLog = logData[dose.logKey] as Map<String, dynamic>?;
           if (doseLog != null) {
             dose.status = _parseDoseStatus(doseLog['status'] as String?);
             dose.takenAt = doseLog['takenAt'] as Timestamp?;
           } else {
-            // If not in log, determine if upcoming or missed based on time
-            if (currentTime.isAfter(tenMinLate)) {
+            if (currentTime.isAfter(missedThresholdTime)) {
               dose.status = DoseStatus.missed;
-            } else if (currentTime.isAfter(fiveMinLate)) {
-              dose.status = DoseStatus.upcoming; // Still upcoming but late
             } else {
               dose.status = DoseStatus.upcoming;
             }
@@ -175,9 +136,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         }
       }
 
-      // 4. Sort doses initially by time
       doses.sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
-
       return doses;
     });
   }
@@ -252,11 +211,21 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         dose.timeIndex,
       );
 
+      // Pass scheduledDT to notification functions
       if (newStatus == DoseStatus.takenLate) {
         await _scheduler.notifyCaregiversTakenLate(
           elderlyId: widget.elderlyId,
           medication: dose.medication,
           takenAt: now,
+          scheduledTime: scheduledDT, // Pass scheduled time
+        );
+      } else {
+        // Notify on time if needed
+        await _scheduler.notifyCaregiversTakenOnTime(
+          elderlyId: widget.elderlyId,
+          medication: dose.medication,
+          takenAt: now,
+          scheduledTime: scheduledDT, // Pass scheduled time
         );
       }
 
@@ -293,26 +262,30 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
     }
 
     final logUpdate = {
+      logKey: FieldValue.delete(), // More robust way to remove the log entry
+      /* Alternatively, update status and nullify takenAt:
       logKey: {
         'status': _statusToString(revertedStatus),
-        'takenAt': null, // Remove timestamp
+        'takenAt': null,
         'medicationName': dose.medication.name,
         'scheduledTime': DateFormat('HH:mm').format(scheduledDT),
         'medicationId': dose.medication.id,
         'timeIndex': dose.timeIndex,
       },
+      */
     };
 
     try {
+      // Use update with FieldValue.delete()
       await _firestore
           .collection('medication_log')
           .doc(widget.elderlyId)
           .collection('daily_log')
           .doc(todayKey)
-          .set(logUpdate, SetOptions(merge: true));
+          .update(logUpdate); // Use update here
 
       debugPrint(
-        "Firestore log reverted for ${dose.logKey} to ${revertedStatus.name}",
+        "Firestore log reverted/deleted for ${dose.logKey}. Reverted status: ${revertedStatus.name}",
       );
 
       await _scheduler.scheduleAllMedications(widget.elderlyId);
@@ -338,9 +311,6 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final todayKey = DateFormat('yyyy-MM-dd').format(now);
-
     return StreamBuilder<List<MedicationDose>>(
       stream: _getTodaysDosesStream(),
       builder: (context, snapshot) {
@@ -363,25 +333,32 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
           );
         }
 
-        // --- Start of Refined Logic Block ---
+        // --- Start of Logic Block within Builder ---
         final doses = snapshot.data!;
-        final currentTime = DateTime.now();
+        DateTime now = DateTime.now();
 
-        // Define the lists
+        // Define lists within this scope
         final List<MedicationDose> upcoming = [];
         final List<MedicationDose> takenOnTime = [];
         final List<MedicationDose> takenLate = [];
         final List<MedicationDose> missed = [];
 
-        // Separate doses by status FIRST, re-evaluating missed status
+        // Separate doses by status, re-evaluating missed
         for (final dose in doses) {
           final scheduledDT = dose.scheduledDateTime;
           final tenMinLate = scheduledDT.add(const Duration(minutes: 10));
 
-          // If dose is upcoming but current time is past 10 minutes late, mark as missed
-          if (dose.status == DoseStatus.upcoming &&
-              currentTime.isAfter(tenMinLate)) {
-            missed.add(dose..status = DoseStatus.missed);
+          if ((dose.status == DoseStatus.upcoming && now.isAfter(tenMinLate))) {
+            // If upcoming but time is > 10 mins past, treat as missed for display
+            // Also check if caregiver was already notified to avoid repeat notifications later
+            final doseLog =
+                dose.takenAt ==
+                null; // Placeholder check, need actual log check maybe
+            // Add logic here if you need to trigger missed notification from UI update
+
+            missed.add(
+              dose..status = DoseStatus.missed,
+            ); // Update status in memory
           } else {
             switch (dose.status) {
               case DoseStatus.upcoming:
@@ -393,7 +370,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
               case DoseStatus.takenLate:
                 takenLate.add(dose);
                 break;
-              case DoseStatus.missed:
+              case DoseStatus.missed: // Already logged as missed
                 missed.add(dose);
                 break;
             }
@@ -403,48 +380,45 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         // --- Logic to determine "Next Up" vs "Later Today" ---
         List<MedicationDose> nextUpDoses = [];
         List<MedicationDose> laterTodayDoses = [];
+        DateTime? nextScheduledTimeAbsolute;
 
         if (upcoming.isNotEmpty) {
-          // Sort upcoming doses by time
-          upcoming.sort(
-            (a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime),
-          );
+          // Sort upcoming doses purely by scheduled time (already done mostly by stream sort)
+          // upcoming.sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
 
-          // Find the next dose that hasn't passed its missed threshold
-          MedicationDose? nextDose;
+          // Find the earliest relevant time among ALL upcoming doses
+          DateTime? earliestRelevantTime;
           for (final dose in upcoming) {
-            final missedThreshold = dose.scheduledDateTime.add(
-              const Duration(minutes: 10),
-            );
-            if (currentTime.isBefore(missedThreshold)) {
-              nextDose = dose;
-              break;
-            }
+            earliestRelevantTime = dose.scheduledDateTime;
+            break; // Since it's sorted, the first one is the earliest
           }
 
-          if (nextDose != null) {
-            // Group doses by the same scheduled time
-            final nextTime = nextDose.scheduledTime;
+          if (earliestRelevantTime != null) {
+            nextScheduledTimeAbsolute = earliestRelevantTime;
+
+            // Find ALL upcoming doses scheduled exactly at that earliest relevant time
             nextUpDoses = upcoming
                 .where(
-                  (dose) =>
-                      dose.scheduledTime.hour == nextTime.hour &&
-                      dose.scheduledTime.minute == nextTime.minute,
+                  (d) =>
+                      d.scheduledTime.hour == nextScheduledTimeAbsolute!.hour &&
+                      d.scheduledTime.minute ==
+                          nextScheduledTimeAbsolute!.minute,
                 )
                 .toList();
 
-            // All other upcoming doses go to "Later Today"
+            // All other *future* upcoming doses (strictly after the next batch) are "Later Today"
             laterTodayDoses = upcoming
-                .where((dose) => !nextUpDoses.contains(dose))
+                .where(
+                  (d) =>
+                      d.scheduledDateTime.isAfter(nextScheduledTimeAbsolute!),
+                )
                 .toList();
-          } else {
-            // If no upcoming doses (all missed), move all to missed section
-            missed.addAll(upcoming);
-            upcoming.clear();
           }
+          // No else needed, if earliestRelevantTime is null, lists remain empty
         }
+        // --- End of Next Up/Later Logic ---
 
-        // Define allTaken
+        // Define and sort allTaken ONCE within this scope
         final List<MedicationDose> allTaken = [...takenOnTime, ...takenLate]
           ..sort((a, b) {
             final DateTime aCompareTime =
@@ -454,10 +428,11 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
             return aCompareTime.compareTo(bCompareTime);
           });
 
+        // Sort missed list
         missed.sort(
           (a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime),
         );
-        // --- End of Refined Logic Block ---
+        // --- End of Logic Block ---
 
         // --- Return the ListView using the calculated lists ---
         return ListView(
@@ -512,7 +487,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                 Icons.check_circle,
                 Colors.green.shade700,
               ),
-              ...allTaken
+              ...allTaken // Use the combined/sorted list here
                   .map(
                     (dose) => _TodayMedicationCard(
                       dose: dose,
@@ -542,22 +517,11 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                   )
                   .toList(),
             ],
-
-            // Debug button (remove in production)
-            if (!widget.isCaregiverView) ...[
-              const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _debugNotifications,
-                  child: const Text('Debug Notifications'),
-                ),
-              ),
-            ],
           ],
         );
-      },
-    );
-  }
+      }, // End of builder function
+    ); // End StreamBuilder
+  } // End build method
 
   Widget _buildSectionHeader(String title, IconData icon, Color color) {
     return Padding(
@@ -578,22 +542,23 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
       ),
     );
   }
-}
+} // End _TodaysMedsTabState
 
 // --- _TodayMedicationCard Widget ---
+// (Keep the implementation from the previous response)
 class _TodayMedicationCard extends StatelessWidget {
   final MedicationDose dose;
   final bool isHighlighted; // For 'Next Up'
   final bool isCaregiverView;
   final VoidCallback onTakenPressed;
-  final VoidCallback onUndoPressed;
+  final VoidCallback onUndoPressed; // Callback for undo
 
   const _TodayMedicationCard({
     required this.dose,
     this.isHighlighted = false,
     required this.isCaregiverView,
     required this.onTakenPressed,
-    required this.onUndoPressed,
+    required this.onUndoPressed, // Added undo callback
   });
 
   @override
@@ -606,7 +571,7 @@ class _TodayMedicationCard extends StatelessWidget {
     // Define colors and styles based on status
     Color borderColor = Colors.grey.shade300;
     Color backgroundColor = Colors.white;
-    Color headerColor = const Color(0xFF1B3A52);
+    Color headerColor = const Color(0xFF1B3A52); // Default header color
     IconData headerIcon = Icons.access_time;
     String statusText = '';
     Color statusColor = Colors.grey;
@@ -616,7 +581,9 @@ class _TodayMedicationCard extends StatelessWidget {
     bool showUndoButton =
         !isCaregiverView &&
         (status == DoseStatus.takenOnTime || status == DoseStatus.takenLate);
-    bool isDimmed = status == DoseStatus.upcoming && !isHighlighted;
+    bool isDimmed =
+        status == DoseStatus.upcoming &&
+        !isHighlighted; // Dim later upcoming meds
 
     switch (status) {
       case DoseStatus.takenOnTime:
@@ -628,10 +595,10 @@ class _TodayMedicationCard extends StatelessWidget {
         statusColor = Colors.green;
         break;
       case DoseStatus.takenLate:
-        borderColor = Colors.orange;
-        backgroundColor = Colors.orange.shade50;
+        borderColor = Colors.orange; // Changed border for late
+        backgroundColor = Colors.orange.shade50; // Changed background for late
         headerColor = Colors.orange.shade800;
-        headerIcon = Icons.check_circle;
+        headerIcon = Icons.check_circle; // Still check mark
         statusText = 'Taken late';
         statusColor = Colors.orange.shade800;
         break;
@@ -652,6 +619,7 @@ class _TodayMedicationCard extends StatelessWidget {
           statusText = 'Next up';
           statusColor = Colors.blue.shade700;
         } else {
+          // Keep default greyish look for later meds
           headerIcon = Icons.update;
           statusText = 'Upcoming';
           statusColor = Colors.grey.shade600;
@@ -660,7 +628,7 @@ class _TodayMedicationCard extends StatelessWidget {
     }
 
     return Opacity(
-      opacity: isDimmed ? 0.65 : 1.0,
+      opacity: isDimmed ? 0.65 : 1.0, // Apply dimming
       child: Card(
         elevation: isHighlighted ? 6 : 2,
         margin: const EdgeInsets.only(bottom: 16),
@@ -681,6 +649,7 @@ class _TodayMedicationCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
+                    // Icon background
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: headerColor.withOpacity(0.1),
@@ -694,6 +663,7 @@ class _TodayMedicationCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
+                          // Scheduled Time
                           time.format(context),
                           style: TextStyle(
                             fontSize: isHighlighted ? 22 : 20,
@@ -703,6 +673,7 @@ class _TodayMedicationCard extends StatelessWidget {
                         ),
                         if (statusText.isNotEmpty)
                           Text(
+                            // Status Text (e.g., Taken, Missed)
                             statusText,
                             style: TextStyle(
                               fontSize: 14,
@@ -710,7 +681,7 @@ class _TodayMedicationCard extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        if (takenTime != null)
+                        if (takenTime != null) // Display Taken Timestamp
                           Text(
                             'at ${DateFormat('h:mm a').format(takenTime.toDate())}',
                             style: TextStyle(
@@ -732,6 +703,7 @@ class _TodayMedicationCard extends StatelessWidget {
                   fontSize: isHighlighted ? 20 : 18,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF212121),
+                  // Apply strikethrough only if missed AND not yet taken late
                   decoration: (status == DoseStatus.missed && takenTime == null)
                       ? TextDecoration.lineThrough
                       : TextDecoration.none,
@@ -818,6 +790,7 @@ class _TodayMedicationCard extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Center(
+                      // Center the undo button
                       child: TextButton.icon(
                         onPressed: onUndoPressed,
                         icon: const Icon(Icons.undo, size: 18),
@@ -835,4 +808,4 @@ class _TodayMedicationCard extends StatelessWidget {
       ),
     );
   }
-}
+} // End _TodayMedicationCard

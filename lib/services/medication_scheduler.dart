@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // For date formatting
+// ---> ADD THIS IMPORT <---
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// ---> END OF ADDITION <---
+
 import '../models/medication.dart';
 import 'notification_service.dart';
+
+// Import DoseStatus if it's defined in todays_meds_tab.dart or define it here
+// Assuming DoseStatus is defined elsewhere, like in models or a shared location
 
 class MedicationScheduler {
   static final MedicationScheduler _instance = MedicationScheduler._internal();
@@ -10,16 +17,19 @@ class MedicationScheduler {
   MedicationScheduler._internal();
 
   final NotificationService _notificationService = NotificationService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance; // Firestore instance
 
   /// جدولة جميع أدوية المستخدم الكبير
   Future<void> scheduleAllMedications(String elderlyId) async {
     try {
+      // It's safer to cancel *all* notifications and reschedule to avoid dangling ones
       await _notificationService.cancelAllNotifications();
       debugPrint(
         '🗑️ Cancelled all notifications before rescheduling for $elderlyId',
       );
 
+      // جلب الأدوية من Firestore
       final docSnapshot = await _firestore
           .collection('medications')
           .doc(elderlyId)
@@ -42,15 +52,17 @@ class MedicationScheduler {
           [];
 
       int scheduledCount = 0;
+      // جدولة كل دواء
       for (final med in medsList) {
         await _scheduleMedication(elderlyId, med);
-        scheduledCount++;
+        scheduledCount++; // Increment count for each medication processed
       }
 
       debugPrint(
         '✅ Processed scheduling for $scheduledCount medications for $elderlyId',
       );
 
+      // Optional: Log pending notifications to verify
       final pending = await _notificationService.getPendingNotifications();
       debugPrint(
         'ℹ️ Pending notifications count after rescheduling: ${pending.length}',
@@ -82,6 +94,7 @@ class MedicationScheduler {
       debugPrint(
         'ℹ️ Could not fetch medication log for $elderlyId/$todayKey: $e',
       );
+      // Proceed without log data, assuming nothing is taken/missed yet for scheduling
     }
 
     // Schedule for the next 7 days including today
@@ -98,13 +111,13 @@ class MedicationScheduler {
           time.minute,
         );
 
-        // Skip past schedules
+        // Don't schedule notifications for times clearly in the past (more than 10 mins ago)
         if (scheduledTime.isBefore(now.subtract(const Duration(minutes: 11)))) {
           continue;
         }
 
-        // Check if already taken
-        final doseLogKey = '${med.id}_$i';
+        // Check log: If already taken or marked missed today, don't schedule notifications for this slot
+        final doseLogKey = '${med.id}_$i'; // Key used in the log document
         final doseLog = logData[doseLogKey] as Map<String, dynamic>?;
         final currentStatusString = doseLog?['status'] as String?;
         bool alreadyTaken =
@@ -112,12 +125,13 @@ class MedicationScheduler {
             currentStatusString == 'taken_late';
 
         if (DateUtils.isSameDay(day, now) && alreadyTaken) {
+          // Use a placeholder context or find a way to get context if needed for format
           String formattedTime =
               '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
           debugPrint(
-            '🚫 Skipping notifications for ${med.name} at $formattedTime - Already taken.',
+            '🚫 Skipping notifications for ${med.name} at $formattedTime (Day: ${DateFormat('yyyy-MM-dd').format(day)}) - Already taken according to log.',
           );
-          continue;
+          continue; // Skip scheduling notifications if already taken today
         }
 
         // --- Schedule Notifications ---
@@ -132,9 +146,6 @@ class MedicationScheduler {
             scheduledTime: scheduledTime,
             payload: 'med:$elderlyId:${med.id}:$i:0',
           );
-          debugPrint(
-            '📅 Scheduled ON-TIME #$notifId1 for ${med.name} at ${DateFormat('HH:mm').format(scheduledTime)}',
-          );
         }
 
         // Notification 2: 5 mins late reminder for Elderly
@@ -148,35 +159,31 @@ class MedicationScheduler {
             scheduledTime: reminderTime,
             payload: 'reminder:$elderlyId:${med.id}:$i:1',
           );
-          debugPrint(
-            '📅 Scheduled 5-MIN #$notifId2 for ${med.name} at ${DateFormat('HH:mm').format(reminderTime)}',
-          );
         }
 
-        // NEW: Schedule immediate caregiver notification at medication time
+        // Notification 3: 10 mins late -> Notify Caregivers (Missed Alert)
+        final missedAlertTime = scheduledTime.add(const Duration(minutes: 10));
         final notifId3 = _generateNotificationId(elderlyId, med.id, i, 2);
-        if (scheduledTime.isAfter(now)) {
-          await _notificationService.scheduleNotification(
-            id: notifId3,
-            title: '👀 Medication Due',
-            body: "${med.name} is due now for the elderly person.",
+        if (missedAlertTime.isAfter(now)) {
+          await notifyCaregiversMissed(
+            elderlyId: elderlyId,
+            medication: med,
             scheduledTime: scheduledTime,
-            payload: 'caregiver_due:$elderlyId:${med.id}:$i:2',
-          );
-          debugPrint(
-            '📅 Scheduled CAREGIVER DUE #$notifId3 for ${med.name} at ${DateFormat('HH:mm').format(scheduledTime)}',
+            timeIndex: i,
+            notificationId: notifId3,
           );
         }
       }
     }
   }
 
-  /// **NEW:** إرسال تنبيه فوري لـ caregivers عند تفويت الدواء (يتم استدعاؤه من TodaysMedsTab)
-  Future<void> notifyCaregiversMissedImmediately({
+  /// جدولة تنبيه لجميع caregivers المرتبطين بكبير السن - **يستخدم للتنبيه عند التفويت**
+  Future<void> notifyCaregiversMissed({
     required String elderlyId,
     required Medication medication,
-    required DateTime scheduledTime,
+    required DateTime scheduledTime, // الوقت الأصلي للدواء
     required int timeIndex,
+    required int notificationId,
   }) async {
     try {
       final elderlyDoc = await _firestore
@@ -210,39 +217,33 @@ class MedicationScheduler {
       );
 
       final String body =
-          '$displayElderlyName missed their ${medication.name} dose scheduled for ${DateFormat('h:mm a').format(scheduledTime)}! Please check on them.';
-
-      // Generate unique ID for immediate notification
-      final uniqueSuffix = DateTime.now().millisecondsSinceEpoch;
-      final immediateNotificationId =
-          '${elderlyId}-${medication.id}-missed-$uniqueSuffix'.hashCode.abs() %
-          2147483647;
+          '$displayElderlyName missed their ${medication.name} dose scheduled for ${DateFormat('h:mm a').format(scheduledTime)}!';
+      final DateTime notificationTime = scheduledTime.add(
+        const Duration(minutes: 10),
+      );
 
       for (final caregiverDoc in caregiversSnapshot.docs) {
-        await _notificationService.showImmediateNotification(
-          id: immediateNotificationId,
-          title: '🚨 Medication Missed!',
+        await _notificationService.scheduleNotification(
+          id: notificationId, // Use the passed-in ID
+          title: '🚨 Medication Missed Alert',
           body: body,
+          scheduledTime: notificationTime,
           payload:
-              'caregiver_alert_missed:$elderlyId:${medication.id}:$timeIndex',
-        );
-        debugPrint(
-          '🔔 Sent IMMEDIATE MISSED notification to caregiver ${caregiverDoc.id}',
+              'caregiver_alert_missed:$elderlyId:${medication.id}:$timeIndex:2',
         );
       }
     } catch (e) {
-      debugPrint(
-        '❌ Error in notifyCaregiversMissedImmediately for $elderlyId: $e',
-      );
+      debugPrint('❌ Error in notifyCaregiversMissed for $elderlyId: $e');
     }
   }
 
-  /// **NEW:** إرسال تنبيه فوري لـ caregivers عند أخذ الدواء متأخراً
+  /// **NEW:** إرسال تنبيه فوري لـ caregivers عند أخذ الدواء متأخراً (Case 4)
+  /// **UPDATED:** Added scheduledTime parameter
   Future<void> notifyCaregiversTakenLate({
     required String elderlyId,
     required Medication medication,
-    required DateTime takenAt,
-    required DateTime scheduledTime,
+    required DateTime takenAt, // الوقت الفعلي للأخذ
+    required DateTime scheduledTime, // الوقت المجدول الأصلي
   }) async {
     try {
       final elderlyDoc = await _firestore
@@ -275,8 +276,13 @@ class MedicationScheduler {
         '👥 [Late Notify] Found ${caregiversSnapshot.docs.length} caregivers for $elderlyId',
       );
 
+      final Duration difference = takenAt.difference(scheduledTime);
+      final String lateDuration = _formatDuration(
+        difference,
+      ); // Format the duration
+
       final String body =
-          '$displayElderlyName took their ${medication.name} dose late at ${DateFormat('h:mm a').format(takenAt)} (was scheduled for ${DateFormat('h:mm a').format(scheduledTime)}).';
+          '$displayElderlyName took their ${medication.name} dose late (scheduled for ${DateFormat('h:mm a').format(scheduledTime)}, taken at ${DateFormat('h:mm a').format(takenAt)} - $lateDuration late).';
 
       final uniqueSuffix = DateTime.now().millisecondsSinceEpoch;
       final immediateNotificationId =
@@ -286,11 +292,13 @@ class MedicationScheduler {
       for (final caregiverDoc in caregiversSnapshot.docs) {
         await _notificationService.showImmediateNotification(
           id: immediateNotificationId,
-          title: '⚠️ Medication Taken Late',
+          title: ' Medication Taken Late',
           body: body,
           payload: 'caregiver_alert_late:$elderlyId:${medication.id}',
         );
-        debugPrint('🔔 Sent LATE notification to caregiver ${caregiverDoc.id}');
+        debugPrint(
+          '🔔 Sent LATE notification #${immediateNotificationId} to caregiver ${caregiverDoc.id}',
+        );
       }
     } catch (e) {
       debugPrint(
@@ -303,10 +311,23 @@ class MedicationScheduler {
   Future<void> notifyCaregiversTakenOnTime({
     required String elderlyId,
     required Medication medication,
-    required DateTime takenAt,
-    required DateTime scheduledTime,
+    required DateTime takenAt, // الوقت الفعلي للأخذ
+    required DateTime scheduledTime, // الوقت المجدول الأصلي
   }) async {
     try {
+      final elderlyDoc = await _firestore
+          .collection('users')
+          .doc(elderlyId)
+          .get();
+      final elderlyData = elderlyDoc.data();
+      final elderlyName = [
+        elderlyData?['firstName'] ?? '',
+        elderlyData?['lastName'] ?? '',
+      ].where((s) => s.toString().isNotEmpty).join(' ');
+      final displayElderlyName = elderlyName.isNotEmpty
+          ? elderlyName
+          : "The elderly person";
+
       final caregiversSnapshot = await _firestore
           .collection('users')
           .where('role', isEqualTo: 'caregiver')
@@ -314,30 +335,54 @@ class MedicationScheduler {
           .get();
 
       if (caregiversSnapshot.docs.isEmpty) {
+        debugPrint(
+          'ℹ️ [On Time Notify] No caregivers found linked to $elderlyId to notify.',
+        );
         return;
       }
 
+      debugPrint(
+        '👥 [On Time Notify] Found ${caregiversSnapshot.docs.length} caregivers for $elderlyId',
+      );
+
       final String body =
-          '${medication.name} was taken on time at ${DateFormat('h:mm a').format(takenAt)}.';
+          '$displayElderlyName took their ${medication.name} dose on time at ${DateFormat('h:mm a').format(takenAt)}.';
 
       final uniqueSuffix = DateTime.now().millisecondsSinceEpoch;
       final immediateNotificationId =
-          '${elderlyId}-${medication.id}-ontime-$uniqueSuffix'.hashCode.abs() %
+          '${elderlyId}-${medication.id}-onTime-$uniqueSuffix'.hashCode.abs() %
           2147483647;
 
       for (final caregiverDoc in caregiversSnapshot.docs) {
         await _notificationService.showImmediateNotification(
           id: immediateNotificationId,
-          title: '✅ Medication Taken',
+          title: '✅ Medication Taken On Time',
           body: body,
-          payload: 'caregiver_alert_ontime:$elderlyId:${medication.id}',
+          payload: 'caregiver_alert_onTime:$elderlyId:${medication.id}',
+        );
+        debugPrint(
+          '🔔 Sent ON TIME notification #${immediateNotificationId} to caregiver ${caregiverDoc.id}',
         );
       }
-      debugPrint('🔔 Sent ON-TIME notification to caregivers');
     } catch (e) {
       debugPrint(
-        '❌ Error sending caregiver ON-TIME notification for $elderlyId: $e',
+        '❌ Error sending caregiver ON TIME notification for $elderlyId: $e',
       );
+    }
+  }
+
+  // Helper function to format Duration
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    // String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    // return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+    if (duration.inHours > 0) {
+      return "${duration.inHours}h ${twoDigitMinutes}m";
+    } else if (duration.inMinutes > 0) {
+      return "${duration.inMinutes}m";
+    } else {
+      return "${duration.inSeconds}s";
     }
   }
 
@@ -412,7 +457,7 @@ class MedicationScheduler {
     await scheduleAllMedications(elderlyId);
   }
 
-  /// تسجيل أخذ الدواء (إلغاء التنبيهات التالية)
+  /// تسجيل أخذ الدواء (إلغاء التنبيهات التالية لهذا الوقت)
   Future<void> markMedicationTaken(
     String elderlyId,
     String medicationId,
@@ -423,23 +468,21 @@ class MedicationScheduler {
       medicationId,
       timeIndex,
       1,
-    );
+    ); // 5 min reminder
     final notifId3 = _generateNotificationId(
       elderlyId,
       medicationId,
       timeIndex,
       2,
-    );
+    ); // 10 min (missed) caregiver alert
 
     try {
       await _notificationService.cancelNotification(notifId2);
-      debugPrint('🚫 Cancelled 5-min reminder #$notifId2');
     } catch (e) {
       debugPrint('⚠️ Error cancelling notification #$notifId2: $e');
     }
     try {
       await _notificationService.cancelNotification(notifId3);
-      debugPrint('🚫 Cancelled caregiver due notification #$notifId3');
     } catch (e) {
       debugPrint('⚠️ Error cancelling notification #$notifId3: $e');
     }
@@ -448,9 +491,4 @@ class MedicationScheduler {
       '✅ Processed cancellations for taken medication ($medicationId / index $timeIndex)',
     );
   }
-
-  /// **NEW:** الحصول على جميع التنبيهات المجدولة (للتdebug)
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    return await _notificationService.getPendingNotifications();
-  }
-}
+} // End MedicationScheduler Class
