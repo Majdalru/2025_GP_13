@@ -318,38 +318,55 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
           );
         }
         // Even if data is null or empty, proceed to build the structure
-        final doses = snapshot.data ?? []; // Use empty list if no data
+        // --- Start of Logic Block ---
+        final doses = snapshot.data ?? [];
         DateTime now = DateTime.now();
 
-        // --- Logic Block (copied from previous response) ---
-        final List<MedicationDose> upcomingRaw = [];
+        final List<MedicationDose> upcomingRaw = []; // Future doses
         final List<MedicationDose> takenOnTime = [];
         final List<MedicationDose> takenLate = [];
         final List<MedicationDose> missed = [];
-        final List<MedicationDose> pastDueUpcoming = [];
+        final List<MedicationDose> pastDueUpcoming =
+            []; // Doses between 0-5 mins past due
 
+        // 1. Corrected Categorization Loop
         for (final dose in doses) {
           final scheduledDT = dose.scheduledDateTime;
-          final tenMinLate = scheduledDT.add(const Duration(minutes: 10));
+          // Define thresholds relative to NOW
+          final fiveMinPastThreshold = now.subtract(const Duration(minutes: 5));
+          final tenMinPastThreshold = now.subtract(const Duration(minutes: 10));
 
           if (dose.status == DoseStatus.takenOnTime) {
             takenOnTime.add(dose);
           } else if (dose.status == DoseStatus.takenLate) {
             takenLate.add(dose);
           } else if (dose.status == DoseStatus.missed) {
+            // If logged as missed, keep it missed unless manually undone
             missed.add(dose);
           } else {
-            // DoseStatus.upcoming from log or default
-            if (now.isAfter(tenMinLate)) {
-              missed.add(dose..status = DoseStatus.missed);
-            } else if (now.isAfter(scheduledDT)) {
+            // Status is upcoming (either from log or default)
+            if (scheduledDT.isBefore(tenMinPastThreshold)) {
+              // If scheduled time is more than 10 mins ago, it's missed
+              missed.add(
+                dose..status = DoseStatus.missed,
+              ); // Update status in memory
+            } else if (scheduledDT.isBefore(fiveMinPastThreshold)) {
+              // If scheduled time is between 5 and 10 mins ago, it's past due
               pastDueUpcoming.add(dose);
+            } else if (scheduledDT.isBefore(now) ||
+                scheduledDT.isAtSameMomentAs(now)) {
+              // If scheduled time is between 0 and 5 mins ago (inclusive), treat as 'Next Up' (or eligible for it)
+              // We will handle grouping later, just add it to the pool of potentials
+              upcomingRaw.add(dose);
             } else {
+              // Genuinely scheduled for the future
               upcomingRaw.add(dose);
             }
           }
         }
+        // --- End Corrected Categorization ---
 
+        // 2. Sort lists (important after categorization)
         upcomingRaw.sort(
           (a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime),
         );
@@ -359,17 +376,27 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         missed.sort(
           (a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime),
         );
+        takenOnTime.sort(
+          (a, b) => (a.takenAt?.toDate() ?? a.scheduledDateTime).compareTo(
+            b.takenAt?.toDate() ?? b.scheduledDateTime,
+          ),
+        ); // CORRECTED
+        takenLate.sort(
+          (a, b) => (a.takenAt?.toDate() ?? a.scheduledDateTime).compareTo(
+            b.takenAt?.toDate() ?? b.scheduledDateTime,
+          ),
+        ); // CORRECTED
 
+        // 3. Determine "Next Up" vs "Later Today" from upcomingRaw ONLY
         List<MedicationDose> nextUpDoses = [];
         List<MedicationDose> laterTodayDoses = [];
         DateTime? nextScheduledTimeAbsolute;
 
-        final nextDose = upcomingRaw.firstWhereOrNull(
-          (d) => !d.scheduledDateTime.isBefore(now),
-        );
+        // Find the *first* dose in upcomingRaw (which includes 0-5 min past due ones now)
+        if (upcomingRaw.isNotEmpty) {
+          nextScheduledTimeAbsolute = upcomingRaw.first.scheduledDateTime;
 
-        if (nextDose != null) {
-          nextScheduledTimeAbsolute = nextDose.scheduledDateTime;
+          // Group all doses AT that earliest time (could be past or future)
           nextUpDoses = upcomingRaw
               .where(
                 (d) =>
@@ -379,24 +406,23 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                         nextScheduledTimeAbsolute!.minute,
               )
               .toList();
+
+          // Everything else in upcomingRaw that's strictly AFTER that time is later
           laterTodayDoses = upcomingRaw
               .where(
                 (d) => d.scheduledDateTime.isAfter(nextScheduledTimeAbsolute!),
               )
               .toList();
-        } else {
-          laterTodayDoses = List.from(upcomingRaw);
         }
 
+        // 4. Combine Taken lists and sort
         final List<MedicationDose> allTaken = [...takenOnTime, ...takenLate]
           ..sort((a, b) {
             final DateTime aCompareTime =
                 a.takenAt?.toDate() ?? a.scheduledDateTime;
             final DateTime bCompareTime =
                 b.takenAt?.toDate() ?? b.scheduledDateTime;
-            return aCompareTime.compareTo(
-              bCompareTime,
-            ); // Sort taken items chronologically
+            return aCompareTime.compareTo(bCompareTime); // CORRECTED
           });
         // --- End of Logic Block ---
 
@@ -409,6 +435,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
               title: 'Upcoming',
               icon: Icons.notifications_active, // Or choose a better icon
               color: Colors.blue.shade700,
+
               children: [
                 // Next Up (Show header only if items exist)
                 if (nextUpDoses.isNotEmpty) ...[
@@ -634,34 +661,51 @@ class _TodayMedicationCard extends StatelessWidget {
     final med = dose.medication;
     final time = dose.scheduledTime;
     final takenTime = dose.takenAt;
+    DateTime now = DateTime.now();
 
-    // Define colors and styles based on status
     Color borderColor = Colors.grey.shade300;
     Color backgroundColor = Colors.white;
     Color headerColor = const Color(0xFF1B3A52); // Default header color
     IconData headerIcon = Icons.access_time;
     String statusText = '';
     Color statusColor = Colors.grey;
-    bool showTakenButton =
-        !isCaregiverView &&
-        (status == DoseStatus.upcoming ||
-            status == DoseStatus.missed ||
-            dose.status == DoseStatus.missed); // Keep previous logic
+
+    bool canMarkAsTaken =
+        !isCaregiverView && // Only elderly can mark
+        (status ==
+                DoseStatus.missed || // Can always mark missed as taken (late)
+            (status == DoseStatus.upcoming && // Can mark upcoming if...
+                !dose.scheduledDateTime.isAfter(
+                  DateTime.now(),
+                )) // ...scheduled time is now or in the past
+            );
+
+    bool showTakenButton = canMarkAsTaken; // Show button if it can be marked
     bool showUndoButton =
         !isCaregiverView &&
         (status == DoseStatus.takenOnTime || status == DoseStatus.takenLate);
-    bool isDimmed = status == DoseStatus.upcoming && !isHighlighted;
 
-    // Determine if it's past due (used for highlighting and potentially status text)
-    bool isPastDue =
-        !isDimmed &&
+    // --- Determine Styling Based on Status and Time ---
+    // Check if the dose is strictly past the 5-minute threshold for "Past Due" styling
+    bool isStrictlyPastDue =
         status == DoseStatus.upcoming &&
-        dose.scheduledDateTime.isBefore(DateTime.now());
+        dose.scheduledDateTime.add(const Duration(minutes: 5)).isBefore(now);
+    // Check if the dose is the *actual* next one or within the 0-5 min past due window (highlight these)
+    bool shouldHighlight =
+        isHighlighted ||
+        (status == DoseStatus.upcoming &&
+            !isStrictlyPastDue &&
+            dose.scheduledDateTime.isBefore(now));
+    // Dim only if it's truly in the future AND not highlighted as the next immediate one
+    bool isDimmed =
+        status == DoseStatus.upcoming &&
+        dose.scheduledDateTime.isAfter(now) &&
+        !isHighlighted;
 
     switch (status) {
       case DoseStatus.takenOnTime:
         borderColor = Colors.green;
-        backgroundColor = Colors.green.shade50;
+        backgroundColor = const Color(0xFFE8F5E9);
         headerColor = Colors.green.shade700;
         headerIcon = Icons.check_circle;
         statusText = 'Taken on time';
@@ -675,7 +719,7 @@ class _TodayMedicationCard extends StatelessWidget {
         statusText = 'Taken late';
         statusColor = Colors.orange.shade800;
         break;
-      case DoseStatus.missed:
+      case DoseStatus.missed: // (More than 10 mins late)
         borderColor = Colors.red;
         backgroundColor = Colors.red.shade50;
         headerColor = Colors.red.shade700;
@@ -684,95 +728,94 @@ class _TodayMedicationCard extends StatelessWidget {
         statusColor = Colors.red.shade700;
         break;
       case DoseStatus.upcoming:
-        if (isPastDue) {
-          // Style for past due but not yet missed
+        if (isStrictlyPastDue) {
+          // Style for 5-10 mins past due
           borderColor = Colors.orange;
           backgroundColor = Colors.orange.shade50;
           headerColor = Colors.orange.shade700;
           headerIcon = Icons.hourglass_bottom;
           statusText = 'Past due';
           statusColor = Colors.orange.shade700;
-        } else if (isHighlighted) {
-          // Style for next up
+        } else if (shouldHighlight) {
+          // Style for next up (future or 0-5 mins past)
           borderColor = Colors.blue;
           backgroundColor = Colors.blue.shade50;
           headerColor = Colors.blue.shade700;
           headerIcon = Icons.notification_important;
-          statusText = 'Next up';
+          // Decide status text based on time relative to now
+          statusText = dose.scheduledDateTime.isAfter(now)
+              ? 'Next up'
+              : 'Due now';
           statusColor = Colors.blue.shade700;
         } else {
-          // Style for later today
+          // Style for later today (genuinely future and not the immediate next)
           headerIcon = Icons.update;
           statusText = 'Upcoming';
           statusColor = Colors.grey.shade600;
         }
         break;
     }
-
-    // Apply dimming if needed (only for future 'upcoming')
     backgroundColor = isDimmed ? Colors.grey.shade100 : backgroundColor;
     borderColor = isDimmed ? Colors.grey.shade300 : borderColor;
 
-    // --- Define Larger Font Sizes ---
-    const double timeFontSize = 24.0; // Larger scheduled time
-    const double statusFontSize = 18.0; // Slightly larger status text
-    const double takenAtFontSize = 16.0; // Slightly larger 'taken at' time
-    const double medNameFontSize = 24.0; // Larger medication name
-    const double frequencyFontSize = 18.0; // Larger frequency text
-    const double notesFontSize = 18.0; // Larger notes text
-    const double buttonFontSize = 22.0; // Larger button text
-    const double buttonIconSize = 30.0; // Larger button icon
-    const double headerIconSize = 34.0; // Larger header icon
-    const double notesIconSize = 22.0; // Slightly larger notes icon
-    const double undoFontSize = 18.0; // Larger undo text
-    const double undoIconSize = 22.0; // Larger undo icon
+    // --- Keep the Font Sizes from previous step ---
+    const double timeFontSize = 24.0;
+    const double statusFontSize = 16.0;
+    const double takenAtFontSize = 15.0;
+    const double medNameFontSize = 22.0;
+    const double frequencyFontSize = 16.0;
+    const double notesFontSize = 16.0;
+    const double buttonFontSize = 20.0;
+    const double buttonIconSize = 28.0;
+    const double headerIconSize = 32.0;
+    const double notesIconSize = 20.0;
+    const double undoFontSize = 16.0;
+    const double undoIconSize = 20.0;
 
+    // --- Return Card Structure (mostly unchanged, just uses updated variables) ---
     return Card(
-      elevation: (isHighlighted || isPastDue)
+      elevation: (shouldHighlight || isStrictlyPastDue)
           ? 6
-          : 2, // Highlight next up and past due
+          : 2, // Highlight next up and past due (5-10min)
       margin: const EdgeInsets.only(bottom: 16),
       color: backgroundColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20), // Slightly larger radius
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(
           color: borderColor,
-          width: (isHighlighted || isPastDue) ? 3.0 : 2.0, // Thicker borders
+          width: (shouldHighlight || isStrictlyPastDue)
+              ? 3.0
+              : 2.0, // Thicker borders for highlighted
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0), // Increased padding
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // Header (uses updated headerIcon, headerColor, timeFontSize, statusText, statusFontSize, takenAtFontSize)
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12), // Slightly larger padding
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: headerColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(
-                      14,
-                    ), // Slightly larger radius
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  // Use defined headerIconSize
                   child: Icon(
                     headerIcon,
                     color: headerColor,
                     size: headerIconSize,
                   ),
                 ),
-                const SizedBox(width: 14), // Increased spacing
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        // Scheduled Time
                         time.format(context),
                         style: TextStyle(
-                          // Use defined timeFontSize
                           fontSize: timeFontSize,
                           fontWeight: FontWeight.bold,
                           color: headerColor,
@@ -780,27 +823,22 @@ class _TodayMedicationCard extends StatelessWidget {
                       ),
                       if (statusText.isNotEmpty)
                         Padding(
-                          // Add padding below time if status exists
                           padding: const EdgeInsets.only(top: 2.0),
                           child: Text(
-                            // Status Text
                             statusText,
                             style: TextStyle(
-                              // Use defined statusFontSize
                               fontSize: statusFontSize,
                               color: statusColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                      if (takenTime != null) // Display Taken Timestamp
+                      if (takenTime != null)
                         Padding(
-                          // Add padding below status if taken time exists
                           padding: const EdgeInsets.only(top: 2.0),
                           child: Text(
                             'at ${DateFormat('h:mm a').format(takenTime.toDate())}',
                             style: TextStyle(
-                              // Use defined takenAtFontSize
                               fontSize: takenAtFontSize,
                               color: statusColor.withOpacity(0.8),
                             ),
@@ -811,67 +849,60 @@ class _TodayMedicationCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16), // Increased spacing
-            // Medication name
+            const SizedBox(height: 16),
+
+            // Medication Name (uses updated medNameFontSize, color logic remains)
             Text(
               med.name,
               style: TextStyle(
-                // Use defined medNameFontSize
                 fontSize: medNameFontSize,
                 fontWeight: FontWeight.bold,
                 color: status == DoseStatus.missed
                     ? Colors.red.shade700
                     : const Color(0xFF212121),
-                decoration: TextDecoration.none, // Ensure no strikethrough
+                decoration: TextDecoration.none,
               ),
             ),
-            const SizedBox(height: 10), // Increased spacing
-            // Frequency
+            const SizedBox(height: 10),
+
+            // Frequency (uses updated frequencyFontSize)
             if (med.frequency != null)
               Text(
                 'Frequency: ${med.frequency}',
-                // Use defined frequencyFontSize
                 style: TextStyle(
                   fontSize: frequencyFontSize,
-                  color: Colors.grey.shade700,
+                  color: const Color.fromARGB(255, 41, 40, 40),
                 ),
               ),
 
-            // Notes
+            // Notes (uses updated notesFontSize, notesIconSize)
             if (med.notes != null && med.notes!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 12), // Increased spacing
+                padding: const EdgeInsets.only(top: 12),
                 child: Container(
-                  padding: const EdgeInsets.all(12), // Slightly larger padding
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.blueGrey.shade50.withOpacity(
                       isDimmed ? 0.5 : 1.0,
                     ),
-                    borderRadius: BorderRadius.circular(
-                      10,
-                    ), // Slightly larger radius
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.blueGrey.shade200),
                   ),
                   child: Row(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start, // Align icon top
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Use defined notesIconSize
                       Padding(
-                        padding: const EdgeInsets.only(
-                          top: 2.0,
-                        ), // Adjust icon position if needed
+                        padding: const EdgeInsets.only(top: 2.0),
                         child: Icon(
                           Icons.info_outline,
                           size: notesIconSize,
                           color: Colors.blueGrey.shade700,
                         ),
                       ),
-                      const SizedBox(width: 10), // Increased spacing
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           med.notes!,
-                          // Use defined notesFontSize
                           style: TextStyle(
                             fontSize: notesFontSize,
                             color: Colors.blueGrey.shade700,
@@ -883,67 +914,90 @@ class _TodayMedicationCard extends StatelessWidget {
                 ),
               ),
 
-            // Action Buttons
+            // Action Buttons (uses updated canMarkAsTaken, isStrictlyPastDue, font/icon sizes)
             if (!isCaregiverView) ...[
-              const SizedBox(height: 20), // Increased spacing
+              const SizedBox(height: 20),
               if (showTakenButton)
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: onTakenPressed,
-                    // Use defined buttonIconSize
+                    onPressed: canMarkAsTaken ? onTakenPressed : null,
                     icon: Icon(
                       Icons.check_circle_outline,
                       size: buttonIconSize,
                     ),
                     label: Text(
-                      status == DoseStatus.missed
+                      // Label depends on if it's strictly past due (5-10 min) or missed (>10 min)
+                      isStrictlyPastDue || status == DoseStatus.missed
                           ? 'Mark as Taken (Late)'
                           : 'Mark as Taken',
-                      // Use defined buttonFontSize
                       style: const TextStyle(
                         fontSize: buttonFontSize,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          status == DoseStatus.missed ||
-                              isPastDue // Orange button for missed/past due
-                          ? Colors.orange.shade700
-                          : const Color(
-                              0xFF5FA5A0,
-                            ), // Teal for regular upcoming
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 18,
-                      ), // Increased padding
+                      backgroundColor: canMarkAsTaken
+                          ? (isStrictlyPastDue ||
+                                    status ==
+                                        DoseStatus
+                                            .missed // Orange button for past due/missed
+                                ? const Color.fromARGB(255, 225, 116, 7)
+                                : const Color.fromARGB(
+                                    255,
+                                    29,
+                                    119,
+                                    113,
+                                  )) // Teal for current/upcoming
+                          : Colors.grey.shade400, // Disabled color
+                      foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                      ), // Slightly larger radius
-                      elevation: 4,
+                      ),
+                      elevation: canMarkAsTaken ? 4 : 0,
                     ),
                   ),
                 ),
               if (showUndoButton)
                 Padding(
-                  padding: const EdgeInsets.only(top: 10), // Increased spacing
-                  child: Center(
-                    child: TextButton.icon(
+                  padding: const EdgeInsets.only(top: 10), // Spacing
+                  child: SizedBox(
+                    // Wrap with SizedBox to control width if needed
+                    width:
+                        double.infinity, // Make it wide like the other button
+                    child: OutlinedButton.icon(
+                      // <-- Changed to OutlinedButton.icon
                       onPressed: onUndoPressed,
-                      // Use defined undoIconSize
-                      icon: Icon(Icons.undo, size: undoIconSize),
+                      icon: Icon(
+                        Icons.undo,
+                        size: undoIconSize,
+                      ), // Use defined size
                       label: Text(
                         'Undo',
                         // Use defined undoFontSize
-                        style: TextStyle(fontSize: undoFontSize),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ), // Added bold
                       ),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color.fromARGB(
+                          255,
+                          255,
+                          255,
+                          255,
+                        ), // Text/icon color
+
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ), // Add padding to undo button
+                          vertical: 16,
+                        ), // Match vertical padding
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            14,
+                          ), // Match shape
+                        ),
+                        backgroundColor: const Color.fromARGB(255, 77, 75, 75),
                       ),
                     ),
                   ),
