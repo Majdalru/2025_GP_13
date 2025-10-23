@@ -4,7 +4,7 @@ import 'addmed.dart';
 import 'models/medication.dart'; // Import the new model
 import 'Screens/home_shell.dart'; // Import ElderlyProfile to get UID and name
 import 'services/medication_scheduler.dart';
-import 'widgets/todays_meds_tab.dart'; 
+import 'widgets/todays_meds_tab.dart';
 
 // --- Main Page Widget ---
 class Medmain extends StatefulWidget {
@@ -65,11 +65,10 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
         'medsList': FieldValue.arrayRemove([medicationToDelete.toMap()]),
       });
 
- // ✅ حدث جدولة التنبيهات بعد الحذف
-    await MedicationScheduler().scheduleAllMedications(
-      widget.elderlyProfile.uid, // أو widget.elderlyProfile.uid
-    );
-
+      // ✅ حدث جدولة التنبيهات بعد الحذف
+      await MedicationScheduler().scheduleAllMedications(
+        widget.elderlyProfile.uid, // أو widget.elderlyProfile.uid
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -116,7 +115,10 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
             child: TabBarView(
               controller: _tabController,
               children: [
-                TodaysMedsTab(elderlyId: widget.elderlyProfile.uid),
+                TodaysMedsTab(
+                  elderlyId: widget.elderlyProfile.uid,
+                  isCaregiverView: true,
+                ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -433,4 +435,3 @@ class MedicationCard extends StatelessWidget {
     );
   }
 }
-

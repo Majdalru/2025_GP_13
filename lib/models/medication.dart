@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum DoseStatus { upcoming, takenOnTime, takenLate, missed }
+
 class Medication {
   final String id; // Unique ID for the medication entry
   final String name;
