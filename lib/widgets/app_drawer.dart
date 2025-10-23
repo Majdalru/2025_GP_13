@@ -71,10 +71,10 @@ class AppDrawer extends StatelessWidget {
                     displayName = name.isNotEmpty
                         ? name
                         : (email.isNotEmpty ? email : 'Guest');
-                    roleLabel =
-                        (role == 'elderly') ? 'Elderly' : 'Caregiver';
+                    roleLabel = (role == 'elderly') ? 'Elderly' : 'Caregiver';
                   }
 
+                  // ← أضفت زر الإعدادات هنا بدون حذف أي شيء
                   return Row(
                     children: [
                       const CircleAvatar(
@@ -94,16 +94,24 @@ class AppDrawer extends StatelessWidget {
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
-                                fontSize: 16,
+                                fontSize: 18, // >=16 لكبار السن
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               roleLabel,
-                              style: const TextStyle(color: Colors.white70),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
+                      ),
+                      IconButton(
+                        tooltip: 'Settings',
+                        icon: const Icon(Icons.settings, color: Colors.white),
+                        onPressed: () => _openEditDialog(context),
                       ),
                     ],
                   );
@@ -335,9 +343,7 @@ class AppDrawer extends StatelessWidget {
                                       .collection('users')
                                       .doc(caregiverUid);
 
-                                  await firestore.runTransaction((
-                                    transaction,
-                                  ) async {
+                                  await firestore.runTransaction((transaction) async {
                                     transaction.update(caregiverDocRef, {
                                       'elderlyIds': FieldValue.arrayUnion([elderlyUid]),
                                     });
@@ -401,6 +407,125 @@ class AppDrawer extends StatelessWidget {
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== نافذة تعديل المعلومات (اسم / جنس / جوال) مع التحقق =====
+  Future<void> _openEditDialog(BuildContext context) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // جلب القيم الحالية لتهيئة الحقول
+    final snap = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data   = snap.data() ?? {};
+    final first  = (data['firstName'] ?? '').toString().trim();
+    final last   = (data['lastName']  ?? '').toString().trim();
+    final gender = (data['gender']    ?? '').toString().trim();
+    final phone  = (data['phone']     ?? '').toString().trim();
+
+    final formKey    = GlobalKey<FormState>();
+    final nameCtrl   = TextEditingController(text: [first, last].where((s)=>s.isNotEmpty).join(' '));
+    final genderCtrl = TextEditingController(text: gender);
+    final phoneCtrl  = TextEditingController(text: phone);
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Edit Info', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Form(
+          key: formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // الاسم (إلزامي)
+              TextFormField(
+                controller: nameCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+                style: const TextStyle(fontSize: 16),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 12),
+
+              // الجنس
+              DropdownButtonFormField<String>(
+                value: genderCtrl.text.isNotEmpty ? genderCtrl.text : null,
+                decoration: const InputDecoration(
+                  labelText: 'Gender',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'male', child: Text('Male')),
+                  DropdownMenuItem(value: 'female', child: Text('Female')),
+                ],
+                onChanged: (v) => genderCtrl.text = v ?? '',
+                validator: (v) => (v == null || v.isEmpty) ? 'Select gender' : null,
+              ),
+              const SizedBox(height: 12),
+
+              // الجوال (05XXXXXXXX)
+              TextFormField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Mobile (05XXXXXXXX)',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+                style: const TextStyle(fontSize: 16),
+                validator: (v) {
+                  final txt = (v ?? '').trim();
+                  return RegExp(r'^05\d{8}$').hasMatch(txt)
+                      ? null
+                      : 'Must start with 05 and be 10 digits';
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+
+              final name  = nameCtrl.text.trim();
+              final parts = name.split(RegExp(r'\s+'));
+              final first = parts.isNotEmpty ? parts.first : '';
+              final last  = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+              await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                'firstName': first,
+                'lastName' : last,
+                'gender'   : genderCtrl.text,
+                'phone'    : phoneCtrl.text.trim(),
+              });
+
+              if (!context.mounted) return;
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Information updated')),
+              );
+            },
+            child: const Text('Save'),
           ),
         ],
       ),

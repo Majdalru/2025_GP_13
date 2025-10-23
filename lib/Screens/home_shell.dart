@@ -149,6 +149,7 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       _selectedProfile != null
           ? HomePage(
+             elderlyId: _selectedProfile!.uid, // << أضيفي هذا السطر
               elderlyName: _selectedProfile!.name,
               onTapArrowToMedsSummary: () {
                 Navigator.of(context).push(
