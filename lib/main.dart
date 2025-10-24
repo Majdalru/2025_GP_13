@@ -4,6 +4,10 @@ import 'firebase_options.dart'; // ✅ الملف الذي تم توليده ت�
 import 'Screens/login_page.dart';
 import 'services/notification_service.dart';
 
+// This is the custom navy color from your addmed.dart file
+const Color customNavyColor = Color.fromRGBO(9, 31, 63, 1);
+// Let's also define your teal color
+const Color customTealColor = Colors.teal;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ✅ ضروري قبل تشغيل Firebase
   await Firebase.initializeApp(
@@ -26,8 +30,10 @@ class CaregiverApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5E60CE),
+          seedColor: customNavyColor,
           brightness: Brightness.light,
+          primary: customNavyColor,
+          secondary: customTealColor,
         ),
         scaffoldBackgroundColor: const Color(0xFFF7F6FD),
         appBarTheme: const AppBarTheme(elevation: 0, centerTitle: false),

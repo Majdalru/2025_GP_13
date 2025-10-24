@@ -590,13 +590,45 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
                 title: 'Step 2: Select Days',
                 subtitle: 'Which days should you take this medication?',
               ),
-              ..._daysOfWeek.map(
-                (day) => CheckboxListTile(
-                  title: Text(day),
-                  value: _selectedDays.contains(day),
-                  onChanged: (bool? value) => _onDaySelected(value, day),
+
+              // --- Added Titles ---
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                child: Text(
+                  'Daily Schedule',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
                 ),
               ),
+              CheckboxListTile(
+                title: const Text('Every day'),
+                value: _selectedDays.contains('Every day'),
+                onChanged: (bool? value) => _onDaySelected(value, 'Every day'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                child: Text(
+                  'Specific Days',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
+                ),
+              ),
+              ..._daysOfWeek
+                  .sublist(1)
+                  .map(
+                    // Start from index 1 ('Sunday')
+                    (day) => CheckboxListTile(
+                      title: Text(day),
+                      value: _selectedDays.contains(day),
+                      onChanged: (bool? value) => _onDaySelected(value, day),
+                    ),
+                  ),
+
+              // --- End of modifications ---
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _selectedDays.isNotEmpty
@@ -723,6 +755,24 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: widget.selectedTimes[index] ?? TimeOfDay.now(),
+      // --- This 'builder' is the new code ---
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Colors.teal, // This sets the main color
+              onPrimary: Colors.white, // Text on top of the main color
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.teal, // Color for "OK" and "Cancel"
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+      // --- End of new code ---
     );
     if (picked != null) {
       widget.onTimeChanged(index, picked);
