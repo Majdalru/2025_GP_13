@@ -5,62 +5,62 @@ import 'Favoritespage.dart';
 class MediaPage extends StatelessWidget {
   const MediaPage({super.key});
 
+  static const kPrimary = Color(0xFF1B3A52);
+
   @override
   Widget build(BuildContext context) {
-    const darkBlue = Color(0xFF2A4D69);
-
     return Scaffold(
-      backgroundColor: Colors.white,
+    backgroundColor: const Color(0xFFF5F5F5),
+
+      // 🔹 AppBar مثل الصورة
+       appBar: AppBar(
+        toolbarHeight: 110,
+        backgroundColor: const Color(0xFF1B3A52),
+        title: const Text("Media"),
+        titleTextStyle: const TextStyle(
+          fontSize: 34,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
+        ),
+      ),
+
+      // 🔹 المحتوى
       body: SafeArea(
-        child: SingleChildScrollView( // ✅ أضفنا scroll
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Top row: back button + title
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back,
-                        size: 36, color: Colors.black),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  const SizedBox(width: 5),
-                  const Text(
-                    "Media",
-                    style: TextStyle(
-                      fontFamily: 'NotoSansArabic',
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 30),
-
-              // 🔹 Grid of media cards
+              // 🔹 Grid مصغّرة قليلاً
               GridView.count(
-                shrinkWrap: true, // ✅ مهم جدًا
+                shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
                 crossAxisSpacing: 20,
-                mainAxisSpacing: 30,
-                childAspectRatio: 0.7,
+                mainAxisSpacing: 25,
+                childAspectRatio: 0.8, // 🔹 أصغر شوي
                 children: [
-                  _buildMediaCard(context, Icons.library_music, "Story", darkBlue),
-                  _buildMediaCard(context, Icons.menu_book, "Quran", darkBlue),
-                  _buildMediaCard(context, Icons.upload_file, "Caregiver", darkBlue),
-                  _buildMediaCard(context, Icons.favorite, "Health", darkBlue),
+                  _buildMediaCard(context, Icons.library_music, "Story"),
+                  _buildMediaCard(context, Icons.menu_book, "Quran"),
+                  _buildMediaCard(context, Icons.upload_file, "Caregiver"),
+                  _buildMediaCard(context, Icons.favorite, "Health"),
                 ],
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
 
-              // 🔹 Favorites button
+              // 🔹 زر Favorites بنفس تنسيق الهوم
               SizedBox(
                 width: double.infinity,
                 height: 90,
@@ -68,13 +68,10 @@ class MediaPage extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const FavoritesPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const FavoritesPage()),
                     );
                   },
-                  icon: const Icon(Icons.favorite,
-                      size: 45, color: Colors.white),
+                  icon: const Icon(Icons.favorite, size: 45, color: Colors.white),
                   label: const Text(
                     "Favorites",
                     style: TextStyle(
@@ -85,7 +82,7 @@ class MediaPage extends StatelessWidget {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: darkBlue,
+                    backgroundColor: kPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -100,41 +97,38 @@ class MediaPage extends StatelessWidget {
     );
   }
 
-  Widget _buildMediaCard(
-      BuildContext context, IconData icon, String title, Color borderColor) {
+  Widget _buildMediaCard(BuildContext context, IconData icon, String title) {
     return Card(
       color: Colors.white,
       elevation: 4,
-      shadowColor: borderColor.withOpacity(0.2),
+      shadowColor: kPrimary.withOpacity(0.2),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: borderColor.withOpacity(0.9), width: 2),
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: kPrimary.withOpacity(0.9), width: 2),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        splashColor: borderColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(18),
+        splashColor: kPrimary.withOpacity(0.15),
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => AudioListPage(category: title),
-            ),
+            MaterialPageRoute(builder: (_) => AudioListPage(category: title)),
           );
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 15),
+          padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 90, color: borderColor),
-              const SizedBox(height: 20),
+              Icon(icon, size: 80, color: kPrimary), // 🔹 أصغر شوي
+              const SizedBox(height: 18),
               Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'NotoSansArabic',
-                  fontSize: 28,
+                  fontSize: 26, // 🔹 أصغر قليلاً
                   fontWeight: FontWeight.w700,
-                  color: borderColor,
+                  color: kPrimary,
                 ),
               ),
             ],

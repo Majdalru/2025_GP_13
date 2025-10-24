@@ -9,6 +9,53 @@ import 'media_page.dart';
 import 'elderly_med.dart';
 import '../../Screens/login_page.dart';
 
+/// =====================
+///  Styles (Unified)
+/// =====================
+const kPrimary = Color(0xFF1B3A52);
+const kAccentRed = Color(0xFFD62828);
+const kSurface =  Color(0xFFF5F5F5);
+const kCardRadius = 16.0;
+const kFieldRadius = 14.0;
+
+const kTitleText = TextStyle(
+  fontSize: 22,
+  fontWeight: FontWeight.w800,
+  color: kPrimary,
+);
+
+const kBodyText = TextStyle(fontSize: 22, color: Colors.black87);
+
+const kButtonText = TextStyle(
+  fontSize: 22,
+  fontWeight: FontWeight.bold,
+  color: Colors.white,
+);
+
+InputDecoration kInput(String label) => InputDecoration(
+  labelText: label,
+  labelStyle: const TextStyle(
+    fontSize: 20,
+    color: kPrimary,
+    fontWeight: FontWeight.w600,
+  ),
+  filled: true,
+  fillColor: Colors.white,
+  focusedBorder: OutlineInputBorder(
+    borderSide: const BorderSide(color: kPrimary, width: 2),
+    borderRadius: BorderRadius.circular(kFieldRadius),
+  ),
+  border: OutlineInputBorder(borderRadius: BorderRadius.circular(kFieldRadius)),
+  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+);
+
+ButtonStyle kBigButton(Color bg, {EdgeInsets? pad}) => ElevatedButton.styleFrom(
+  backgroundColor: bg,
+  padding: pad ?? const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  elevation: 4,
+);
+
 class ElderlyHomePage extends StatefulWidget {
   const ElderlyHomePage({super.key});
 
@@ -27,6 +74,37 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   void initState() {
     super.initState();
     fetchUserData();
+  }
+
+  void _showTopBanner(
+    String message, {
+    Color color = kPrimary,
+    int seconds = 5,
+  }) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentMaterialBanner()
+      ..showMaterialBanner(
+        MaterialBanner(
+          backgroundColor: color,
+          elevation: 4,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          content: Text(
+            message,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          actions: const [SizedBox.shrink()],
+        ),
+      );
+
+    Future.delayed(Duration(seconds: seconds), () {
+      if (mounted) messenger.hideCurrentMaterialBanner();
+    });
   }
 
   // chunk helper for whereIn (max 10 ids)
@@ -82,7 +160,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             final l = (x['lastName'] ?? '').toString().trim();
             final email = (x['email'] ?? '').toString().trim();
             final n = [f, l].where((s) => s.isNotEmpty).join(' ');
-            names.add(n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'));
+            names.add(
+              n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'),
+            );
           }
         }
       }
@@ -94,262 +174,372 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     } catch (e) {
       setState(() => loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const darkBlue = Color(0xFF2A4D69);
-    const redButton = Color(0xFFD62828);
-
     if (loading) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: kSurface,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kSurface,
       drawer: Drawer(
-        backgroundColor: Colors.white,
+        backgroundColor: kSurface,
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
           children: [
-            // Header name
             const SizedBox(height: 24),
             Align(
-  alignment: Alignment.centerLeft,
-  child: Padding(
-    padding: const EdgeInsets.only(left: 4),
-    child: Text(
-      (fullName?.isNotEmpty ?? false) ? fullName! : "User",
-      textAlign: TextAlign.left,
-      style: const TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF2A4D69),
-      ),
-    ),
-  ),
-),
-            const SizedBox(height: 20),
-
-// ===== Card 1: Elderly Info =====
-Card(
-  elevation: 1,
-  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-  child: Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // العنوان + زر الإعدادات
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "Elderly Info",
-              style: TextStyle(
-                fontSize: 22, // أكبر
-                fontWeight: FontWeight.w800,
-                color: darkBlue,
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  (fullName?.isNotEmpty ?? false) ? fullName! : "User",
+                  textAlign: TextAlign.left,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: kPrimary,
+                  ),
+                ),
               ),
             ),
-            IconButton(
-              iconSize: 28, // أكبر
-              icon: const Icon(Icons.settings, color: darkBlue),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) {
-                    final _formKey = GlobalKey<FormState>();
-                    final nameController =
-                        TextEditingController(text: fullName ?? '');
-                    final genderController =
-                        TextEditingController(text: gender ?? '');
-                    final phoneController =
-                        TextEditingController(text: phone ?? '');
+            const SizedBox(height: 20),
 
-                    return AlertDialog(
-                      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      title: const Text(
-                        "Edit Info",
-                        style: TextStyle(
-                          fontSize: 22, // أكبر
-                          fontWeight: FontWeight.bold,
-                          color: darkBlue,
-                        ),
-                      ),
-                      content: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          // تكبير المقاس على الشاشات الصغيرة أيضًا
-                          maxWidth: MediaQuery.of(context).size.width * 0.95,
-                          maxHeight: MediaQuery.of(context).size.height * 0.70,
-                        ),
-                        child: SingleChildScrollView(
-                          child: Form(
-                            key: _formKey,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // الاسم
-                                TextFormField(
-                                  controller: nameController,
-                                  textInputAction: TextInputAction.next,
-                                  textCapitalization: TextCapitalization.words,
-                                  style: const TextStyle(fontSize: 18),
-                                  decoration: const InputDecoration(
-                                    labelText: "Name",
-                                    labelStyle: TextStyle(fontSize: 16),
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                  ),
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) {
-                                      return "Name is required";
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                // الجنس
-                                DropdownButtonFormField<String>(
-                                  value: (genderController.text.isNotEmpty)
-                                      ? genderController.text
-                                      : null,
-                                  decoration: const InputDecoration(
-                                    labelText: "Gender",
-                                    labelStyle: TextStyle(fontSize: 16),
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                  ),
-                                  style: const TextStyle(fontSize: 18, color: Colors.black87),
-                                  items: const [
-                                    DropdownMenuItem(value: "male", child: Text("Male")),
-                                    DropdownMenuItem(value: "female", child: Text("Female")),
-                                  ],
-                                  onChanged: (val) => genderController.text = val ?? '',
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) return "Select gender";
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                // الجوال
-                                TextFormField(
-                                  controller: phoneController,
-                                  keyboardType: TextInputType.phone,
-                                  style: const TextStyle(fontSize: 18),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(10),
-                                  ],
-                                  decoration: const InputDecoration(
-                                    labelText: "Mobile (05XXXXXXXX)",
-                                    labelStyle: TextStyle(fontSize: 16),
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                  ),
-                                  validator: (v) {
-                                    final txt = (v ?? "").trim();
-                                    final reg = RegExp(r'^05\d{8}$');
-                                    if (!reg.hasMatch(txt)) {
-                                      return "Mobile must be 10 digits and start with 05";
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Cancel", style: TextStyle(fontSize: 16)),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: darkBlue,
-                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                          ),
-                          onPressed: () async {
-                            if (!_formKey.currentState!.validate()) return;
-
-                            final user = FirebaseAuth.instance.currentUser;
-                            if (user != null) {
-                              final name = nameController.text.trim();
-                              final parts = name.split(RegExp(r'\s+'));
-                              final first = parts.isNotEmpty ? parts.first : '';
-                              final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
-
-                              await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(user.uid)
-                                  .update({
-                                'firstName': first,
-                                'lastName': last,
-                                'gender': genderController.text,
-                                'phone': phoneController.text.trim(),
-                              });
-
-                              setState(() {
-                                fullName = nameController.text.trim();
-                                gender = genderController.text;
-                                phone = phoneController.text.trim();
-                              });
-
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Information updated successfully")),
+            // ===== Card 1: Elderly Info =====
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(kCardRadius),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Elderly Info", style: kTitleText),
+                        IconButton(
+                          iconSize: 32,
+                          splashRadius: 28,
+                          icon: const Icon(Icons.settings, color: kPrimary),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) {
+                                final _formKey = GlobalKey<FormState>();
+                                final nameController = TextEditingController(
+                                  text: fullName ?? '',
                                 );
-                              }
-                            }
+                                final genderController = TextEditingController(
+                                  text: gender ?? '',
+                                );
+                                final phoneController = TextEditingController(
+                                  text: phone ?? '',
+                                );
+
+                                return AlertDialog(
+                                  backgroundColor: const Color(0xFFF9FAFB),
+                                  insetPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 24,
+                                  ),
+                                  contentPadding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    20,
+                                    24,
+                                    12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    side: BorderSide(
+                                      color: kPrimary.withOpacity(0.3),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  title: const Text(
+                                    "Edit Information",
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: kPrimary,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  content: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth:
+                                          MediaQuery.of(context).size.width *
+                                          0.95,
+                                      maxHeight:
+                                          MediaQuery.of(context).size.height *
+                                          0.80,
+                                    ),
+                                    child: SingleChildScrollView(
+                                      child: Form(
+                                        key: _formKey,
+                                        autovalidateMode:
+                                            AutovalidateMode.onUserInteraction,
+                                        child: Column(
+                                          children: [
+                                            TextFormField(
+                                              controller: nameController,
+                                              textCapitalization:
+                                                  TextCapitalization.words,
+                                              style: kBodyText,
+                                              decoration: kInput("Name"),
+                                              validator: (v) =>
+                                                  (v == null ||
+                                                      v.trim().isEmpty)
+                                                  ? "Name is required"
+                                                  : null,
+                                            ),
+                                            const SizedBox(height: 18),
+                                            DropdownButtonFormField<String>(
+                                              value:
+                                                  genderController
+                                                      .text
+                                                      .isNotEmpty
+                                                  ? genderController.text
+                                                  : null,
+                                              decoration: kInput("Gender")
+                                                  .copyWith(
+                                                    filled: true,
+                                                    fillColor: Colors.white,
+                                                  ),
+                                              dropdownColor: Colors.white,
+                                              style: kBodyText,
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: "male",
+                                                  child: Text(
+                                                    "Male",
+                                                    style: kBodyText,
+                                                  ),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "female",
+                                                  child: Text(
+                                                    "Female",
+                                                    style: kBodyText,
+                                                  ),
+                                                ),
+                                              ],
+                                              onChanged: (val) =>
+                                                  genderController.text =
+                                                      val ?? '',
+                                              validator: (v) =>
+                                                  v == null || v.isEmpty
+                                                  ? "Select gender"
+                                                  : null,
+                                            ),
+                                            const SizedBox(height: 18),
+                                            TextFormField(
+                                              controller: phoneController,
+                                              keyboardType: TextInputType.phone,
+                                              style: kBodyText,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter
+                                                    .digitsOnly,
+                                                LengthLimitingTextInputFormatter(
+                                                  10,
+                                                ),
+                                              ],
+                                              decoration: kInput(
+                                                "Mobile (05XXXXXXXX)",
+                                              ),
+                                              validator: (v) {
+                                                final txt = (v ?? "").trim();
+                                                final reg = RegExp(
+                                                  r'^05\d{8}$',
+                                                );
+                                                return !reg.hasMatch(txt)
+                                                    ? "Mobile must start with 05 and have 10 digits"
+                                                    : null;
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  actionsPadding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    0,
+                                    20,
+                                    16,
+                                  ),
+                                  actionsAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+
+                                  actions: [
+                                    Row(
+                                      children: [
+                                        // Cancel
+                                        Expanded(
+                                          child: SizedBox(
+                                            height: 56,
+                                            child: TextButton(
+                                              style: TextButton.styleFrom(
+                                                backgroundColor: Colors.white,
+                                                side: const BorderSide(
+                                                  color: kPrimary,
+                                                  width: 2,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                ),
+                                                // نفس البادينغ تقريبًا لكن الارتفاع مضمون بـ SizedBox
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 0,
+                                                    ),
+                                              ),
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                              child: const Text(
+                                                "Cancel",
+                                                style: TextStyle(
+                                                  fontSize: 22,
+                                                  color: kPrimary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+
+                                        // Save
+                                        Expanded(
+                                          child: SizedBox(
+                                            height: 56,
+                                            child: ElevatedButton(
+                                              style:
+                                                  kBigButton(
+                                                    kPrimary,
+                                                    pad:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 16,
+                                                          vertical: 0,
+                                                        ),
+                                                  ).copyWith(
+                                                    elevation:
+                                                        const WidgetStatePropertyAll(
+                                                          2,
+                                                        ),
+                                                  ),
+                                              onPressed: () async {
+                                                if (!_formKey.currentState!
+                                                    .validate())
+                                                  return;
+
+                                                final user = FirebaseAuth
+                                                    .instance
+                                                    .currentUser;
+                                                if (user != null) {
+                                                  final name = nameController
+                                                      .text
+                                                      .trim();
+                                                  final parts = name.split(
+                                                    RegExp(r'\s+'),
+                                                  );
+                                                  final first = parts.isNotEmpty
+                                                      ? parts.first
+                                                      : '';
+                                                  final last = parts.length > 1
+                                                      ? parts
+                                                            .sublist(1)
+                                                            .join(' ')
+                                                      : '';
+
+                                                  await FirebaseFirestore
+                                                      .instance
+                                                      .collection('users')
+                                                      .doc(user.uid)
+                                                      .update({
+                                                        'firstName': first,
+                                                        'lastName': last,
+                                                        'gender':
+                                                            genderController
+                                                                .text,
+                                                        'phone': phoneController
+                                                            .text
+                                                            .trim(),
+                                                      });
+
+                                                  setState(() {
+                                                    fullName = nameController
+                                                        .text
+                                                        .trim();
+                                                    gender =
+                                                        genderController.text;
+                                                    phone = phoneController.text
+                                                        .trim();
+                                                  });
+
+                                                  if (context.mounted) {
+                                                    Navigator.pop(context);
+                                                    _showTopBanner(
+                                                      'Information updated successfully',
+                                                      color:
+                                                          Colors.green.shade700,
+                                                    );
+                                                  }
+                                                }
+                                              },
+                                              child: const Text(
+                                                "Save",
+                                                style: kButtonText,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
                           },
-                          child: const Text("Save", style: TextStyle(fontSize: 16, color: Colors.white)),
                         ),
                       ],
-                    );
-                  },
-                );
-              },
+                    ),
+                    const SizedBox(height: 14),
+                    _InfoBox(
+                      label: "Name",
+                      value: (fullName?.isNotEmpty ?? false)
+                          ? fullName!
+                          : "N/A",
+                    ),
+                    const SizedBox(height: 14),
+                    _InfoBox(label: "Gender", value: gender ?? "N/A"),
+                    const SizedBox(height: 14),
+                    _InfoBox(label: "Mobile", value: phone ?? "N/A"),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        _InfoBox(label: "Name", value: (fullName?.isNotEmpty ?? false) ? fullName! : "N/A"),
-        const SizedBox(height: 14),
-        _InfoBox(label: "Gender", value: gender ?? "N/A"),
-        const SizedBox(height: 14),
-        _InfoBox(label: "Mobile", value: phone ?? "N/A"),
-      ],
-    ),
-  ),
-),
 
-
-
-
-
-            
             // ===== Card 2: Caregivers =====
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(kCardRadius),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -363,23 +553,16 @@ Card(
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(kCardRadius),
               ),
               child: const Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      "Verification Code",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: darkBlue,
-                      ),
-                    ),
+                    Text("Verification Code", style: kTitleText),
                     SizedBox(height: 12),
-                    _PairingCodeBox(), // ← unchanged logic
+                    _PairingCodeBox(),
                   ],
                 ),
               ),
@@ -388,7 +571,7 @@ Card(
         ),
       ),
 
-      // ===== Main content (unchanged) =====
+      // ===== Main content =====
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(25),
@@ -401,12 +584,22 @@ Card(
                 children: [
                   Builder(
                     builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu, size: 42, color: Colors.black),
+                      icon: const Icon(
+                        Icons.menu,
+                        size: 42,
+                        color: Colors.black,
+                      ),
+                      splashRadius: 28,
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.black, size: 36),
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Colors.black,
+                      size: 36,
+                    ),
+                    splashRadius: 28,
                     onPressed: () {
                       HapticFeedback.selectionClick();
                       showDialog(
@@ -415,6 +608,7 @@ Card(
                           backgroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
+                            side: const BorderSide(color: kPrimary, width: 2),
                           ),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -425,19 +619,26 @@ Card(
                                 style: TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w700,
-                                  color: darkBlue,
+                                  color: kPrimary,
                                 ),
                               ),
                               const SizedBox(height: 20),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  FilledButton(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: Colors.grey[200],
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      side: const BorderSide(
+                                        color: kPrimary,
+                                        width: 2,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 35,
-                                        vertical: 15,
+                                        horizontal: 30,
+                                        vertical: 16,
                                       ),
                                     ),
                                     onPressed: () => Navigator.pop(context),
@@ -445,17 +646,18 @@ Card(
                                       "No",
                                       style: TextStyle(
                                         fontSize: 22,
-                                        color: Colors.black87,
+                                        color: kPrimary,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 15),
-                                  FilledButton(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: redButton,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 35,
-                                        vertical: 15,
+                                  ElevatedButton(
+                                    style: kBigButton(
+                                      kAccentRed,
+                                      pad: const EdgeInsets.symmetric(
+                                        horizontal: 36,
+                                        vertical: 18,
                                       ),
                                     ),
                                     onPressed: () {
@@ -470,10 +672,7 @@ Card(
                                     },
                                     child: const Text(
                                       "Yes",
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        color: Colors.white,
-                                      ),
+                                      style: kButtonText,
                                     ),
                                   ),
                                 ],
@@ -502,7 +701,7 @@ Card(
               Container(
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAECEE),
+                  color: const Color.fromARGB(255, 188, 191, 193),
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
@@ -512,7 +711,7 @@ Card(
               // SOS
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: redButton,
+                  backgroundColor: kAccentRed,
                   minimumSize: const Size(double.infinity, 100),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
@@ -531,7 +730,7 @@ Card(
                 ),
               ),
 
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
 
               // two tiles
               Row(
@@ -561,7 +760,8 @@ Card(
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ElderlyMedicationPage(elderlyId: uid),
+                              builder: (_) =>
+                                  ElderlyMedicationPage(elderlyId: uid),
                             ),
                           );
                         } else {
@@ -584,7 +784,7 @@ Card(
   }
 }
 
-// ===== Reusable widgets (unchanged logic) =====
+// ===== Reusable widgets =====
 
 class _InfoBox extends StatelessWidget {
   final String label;
@@ -593,26 +793,18 @@ class _InfoBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const darkBlue = Color(0xFF2A4D69);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: darkBlue,
-          ),
-        ),
+        Text(label, style: kTitleText),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: kSurface,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: darkBlue.withOpacity(0.5), width: 1.5),
+            border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
@@ -621,10 +813,7 @@ class _InfoBox extends StatelessWidget {
               ),
             ],
           ),
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 22, color: Colors.black87),
-          ),
+          child: Text(value, style: kBodyText),
         ),
       ],
     );
@@ -637,28 +826,19 @@ class _CaregiversBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const darkBlue = Color(0xFF2A4D69);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Caregivers',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: darkBlue,
-          ),
-        ),
+        const Text('Caregivers', style: kTitleText),
         const SizedBox(height: 8),
         if (names.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: kSurface,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: darkBlue.withOpacity(0.5), width: 1.5),
+              border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             ),
             child: const Text(
               'No caregivers linked',
@@ -670,15 +850,21 @@ class _CaregiversBox extends StatelessWidget {
             children: names.map((name) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 14,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: kSurface,
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: darkBlue.withOpacity(0.5), width: 1.5),
+                  border: Border.all(
+                    color: kPrimary.withOpacity(0.5),
+                    width: 1.5,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.person, color: darkBlue),
+                    const Icon(Icons.person, color: kPrimary),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -765,9 +951,9 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
           .collection('users')
           .doc(user.uid)
           .update({
-        'pairingCode': newCode,
-        'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
-      });
+            'pairingCode': newCode,
+            'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
+          });
 
       if (mounted) {
         setState(() {
@@ -779,15 +965,15 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error generating code: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error generating code: $e")));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const darkBlue = Color(0xFF2A4D69);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -796,19 +982,20 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: kSurface,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: darkBlue.withOpacity(0.6), width: 1.5),
+              border: Border.all(color: kPrimary.withOpacity(0.6), width: 1.5),
             ),
             child: Column(
               children: [
+                const SizedBox(height: 4),
                 Text(
                   _code!,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: kPrimary,
                     letterSpacing: 3,
                   ),
                 ),
@@ -821,13 +1008,10 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
             ),
           ),
         const SizedBox(height: 15),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: darkBlue,
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+        ElevatedButton(
+          style: kBigButton(
+            kPrimary,
+            pad: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
           ),
           onPressed: _isLoading ? null : _generateNewCode,
           child: _isLoading
@@ -839,10 +1023,7 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
                     color: Colors.white,
                   ),
                 )
-              : Text(
-                  _code == null ? "Generate Code" : "Generate New Code",
-                  style: const TextStyle(fontSize: 20, color: Colors.white),
-                ),
+              : const Text("Generate Code", style: kButtonText),
         ),
       ],
     );
@@ -861,35 +1042,53 @@ class _HomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const darkBlue = Color(0xFF2A4D69);
-    return Card(
-      color: Colors.white,
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-      shadowColor: Colors.grey.withOpacity(0.1),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(25),
-        onTap: onTap,
-        splashColor: darkBlue.withOpacity(0.15),
-        highlightColor: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 30),
-          child: Column(
-            children: [
-              Icon(icon, size: 90, color: darkBlue),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: darkBlue,
-                ),
-              ),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final scale = (width / 200).clamp(0.8, 1.0);
+        final iconSize = 79 * scale;
+        final fontSize = 27 * scale;
+        final vPadding = 50 * scale;
+
+        return Card(
+          color: kSurface,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+            side: const BorderSide(color: kPrimary, width: 2),
           ),
-        ),
-      ),
+          shadowColor: Colors.grey.withOpacity(0.1),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(25),
+            onTap: onTap,
+            splashColor: kPrimary.withOpacity(0.15),
+            highlightColor: Colors.transparent,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: vPadding),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: iconSize, color: kPrimary),
+                  const SizedBox(height: 8),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w600,
+                        color: kPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

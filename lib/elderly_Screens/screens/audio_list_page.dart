@@ -14,6 +14,36 @@ class AudioListPage extends StatefulWidget {
 class _AudioListPageState extends State<AudioListPage> {
   String searchQuery = '';
 
+  static const kPrimary = Color(0xFF1B3A52);
+
+  void _showTopBanner(String message, {Color color = kPrimary, int seconds = 5}) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentMaterialBanner()
+      ..showMaterialBanner(
+        MaterialBanner(
+          backgroundColor: color,
+          elevation: 4,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          actions: const [SizedBox.shrink()], //  
+        ),
+      );
+
+    Future.delayed(Duration(seconds: seconds), () {
+      if (mounted) messenger.hideCurrentMaterialBanner();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final Map<String, List<Map<String, String>>> audioData = {
@@ -41,73 +71,65 @@ class _AudioListPageState extends State<AudioListPage> {
     };
 
     final allItems = audioData[widget.category] ?? [];
+    final filteredItems = allItems
+        .where((item) => item["title"]!
+            .toLowerCase()
+            .contains(searchQuery.toLowerCase()))
+        .toList();
 
-    final filteredItems = allItems.where((item) {
-      final title = item["title"]!.toLowerCase();
-      return title.contains(searchQuery.toLowerCase());
-    }).toList();
-
-    const darkBlue = Color(0xFF2A4D69); // الأزرق الداكن
     const cardColor = Colors.white;
 
     return Scaffold(
       backgroundColor: Colors.white,
+
+      appBar: AppBar(
+        toolbarHeight: 110,
+        backgroundColor: kPrimary,
+        title: Text(widget.category),
+        titleTextStyle: const TextStyle(
+          fontSize: 34,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
+          onPressed: () => Navigator.pop(context),
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
+        ),
+      ),
+
       body: SafeArea(
         child: Column(
           children: [
-            // 🔹 Top Row (Back + Title)
+            // ===== Search Bar =====
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back,
-                        size: 36, color: Colors.black),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    widget.category,
-                    style: const TextStyle(
-                      fontFamily: 'NotoSansArabic',
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 🔹 Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
               child: TextField(
                 onChanged: (value) => setState(() => searchQuery = value),
-                style:
-                    const TextStyle(fontSize: 22, fontFamily: 'NotoSansArabic'),
+                style: const TextStyle(fontSize: 22, fontFamily: 'NotoSansArabic'),
                 decoration: InputDecoration(
                   hintText: 'Search for audio...',
-                  hintStyle:
-                      const TextStyle(fontSize: 22, color: Colors.grey),
-                  prefixIcon:
-                      const Icon(Icons.search, size: 30, color: Colors.grey),
+                  hintStyle: const TextStyle(fontSize: 22, color: Colors.grey),
+                  prefixIcon: const Icon(Icons.search, size: 30, color: Colors.grey),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                      vertical: 15, horizontal: 20),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide:
-                        BorderSide(color: Colors.grey.withOpacity(0.3)),
+                    borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
 
-            // 🔹 List of Audio Cards
+            // ===== List of Audio Cards =====
             Expanded(
               child: filteredItems.isEmpty
                   ? const Center(
@@ -130,13 +152,13 @@ class _AudioListPageState extends State<AudioListPage> {
                         return Card(
                           color: cardColor,
                           elevation: 3,
-                          shadowColor: darkBlue.withOpacity(0.1),
+                          shadowColor: kPrimary.withOpacity(0.1),
                           margin: const EdgeInsets.symmetric(
                               vertical: 12, horizontal: 20),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                             side: BorderSide(
-                              color: darkBlue.withOpacity(0.8),
+                              color: kPrimary.withOpacity(0.8),
                               width: 2,
                             ),
                           ),
@@ -144,8 +166,7 @@ class _AudioListPageState extends State<AudioListPage> {
                             contentPadding: const EdgeInsets.all(20),
                             leading: CircleAvatar(
                               radius: 35,
-                              backgroundImage:
-                                  AssetImage(item["image"]!),
+                              backgroundImage: AssetImage(item["image"]!),
                             ),
                             title: Text(
                               item["title"]!,
@@ -153,7 +174,7 @@ class _AudioListPageState extends State<AudioListPage> {
                                 fontFamily: 'NotoSansArabic',
                                 fontSize: 26,
                                 fontWeight: FontWeight.w700,
-                                color: darkBlue,
+                                color: kPrimary,
                               ),
                             ),
                             trailing: IconButton(
@@ -161,8 +182,7 @@ class _AudioListPageState extends State<AudioListPage> {
                                 isFavorite
                                     ? Icons.favorite
                                     : Icons.favorite_border,
-                                color:
-                                    isFavorite ? Colors.red : Colors.grey,
+                                color: isFavorite ? Colors.red : Colors.grey,
                                 size: 36,
                               ),
                               onPressed: () {
@@ -174,38 +194,17 @@ class _AudioListPageState extends State<AudioListPage> {
                                   });
                                 });
 
-                                final nowFav = favoritesManager
-                                    .isFavorite(item["title"]!);
+                                final nowFav =
+                                    favoritesManager.isFavorite(item["title"]!);
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      nowFav
-                                          ? 'Added to Favorites'
-                                          : 'Removed from Favorites',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontFamily: 'NotoSansArabic',
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    duration:
-                                        const Duration(milliseconds: 1200),
-                                    backgroundColor:
-                                        nowFav ? Colors.green : Colors.red,
-                                    behavior:
-                                        SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(15),
-                                    ),
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 40,
-                                      vertical: 20,
-                                    ),
-                                  ),
+                                // ===== إشعار علوي بدل SnackBar =====
+                                _showTopBanner(
+                                  nowFav
+                                      ? 'Added to Favorites successfully'
+                                      : 'Removed from Favorites',
+                                  color: nowFav
+                                      ? Colors.green.shade700
+                                      : Colors.red.shade700,
                                 );
                               },
                             ),

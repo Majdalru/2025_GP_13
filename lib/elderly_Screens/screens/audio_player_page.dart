@@ -10,77 +10,77 @@ class AudioPlayerPage extends StatelessWidget {
     required this.category,
   });
 
+  static const kPrimary = Color(0xFF1B3A52);
+
   @override
   Widget build(BuildContext context) {
-    const darkBlue = Color(0xFF2A4D69);
-
     return Scaffold(
       backgroundColor: Colors.white,
+
+      // AppBar موحّد مثل الصفحات السابقة
+      appBar: AppBar(
+        toolbarHeight: 110,
+        backgroundColor: kPrimary,
+        title: Text(title, overflow: TextOverflow.ellipsis),
+        titleTextStyle: const TextStyle(
+          fontSize: 28,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
+          onPressed: () => Navigator.pop(context),
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
+        ),
+      ),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Top Row (Back + Title)
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back,
-                        size: 36, color: Colors.black),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 5),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontFamily: 'NotoSansArabic',
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+              // مساحة بسيطة تحت الـAppBar
+              const SizedBox(height: 10),
 
-              const SizedBox(height: 40),
-
-              // 🔹 Audio Player Card
+              // بطاقة المشغّل
               Expanded(
                 child: Center(
                   child: Card(
                     color: Colors.white,
                     elevation: 4,
-                    shadowColor: darkBlue.withOpacity(0.15),
+                    shadowColor: kPrimary.withOpacity(0.15),
                     margin: const EdgeInsets.all(10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
-                      side: BorderSide(color: darkBlue.withOpacity(0.8), width: 2),
+                      side: BorderSide(color: kPrimary.withOpacity(0.85), width: 2),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(30.0),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // العنوان + صورة
                           Row(
                             children: [
                               const CircleAvatar(
                                 radius: 45,
-                                backgroundImage:
-                                    AssetImage('assets/images/sample.jpg'),
+                                backgroundImage: AssetImage('assets/images/sample.jpg'),
                               ),
                               const SizedBox(width: 20),
                               Expanded(
                                 child: Text(
                                   title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontFamily: 'NotoSansArabic',
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
-                                    color: darkBlue,
+                                    color: kPrimary,
                                   ),
                                 ),
                               ),
@@ -89,21 +89,19 @@ class AudioPlayerPage extends StatelessWidget {
 
                           const SizedBox(height: 40),
 
-                          // 🔹 Slider
+                          // المؤشر (Slider)
                           SliderTheme(
                             data: SliderTheme.of(context).copyWith(
-                              thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 10),
-                              overlayShape: const RoundSliderOverlayShape(
-                                  overlayRadius: 18),
+                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
                               trackHeight: 4,
                             ),
                             child: Slider(
-                              value: 0,
-                              onChanged: (value) {},
+                              value: 0, // UI فقط حالياً
+                              onChanged: (_) {},
                               min: 0,
                               max: 100,
-                              activeColor: darkBlue,
+                              activeColor: kPrimary,
                               inactiveColor: Colors.grey[300],
                             ),
                           ),
@@ -122,37 +120,35 @@ class AudioPlayerPage extends StatelessWidget {
 
                           const SizedBox(height: 40),
 
-                          // 🔹 Player Controls
+                          // أزرار التحكم
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.skip_previous),
                                 iconSize: 50,
-                                color: darkBlue,
+                                color: kPrimary,
                                 onPressed: () {},
+                                splashRadius: 30,
                               ),
                               const SizedBox(width: 20),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   shape: const CircleBorder(),
-                                  backgroundColor: darkBlue,
+                                  backgroundColor: kPrimary,
                                   padding: const EdgeInsets.all(22),
                                   elevation: 4,
                                 ),
                                 onPressed: () {},
-                                child: const Icon(
-                                  Icons.play_arrow,
-                                  color: Colors.white,
-                                  size: 60,
-                                ),
+                                child: const Icon(Icons.play_arrow, color: Colors.white, size: 60),
                               ),
                               const SizedBox(width: 20),
                               IconButton(
                                 icon: const Icon(Icons.skip_next),
                                 iconSize: 50,
-                                color: darkBlue,
+                                color: kPrimary,
                                 onPressed: () {},
+                                splashRadius: 30,
                               ),
                             ],
                           ),
