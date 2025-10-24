@@ -176,7 +176,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
 
     DoseStatus newStatus;
     // Mark as late if current time is after scheduled time + 1 sec (to avoid edge cases exactly on time)
-    if (now.isAfter(scheduledDT.add(const Duration(seconds: 1)))) {
+    if (now.isAfter(scheduledDT.add(const Duration(seconds: 360)))) {
       newStatus = DoseStatus.takenLate;
     } else {
       newStatus = DoseStatus.takenOnTime;
@@ -205,11 +205,12 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         "Firestore log updated for ${dose.logKey} to ${newStatus.name}",
       );
 
-      await _scheduler.markMedicationTaken(
-        widget.elderlyId,
-        dose.medication.id,
-        dose.timeIndex,
-      );
+    await _scheduler.markMedicationTaken(
+  widget.elderlyId,
+  dose.medication.id,
+  dose.timeIndex,
+  scheduledDT, // ✅ أضيفي هذا السطر
+);
 
       // Pass scheduledDT to notification functions
       if (newStatus == DoseStatus.takenLate) {
@@ -232,10 +233,52 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              '${dose.medication.name} marked as taken (${newStatus == DoseStatus.takenOnTime ? "on time" : "late"}).',
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  newStatus == DoseStatus.takenOnTime 
+                      ? Icons.check_circle 
+                      : Icons.access_time,
+                  color: Colors.white,
+                  size: 40,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${dose.medication.name}',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  newStatus == DoseStatus.takenOnTime 
+                      ? 'The medication was taken on time ✓' 
+                      : 'The medication was taken late',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            backgroundColor: Colors.green, // Give feedback color
+            backgroundColor: newStatus == DoseStatus.takenOnTime 
+                ? Colors.green.shade600 
+                : Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height - 200,
+              left: 20,
+              right: 20,
+            ),
+            duration: const Duration(seconds: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
           ),
         );
       }

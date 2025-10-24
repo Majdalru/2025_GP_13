@@ -72,10 +72,28 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Medication deleted'),
-            backgroundColor: Colors.red,
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'medication deleted',
+              style: TextStyle(
+                fontSize: 22, // خط كبير مناسب لكبار السن
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating, // يجعله يطفو
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height - 150, // يظهر في الأعلى
+              left: 20,
+              right: 20,
+            ),
+            duration: Duration(seconds: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           ),
         );
       }

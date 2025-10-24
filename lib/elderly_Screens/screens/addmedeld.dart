@@ -557,9 +557,7 @@ class _Step1MedNameState extends State<_Step1MedName> {
       ),
     );
   }
-}
-
-// --- Step 2: Select Days (Unchanged) ---
+}// --- Step 2: Select Days (Each day has its own colored box) ---
 class _Step2SelectDays extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<List<String>> onNext;
@@ -613,15 +611,77 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
         } else {
           _selectedDays.remove(day);
         }
+
+        // If all individual days selected, include 'Every day'
         if (_daysOfWeek.sublist(1).every((d) => _selectedDays.contains(d))) {
           _selectedDays = List.from(_daysOfWeek);
+        } else {
+          _selectedDays.remove('Every day');
         }
       }
     });
   }
 
+  Widget _buildDayTile(String day) {
+    final bool isSelected = _selectedDays.contains(day);
+
+    return GestureDetector(
+      onTap: () => _onDaySelected(!isSelected, day),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFDCF2EF) : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF5FA5A0)
+                : const Color(0xFF5FA5A0).withOpacity(0.2),
+            width: 2,
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: const Color(0xFF5FA5A0).withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Checkbox(
+              value: isSelected,
+              onChanged: (value) => _onDaySelected(value, day),
+              activeColor: const Color(0xFF5FA5A0),
+            ),
+            Expanded(
+              child: Text(
+                day,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? const Color(0xFF4B8681)
+                      : Colors.grey.shade800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // أول بوكس ل every day
+    final everyDayTile = _buildDayTile('Every day');
+    // الباقي للأيام
+    final specificDayTiles =
+        _daysOfWeek.sublist(1).map(_buildDayTile).toList();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Card(
@@ -644,18 +704,29 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
                 title: 'Step 2: Select Days',
                 subtitle: 'Which days should you take this medication?',
               ),
-              ..._daysOfWeek.map(
-                (day) => CheckboxListTile(
-                  title: Text(day, style: const TextStyle(fontSize: 22)),
-                  value: _selectedDays.contains(day),
-                  onChanged: (bool? value) => _onDaySelected(value, day),
-                  activeColor: const Color(0xFF5FA5A0),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                ),
+
+              // Every day tile in its own section
+              Text(
+                'Daily Schedule',
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4B8681)),
               ),
+              const SizedBox(height: 8),
+              everyDayTile,
+
+              const SizedBox(height: 16),
+              Text(
+                'Specific Days',
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4B8681)),
+              ),
+              const SizedBox(height: 8),
+              ...specificDayTiles,
+
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: _selectedDays.isNotEmpty
@@ -671,6 +742,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
     );
   }
 }
+
 
 // --- Step 3: Frequency (Unchanged) ---
 class _Step3HowManyTimesPerDay extends StatefulWidget {
