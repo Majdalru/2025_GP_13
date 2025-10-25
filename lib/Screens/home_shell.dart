@@ -1,3 +1,4 @@
+import 'dart:async'; // 👈 جديد
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -32,11 +33,21 @@ class _HomeShellState extends State<HomeShell> {
   List<ElderlyProfile> _linkedProfiles = [];
   ElderlyProfile? _selectedProfile;
 
+  // 👇 جديد: اشتراك حي على مستند المستخدم
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _caregiverSub;
+
   @override
   void initState() {
     super.initState();
     _fetchLinkedProfiles();
+    _subscribeToCaregiverDoc(); // 👈 جديد: حدث فوري بعد الربط
     _scheduleNotificationsForUser();
+  }
+
+  @override
+  void dispose() {
+    _caregiverSub?.cancel(); // 👈 مهم: إلغاء الاشتراك
+    super.dispose();
   }
 
   // --- helpers ---
@@ -48,6 +59,23 @@ class _HomeShellState extends State<HomeShell> {
       );
     }
     return chunks;
+  }
+
+  // 👇 جديد: نسمع لأي تغيير على users/{uid} (elderlyIds تتغير بعد الربط)
+  void _subscribeToCaregiverDoc() {
+    final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
+    if (caregiverUid == null) return;
+
+    _caregiverSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(caregiverUid)
+        .snapshots()
+        .listen((doc) {
+      // كل ما تغير المستند (مثلاً: أضيف elderly جديد) نعيد الجلب
+      _fetchLinkedProfiles();
+    }, onError: (e) {
+      debugPrint('⚠️ caregiver stream error: $e');
+    });
   }
 
   Future<void> _fetchLinkedProfiles() async {
@@ -122,9 +150,8 @@ class _HomeShellState extends State<HomeShell> {
         _linkedProfiles = profiles;
         if (_selectedProfile == null ||
             !_linkedProfiles.any((e) => e.uid == _selectedProfile!.uid)) {
-          _selectedProfile = _linkedProfiles.isNotEmpty
-              ? _linkedProfiles.first
-              : null;
+          _selectedProfile =
+              _linkedProfiles.isNotEmpty ? _linkedProfiles.first : null;
         }
         _isLoading = false;
       });
@@ -149,17 +176,17 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       _selectedProfile != null
           ? HomePage(
-             elderlyId: _selectedProfile!.uid, // << أضيفي هذا السطر
+              elderlyId: _selectedProfile!.uid, // << أضيفي هذا السطر
               elderlyName: _selectedProfile!.name,
               onTapArrowToMedsSummary: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                       builder: (_) => MedsSummaryPage(
-                        elderlyId: _selectedProfile!.uid, // ✅ مرّر الـID
-                         ),
-                       ),
-                    );
-                 },
+                    builder: (_) => MedsSummaryPage(
+                      elderlyId: _selectedProfile!.uid, // ✅ مرّر الـID
+                    ),
+                  ),
+                );
+              },
               onTapArrowToMedmain: () {
                 // **NAVIGATION UPDATE**
                 // Pass the selected profile to the caregiver's medication page
@@ -170,9 +197,9 @@ class _HomeShellState extends State<HomeShell> {
                 );
               },
               onTapEmergency: () {
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const LocationPage()));
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LocationPage()),
+                );
               },
             )
           : const Center(
@@ -191,7 +218,7 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ),
             ),
-       BrowsePage(selectedProfile: _selectedProfile),
+      BrowsePage(selectedProfile: _selectedProfile),
     ];
 
     return Scaffold(
@@ -200,7 +227,7 @@ class _HomeShellState extends State<HomeShell> {
         selectedProfile: _selectedProfile,
         onProfileSelected: _selectProfile,
         onLogoutConfirmed: () {},
-        onProfileLinked: _fetchLinkedProfiles,
+        onProfileLinked: _fetchLinkedProfiles, // يبقى كما هو
       ),
       appBar: AppBar(
         title: Text(
@@ -234,39 +261,36 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-
-
   Future<void> _scheduleNotificationsForUser() async {
-  final currentUser = FirebaseAuth.instance.currentUser;
-  if (currentUser == null) return;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
 
-  try {
-    // جلب معلومات المستخدم الحالي
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
-    
-    final role = userDoc.data()?['role'] as String?;
+    try {
+      // جلب معلومات المستخدم الحالي
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
 
-    if (role == 'elderly') {
-      // إذا كان كبير السن، جدول تنبيهاته
-      await MedicationScheduler().scheduleAllMedications(currentUser.uid);
-      debugPrint('✅ Scheduled notifications for elderly: ${currentUser.uid}');
-    } else if (role == 'caregiver') {
-      // إذا كان caregiver، جدول تنبيهات كل الـ elderly المرتبطين به
-      final elderlyIds = List<String>.from(
-        userDoc.data()?['elderlyIds'] ?? [],
-      );
-      
-      for (final elderlyId in elderlyIds) {
-        await MedicationScheduler().scheduleAllMedications(elderlyId);
-        debugPrint('✅ Scheduled notifications for elderly: $elderlyId');
+      final role = userDoc.data()?['role'] as String?;
+
+      if (role == 'elderly') {
+        // إذا كان كبير السن، جدول تنبيهاته
+        await MedicationScheduler().scheduleAllMedications(currentUser.uid);
+        debugPrint('✅ Scheduled notifications for elderly: ${currentUser.uid}');
+      } else if (role == 'caregiver') {
+        // إذا كان caregiver، جدول تنبيهات كل الـ elderly المرتبطين به
+        final elderlyIds = List<String>.from(
+          userDoc.data()?['elderlyIds'] ?? [],
+        );
+
+        for (final elderlyId in elderlyIds) {
+          await MedicationScheduler().scheduleAllMedications(elderlyId);
+          debugPrint('✅ Scheduled notifications for elderly: $elderlyId');
+        }
       }
+    } catch (e) {
+      debugPrint('❌ Error scheduling notifications: $e');
     }
-  } catch (e) {
-    debugPrint('❌ Error scheduling notifications: $e');
   }
-}
-
 }
