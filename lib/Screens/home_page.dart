@@ -2,23 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '/medmain.dart';                // صفحة أدوية caregiver
-import 'meds_summary_page.dart';       // صفحة الملخص الشهري
-import 'location_page.dart';           // صفحة الموقع
-import '../models/medication.dart';    // لاستعمال Medication.fromMap
-
-// -------------------- ملخص اليوم (Stream داخلي) --------------------
+import '/medmain.dart';
+import 'meds_summary_page.dart';
+import 'location_page.dart';
+import '../models/medication.dart';
 
 class _TodaySummary {
-  final String? nextName;     // اسم الجرعة الأقرب القادمة (للملخص فقط)
-  final DateTime? nextTime;   // وقتها
-  final int taken;            // taken_on_time + taken_late
-  final int late;             // taken_late فقط
-  final int missed;           // missed
-  const _TodaySummary({
+  final String? nextName;
+  final DateTime? nextTime;
+  final int onTime;
+  final int late;
+  final int missed;
+  _TodaySummary({
     this.nextName,
     this.nextTime,
-    this.taken = 0,
+    this.onTime = 0,
     this.late = 0,
     this.missed = 0,
   });
@@ -27,27 +25,23 @@ class _TodaySummary {
 Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
   final fs = FirebaseFirestore.instance;
   final now = DateTime.now();
-  final todayKey  = DateFormat('yyyy-MM-dd').format(now);
-  final todayName = DateFormat('EEEE').format(now); // Monday..Sunday
+  final todayKey = DateFormat('yyyy-MM-dd').format(now);
+  final todayName = DateFormat('EEEE').format(now);
 
-  // medications/{elderlyId} -> medsList[]
   final medsDocStream = fs.collection('medications').doc(elderlyId).snapshots();
 
   return medsDocStream.asyncMap((medsSnap) async {
-    // 1) جهّز قائمة أدوية اليوم
     final meds = <Medication>[];
     if (medsSnap.exists && medsSnap.data()?['medsList'] != null) {
       final all = (medsSnap.data()!['medsList'] as List)
           .map((m) => Medication.fromMap(m as Map<String, dynamic>))
           .toList();
-
       meds.addAll(all.where(
         (m) => m.days.contains('Every day') || m.days.contains(todayName),
       ));
     }
-    if (meds.isEmpty) return const _TodaySummary();
+    if (meds.isEmpty) return _TodaySummary();
 
-    // 2) اللوق اليومي
     Map<String, dynamic> log = {};
     final logDoc = await fs
         .collection('medication_log')
@@ -57,10 +51,9 @@ Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
         .get();
     if (logDoc.exists) log = logDoc.data() ?? {};
 
-    // 3) احسب العدادات واستخرج NextUp (للعنوان فقط)
-    int taken = 0, late = 0, missed = 0;
+    int onTime = 0, late = 0, missed = 0;
     final nowDT = DateTime.now();
-    final doses = <Map<String, dynamic>>[]; // {name, when, status}
+    final doses = <Map<String, dynamic>>[];
 
     for (final med in meds) {
       for (int i = 0; i < med.times.length; i++) {
@@ -74,16 +67,14 @@ Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
         if (dlog != null) {
           status = (dlog['status'] as String?) ?? 'upcoming';
         } else {
-          // قاعدة: بعد 10 دقائق تصير Missed
           if (nowDT.isAfter(when.add(const Duration(minutes: 10)))) {
             status = 'missed';
           }
         }
 
         if (status == 'taken_on_time') {
-          taken++;
+          onTime++;
         } else if (status == 'taken_late') {
-          taken++;
           late++;
         } else if (status == 'missed') {
           missed++;
@@ -93,7 +84,6 @@ Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
       }
     }
 
-    // Next Up للملخص فقط (أقرب upcoming >= الآن، وإن ما فيه نعرض أقرب taken_late)
     String? nextName;
     DateTime? nextTime;
 
@@ -119,14 +109,12 @@ Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
     return _TodaySummary(
       nextName: nextName,
       nextTime: nextTime,
-      taken: taken,
+      onTime: onTime,
       late: late,
       missed: missed,
     );
   });
 }
-
-// -------------------- ستريم كل الجرعات القادمة (قائمة بوكسات) --------------------
 
 class _NextDose {
   final String name;
@@ -137,13 +125,12 @@ class _NextDose {
 Stream<List<_NextDose>> _nextDosesStream(String elderlyId) {
   final fs = FirebaseFirestore.instance;
   final now = DateTime.now();
-  final todayKey  = DateFormat('yyyy-MM-dd').format(now);
+  final todayKey = DateFormat('yyyy-MM-dd').format(now);
   final todayName = DateFormat('EEEE').format(now);
 
   final medsDocStream = fs.collection('medications').doc(elderlyId).snapshots();
 
   return medsDocStream.asyncMap((medsSnap) async {
-    // 1) أدوية اليوم
     final meds = <Medication>[];
     if (medsSnap.exists && medsSnap.data()?['medsList'] != null) {
       final all = (medsSnap.data()!['medsList'] as List)
@@ -155,7 +142,6 @@ Stream<List<_NextDose>> _nextDosesStream(String elderlyId) {
     }
     if (meds.isEmpty) return const <_NextDose>[];
 
-    // 2) لوق اليوم
     Map<String, dynamic> log = {};
     final logDoc = await fs
         .collection('medication_log')
@@ -165,7 +151,6 @@ Stream<List<_NextDose>> _nextDosesStream(String elderlyId) {
         .get();
     if (logDoc.exists) log = logDoc.data() ?? {};
 
-    // 3) كل upcoming التي وقتها >= الآن
     final nowDT = DateTime.now();
     final nextList = <_NextDose>[];
 
@@ -192,15 +177,13 @@ Stream<List<_NextDose>> _nextDosesStream(String elderlyId) {
       }
     }
 
-    nextList.sort((a,b) => a.when.compareTo(b.when));
+    nextList.sort((a, b) => a.when.compareTo(b.when));
     return nextList;
   });
 }
 
-// -------------------- الصفحة الرئيسية (HomePage) --------------------
-
 class HomePage extends StatelessWidget {
-  final String elderlyId;                 // ⬅️ مهم: لقراءة بيانات الشخص
+  final String elderlyId;
   final String elderlyName;
   final VoidCallback onTapArrowToMedsSummary;
   final VoidCallback onTapArrowToMedmain;
@@ -208,7 +191,7 @@ class HomePage extends StatelessWidget {
 
   const HomePage({
     super.key,
-    required this.elderlyId,              // ⬅️ تمرير من HomeShell
+    required this.elderlyId,
     required this.elderlyName,
     required this.onTapArrowToMedsSummary,
     required this.onTapArrowToMedmain,
@@ -223,7 +206,6 @@ class HomePage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // ===== Emergency Alert =====
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -265,10 +247,7 @@ class HomePage extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 18),
-
-        // ===== Today Card with Brief Medication Info =====
         Card(
           elevation: 0,
           clipBehavior: Clip.antiAlias,
@@ -282,10 +261,10 @@ class HomePage extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'Today • $formattedDate', // تاريخ اليوم
+                      'Today • $formattedDate',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
                     const Spacer(),
                     IconButton.filledTonal(
@@ -294,15 +273,13 @@ class HomePage extends StatelessWidget {
                         backgroundColor: cs.primary.withOpacity(.10),
                       ),
                       onPressed: onTapArrowToMedmain,
-                      icon: Icon(Icons.arrow_forward_rounded, color:Color.fromARGB(255, 1, 42, 75)),
+                      icon: const Icon(Icons.arrow_forward_rounded, color: Color.fromARGB(255, 1, 42, 75)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Divider(color: Colors.grey.withOpacity(.25), height: 20),
                 const SizedBox(height: 12),
-
-                // ==== عرض حقيقي من Firestore (Next Up + Counters) ====
                 StreamBuilder<_TodaySummary>(
                   stream: _todaySummaryStream(elderlyId),
                   builder: (context, snap) {
@@ -312,9 +289,8 @@ class HomePage extends StatelessWidget {
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
-                    final s = snap.data ?? const _TodaySummary();
+                    final s = snap.data ?? _TodaySummary();
 
-                    // ==== قائمة كل الجرعات القادمة (كل واحدة بوكس) ====
                     return Column(
                       children: [
                         StreamBuilder<List<_NextDose>>(
@@ -329,7 +305,7 @@ class HomePage extends StatelessWidget {
                             final nexts = snapNext.data ?? const <_NextDose>[];
 
                             if (nexts.isEmpty) {
-                              return _NextMedicationCardReal(
+                              return const _NextMedicationCardReal(
                                 medName: 'No upcoming meds',
                                 timeText: '--',
                               );
@@ -349,15 +325,12 @@ class HomePage extends StatelessWidget {
                             );
                           },
                         ),
-
                         const SizedBox(height: 16),
-
                         _MedicationStatusSummaryRow(
-                          taken: s.taken,
+                          taken: s.onTime,
                           late: s.late,
                           missed: s.missed,
                         ),
-
                         const SizedBox(height: 12),
                         Divider(color: Colors.grey.withOpacity(.25), height: 1),
                         Align(
@@ -366,7 +339,7 @@ class HomePage extends StatelessWidget {
                             onPressed: onTapArrowToMedsSummary,
                             child: const Text(
                               'Monthly Overview',
-                              style: TextStyle(fontWeight: FontWeight.bold , color:Color.fromARGB(255, 1, 42, 76)),
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Color.fromARGB(255, 1, 42, 76)),
                             ),
                           ),
                         ),
@@ -378,7 +351,6 @@ class HomePage extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 8),
         Row(
           children: [
@@ -394,8 +366,6 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-
-// -------------------- ودجت العرض السريع --------------------
 
 class _NextMedicationCardReal extends StatelessWidget {
   final String medName;
@@ -416,16 +386,16 @@ class _NextMedicationCardReal extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.upcoming_outlined, color: const Color.fromARGB(255, 4, 54, 94)),
+          const Icon(Icons.upcoming_outlined, color: Color.fromARGB(255, 4, 54, 94)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Next Up", style: TextStyle(color: Colors.grey)),
+              children: const [
+                Text("Next Up", style: TextStyle(color: Colors.grey)),
                 Text(
-                  medName,
-                  style: const TextStyle(
+                  " ",
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -437,10 +407,10 @@ class _NextMedicationCardReal extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             timeText,
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 20,
-              color: const Color.fromARGB(255, 2, 49, 87),
+              color: Color.fromARGB(255, 2, 49, 87),
             ),
           ),
         ],
@@ -464,7 +434,7 @@ class _MedicationStatusSummaryRow extends StatelessWidget {
       children: [
         _StatusItem(
           count: taken,
-          label: 'Taken',
+          label: 'On time',
           color: Colors.green.shade700,
           icon: Icons.check_circle_outline,
         ),
