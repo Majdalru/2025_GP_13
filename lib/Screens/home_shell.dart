@@ -153,9 +153,13 @@ class _HomeShellState extends State<HomeShell> {
               elderlyName: _selectedProfile!.name,
               onTapArrowToMedsSummary: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MedsSummaryPage()),
-                );
-              },
+                  MaterialPageRoute(
+                       builder: (_) => MedsSummaryPage(
+                        elderlyId: _selectedProfile!.uid, // ✅ مرّر الـID
+                         ),
+                       ),
+                    );
+                 },
               onTapArrowToMedmain: () {
                 // **NAVIGATION UPDATE**
                 // Pass the selected profile to the caregiver's medication page

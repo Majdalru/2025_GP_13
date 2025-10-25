@@ -47,9 +47,27 @@ class BrowsePage extends StatelessWidget {
         subtitle: 'Monthly overview',
         icon: Icons.assignment_outlined,
         color: cs.primary,
-        onTap: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const MedsSummaryPage())),
+        onTap: () {
+          if (selectedProfile != null) {
+            // ✅ مرّر نفس الـID المستخدم في بقية الصفحات
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MedsSummaryPage(
+                  elderlyId: selectedProfile!.uid, // لو اسم الحقل عندك id بدّلها لـ .id
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Please select an elderly profile from the drawer menu first.',
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        },
       ),
       _BrowseItem(
         title: 'Location',
@@ -140,9 +158,8 @@ class _BrowseCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        splashFactory: tappable
-            ? InkRipple.splashFactory
-            : NoSplash.splashFactory,
+        splashFactory:
+            tappable ? InkRipple.splashFactory : NoSplash.splashFactory,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
