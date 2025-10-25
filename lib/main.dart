@@ -5,7 +5,7 @@ import 'Screens/login_page.dart';
 import 'services/notification_service.dart';
 
 // This is the custom navy color from your addmed.dart file
-const Color customNavyColor = Color.fromRGBO(9, 31, 63, 1);
+const Color customNavyColor = Color.fromRGBO(12, 45, 93, 1);
 // Let's also define your teal color
 const Color customTealColor = Colors.teal;
 void main() async {

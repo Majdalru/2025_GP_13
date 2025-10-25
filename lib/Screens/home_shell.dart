@@ -70,12 +70,15 @@ class _HomeShellState extends State<HomeShell> {
         .collection('users')
         .doc(caregiverUid)
         .snapshots()
-        .listen((doc) {
-      // كل ما تغير المستند (مثلاً: أضيف elderly جديد) نعيد الجلب
-      _fetchLinkedProfiles();
-    }, onError: (e) {
-      debugPrint('⚠️ caregiver stream error: $e');
-    });
+        .listen(
+          (doc) {
+            // كل ما تغير المستند (مثلاً: أضيف elderly جديد) نعيد الجلب
+            _fetchLinkedProfiles();
+          },
+          onError: (e) {
+            debugPrint('⚠️ caregiver stream error: $e');
+          },
+        );
   }
 
   Future<void> _fetchLinkedProfiles() async {
@@ -150,8 +153,9 @@ class _HomeShellState extends State<HomeShell> {
         _linkedProfiles = profiles;
         if (_selectedProfile == null ||
             !_linkedProfiles.any((e) => e.uid == _selectedProfile!.uid)) {
-          _selectedProfile =
-              _linkedProfiles.isNotEmpty ? _linkedProfiles.first : null;
+          _selectedProfile = _linkedProfiles.isNotEmpty
+              ? _linkedProfiles.first
+              : null;
         }
         _isLoading = false;
       });
@@ -197,9 +201,9 @@ class _HomeShellState extends State<HomeShell> {
                 );
               },
               onTapEmergency: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const LocationPage()),
-                );
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const LocationPage()));
               },
             )
           : const Center(
@@ -230,6 +234,16 @@ class _HomeShellState extends State<HomeShell> {
         onProfileLinked: _fetchLinkedProfiles, // يبقى كما هو
       ),
       appBar: AppBar(
+        toolbarHeight: 80,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
+        ),
+        elevation: 5.0,
+
+        // (Optional) You can also change the shadow's color
+        shadowColor: Colors.black.withOpacity(0.5),
+
         title: Text(
           _bottomNavIndex == 0
               ? (_selectedProfile?.name ?? 'Dashboard')
@@ -242,21 +256,56 @@ class _HomeShellState extends State<HomeShell> {
               duration: const Duration(milliseconds: 250),
               child: pages[_bottomNavIndex],
             ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _bottomNavIndex,
-        onDestinationSelected: (i) => setState(() => _bottomNavIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+      bottomNavigationBar: Theme(
+        data: Theme.of(context).copyWith(
+          // Sets the color for unselected labels
+          textTheme: Theme.of(context).textTheme.copyWith(
+            labelSmall: TextStyle(
+              color: Colors.grey[700], // Unselected label color
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.apps),
-            selectedIcon: Icon(Icons.apps_outlined),
-            label: 'Browse',
-          ),
-        ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _bottomNavIndex,
+          onDestinationSelected: (i) => setState(() => _bottomNavIndex = i),
+
+          // --- Your Style Properties ---
+
+          // 1. Bar background color
+          backgroundColor: const Color.fromARGB(
+            69,
+            204,
+            204,
+            208,
+          ), // Light gray background
+          // 2. "Bubble" indicator color
+          indicatorColor: Colors.teal, // Teal bubble
+          height: 80,
+          elevation: 2, // A subtle shadow
+          // --- End Style Properties ---
+          destinations: const [
+            NavigationDestination(
+              // 3. Unselected icon
+              icon: Icon(
+                Icons.home_outlined,
+                color: Colors.grey, // Dark grey for unselected
+              ),
+              // 4. Selected icon
+              selectedIcon: Icon(
+                Icons.home,
+                color: Colors.white, // White icon on the teal bubble
+              ),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.apps, color: Colors.grey),
+              selectedIcon: Icon(Icons.apps_outlined, color: Colors.white),
+              label: 'Browse',
+            ),
+          ],
+        ),
       ),
     );
   }

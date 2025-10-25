@@ -41,19 +41,15 @@ class AppDrawer extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.primaryContainer],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+                color: const Color.fromARGB(255, 1, 129, 116),
               ),
               child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: (FirebaseAuth.instance.currentUser == null)
                     ? null
                     : FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(FirebaseAuth.instance.currentUser!.uid)
-                        .snapshots(),
+                          .collection('users')
+                          .doc(FirebaseAuth.instance.currentUser!.uid)
+                          .snapshots(),
                 builder: (context, snap) {
                   // القيم الافتراضية
                   String displayName = 'Guest';
@@ -66,8 +62,10 @@ class AppDrawer extends StatelessWidget {
                     final email = (data['email'] ?? '').toString().trim();
                     final role = (data['role'] ?? '').toString().toLowerCase();
 
-                    final name =
-                        [first, last].where((s) => s.isNotEmpty).join(' ');
+                    final name = [
+                      first,
+                      last,
+                    ].where((s) => s.isNotEmpty).join(' ');
                     displayName = name.isNotEmpty
                         ? name
                         : (email.isNotEmpty ? email : 'Guest');
@@ -110,7 +108,11 @@ class AppDrawer extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Settings',
-                        icon: const Icon(Icons.settings, color: Colors.white),
+                        icon: const Icon(
+                          Icons.settings,
+                          color: Color.fromARGB(255, 255, 255, 255),
+                          size: 30,
+                        ),
                         onPressed: () => _openEditDialog(context),
                       ),
                     ],
@@ -128,7 +130,7 @@ class AppDrawer extends StatelessWidget {
                   const SizedBox(width: 6),
                   const Text(
                     'Linked Profiles',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                   ),
                   const Spacer(),
                   FilledButton.tonalIcon(
@@ -162,7 +164,10 @@ class AppDrawer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: FilledButton.tonalIcon(
                 icon: const Icon(Icons.logout),
-                label: const Text('Log out'),
+                label: const Text(
+                  'Log out',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                ),
                 onPressed: () async {
                   final yes = await _confirmLogout(context);
                   if (yes == true) {
@@ -178,9 +183,10 @@ class AppDrawer extends StatelessWidget {
                   }
                 },
                 style: FilledButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 255, 193, 190),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                    horizontal: 18,
+                    vertical: 14,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -343,12 +349,18 @@ class AppDrawer extends StatelessWidget {
                                       .collection('users')
                                       .doc(caregiverUid);
 
-                                  await firestore.runTransaction((transaction) async {
+                                  await firestore.runTransaction((
+                                    transaction,
+                                  ) async {
                                     transaction.update(caregiverDocRef, {
-                                      'elderlyIds': FieldValue.arrayUnion([elderlyUid]),
+                                      'elderlyIds': FieldValue.arrayUnion([
+                                        elderlyUid,
+                                      ]),
                                     });
                                     transaction.update(elderlyDoc.reference, {
-                                      'caregiverIds': FieldValue.arrayUnion([caregiverUid]),
+                                      'caregiverIds': FieldValue.arrayUnion([
+                                        caregiverUid,
+                                      ]),
                                       'pairingCode': null,
                                       'pairingCodeCreatedAt': null,
                                     });
@@ -357,7 +369,9 @@ class AppDrawer extends StatelessWidget {
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Profile linked successfully!'),
+                                      content: Text(
+                                        'Profile linked successfully!',
+                                      ),
                                     ),
                                   );
                                   onProfileLinked();
@@ -419,24 +433,32 @@ class AppDrawer extends StatelessWidget {
     if (uid == null) return;
 
     // جلب القيم الحالية لتهيئة الحقول
-    final snap = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final data   = snap.data() ?? {};
-    final first  = (data['firstName'] ?? '').toString().trim();
-    final last   = (data['lastName']  ?? '').toString().trim();
-    final gender = (data['gender']    ?? '').toString().trim();
-    final phone  = (data['phone']     ?? '').toString().trim();
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final data = snap.data() ?? {};
+    final first = (data['firstName'] ?? '').toString().trim();
+    final last = (data['lastName'] ?? '').toString().trim();
+    final gender = (data['gender'] ?? '').toString().trim();
+    final phone = (data['phone'] ?? '').toString().trim();
 
-    final formKey    = GlobalKey<FormState>();
-    final nameCtrl   = TextEditingController(text: [first, last].where((s)=>s.isNotEmpty).join(' '));
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController(
+      text: [first, last].where((s) => s.isNotEmpty).join(' '),
+    );
     final genderCtrl = TextEditingController(text: gender);
-    final phoneCtrl  = TextEditingController(text: phone);
+    final phoneCtrl = TextEditingController(text: phone);
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Info', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Edit Info',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Form(
           key: formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -450,10 +472,14 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Name',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 style: const TextStyle(fontSize: 16),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
               ),
               const SizedBox(height: 12),
 
@@ -463,14 +489,18 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Gender',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'male', child: Text('Male')),
                   DropdownMenuItem(value: 'female', child: Text('Female')),
                 ],
                 onChanged: (v) => genderCtrl.text = v ?? '',
-                validator: (v) => (v == null || v.isEmpty) ? 'Select gender' : null,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Select gender' : null,
               ),
               const SizedBox(height: 12),
 
@@ -485,7 +515,10 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Mobile (05XXXXXXXX)',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 style: const TextStyle(fontSize: 16),
                 validator: (v) {
@@ -507,17 +540,20 @@ class AppDrawer extends StatelessWidget {
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
 
-              final name  = nameCtrl.text.trim();
+              final name = nameCtrl.text.trim();
               final parts = name.split(RegExp(r'\s+'));
               final first = parts.isNotEmpty ? parts.first : '';
-              final last  = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+              final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
 
-              await FirebaseFirestore.instance.collection('users').doc(uid).update({
-                'firstName': first,
-                'lastName' : last,
-                'gender'   : genderCtrl.text,
-                'phone'    : phoneCtrl.text.trim(),
-              });
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid)
+                  .update({
+                    'firstName': first,
+                    'lastName': last,
+                    'gender': genderCtrl.text,
+                    'phone': phoneCtrl.text.trim(),
+                  });
 
               if (!context.mounted) return;
               Navigator.pop(ctx);
