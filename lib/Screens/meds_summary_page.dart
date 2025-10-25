@@ -1,6 +1,5 @@
 // MedsSummaryPage.dart
 
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -81,7 +80,6 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     final doses = month[key] ?? const [];
 
     if (isFuture) return Colors.grey.shade200; // upcoming (filled light grey)
-
     if (doses.isEmpty) return null; // past day with no logs → transparent
 
     final statuses =
@@ -92,9 +90,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     final allOnTime =
         statuses.isNotEmpty && statuses.every((s) => s == 'taken_on_time');
 
-    if (hasMissed) return Colors.red.shade600; // missed
-    if (hasLate) return Colors.amber.shade700; // late
-    if (allOnTime) return Colors.green.shade600; // on time
+    if (hasMissed) return Colors.red.shade600;    // missed
+    if (hasLate) return Colors.amber.shade700;    // late
+    if (allOnTime) return Colors.green.shade600;  // on time
 
     // Fallback (mixed unexpected): treat as late
     return Colors.amber.shade700;
@@ -154,9 +152,10 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                           color: cs.primary.withOpacity(.08),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(monthName,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w700)),
+                        child: Text(
+                          monthName,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                   ),
@@ -207,17 +206,28 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                   return doses.map((m) {
                     final status =
                         (m['status'] ?? '').toString().toLowerCase();
-                    final ok = status != 'missed';
                     final name = (m['medicationName'] ?? 'Med').toString();
                     final sched = (m['scheduledTime'] ?? '').toString();
                     final takenAt = _toDateTime(m['takenAt']);
+
                     String timeLabel = 'Scheduled $sched';
                     if (takenAt != null) {
                       timeLabel +=
                           ' • Taken ${DateFormat('hh:mm a').format(takenAt)}';
                     }
+
+                    // tone per-card (onTime / late / missed)
+                    final tone = status == 'missed'
+                        ? DoseTone.missed
+                        : (status == 'taken_late'
+                            ? DoseTone.late
+                            : DoseTone.onTime);
+
                     return _SummaryMedStatusRow(
-                        name: name, time: timeLabel, ok: ok);
+                      name: name,
+                      time: timeLabel,
+                      tone: tone,
+                    );
                   }).toList();
                 })(),
               ] else
@@ -373,33 +383,62 @@ class _SummaryDayCell extends StatelessWidget {
   }
 }
 
+// ===== New tone-based card =====
+enum DoseTone { onTime, late, missed }
+
 class _SummaryMedStatusRow extends StatelessWidget {
   final String name, time;
-  final bool ok;
+  final DoseTone tone;
+
   const _SummaryMedStatusRow({
+    super.key,
     required this.name,
     required this.time,
-    required this.ok,
-    super.key,
+    required this.tone,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = ok ? Colors.green.shade600 : Colors.red.shade700;
+    // same layout; only the color changes per tone
+    late final Color base;
+    late final IconData icon;
+    late final IconData trailingIcon;
+
+    switch (tone) {
+      case DoseTone.onTime:
+        base = Colors.green.shade600;
+        icon = Icons.check_circle;
+        trailingIcon = Icons.check;
+        break;
+      case DoseTone.late:
+        base = Colors.amber.shade700; // yellow variant
+        icon = Icons.check_circle;    // same icon as onTime (as requested)
+        trailingIcon = Icons.check;   // same trailing check
+        break;
+      case DoseTone.missed:
+        base = Colors.red.shade700;
+        icon = Icons.error;
+        trailingIcon = Icons.close;
+        break;
+    }
+
     return Card(
-      color: color.withOpacity(.08),
+      color: base.withOpacity(.08),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(.12),
+            color: base.withOpacity(.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(ok ? Icons.check_circle : Icons.error, color: color),
+          child: Icon(icon, color: base),
         ),
-        title: Text(name, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+        title: Text(
+          name,
+          style: TextStyle(color: base, fontWeight: FontWeight.w700),
+        ),
         subtitle: Text(time),
-        trailing: Icon(ok ? Icons.check : Icons.close, color: color),
+        trailing: Icon(trailingIcon, color: base),
       ),
     );
   }
@@ -409,16 +448,17 @@ class _SummaryMedStatusRow extends StatelessWidget {
 class _LegendRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w600);
+    final style = TextStyle(
+        fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w600);
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 16,
       runSpacing: 8,
       children: const [
-        _LegendItem(color: Color(0xFFD32F2F), label: 'Missed'),      // red
-        _LegendItem(color: Color(0xFFF9A825), label: 'Late'),        // yellow
-        _LegendItem(color: Color(0xFF2E7D32), label: 'On time'),     // green
-        _LegendItem(color: Color(0xFFEEEEEE), label: 'Upcoming'),    // light grey
+        _LegendItem(color: Color(0xFFD32F2F), label: 'Missed'),    // red
+        _LegendItem(color: Color(0xFFF9A825), label: 'Late'),      // yellow
+        _LegendItem(color: Color(0xFF2E7D32), label: 'On time'),   // green
+        _LegendItem(color: Color(0xFFEEEEEE), label: 'Upcoming'),  // light grey
       ],
     );
   }
@@ -431,13 +471,16 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w600);
+    final style = TextStyle(
+        fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w600);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12, height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          width: 12,
+          height: 12,
+          decoration:
+              BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
         Text(label, style: style),
