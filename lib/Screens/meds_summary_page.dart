@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MedsSummaryPage extends StatefulWidget {
-  final String elderlyId; // required: same ID used under medication_log/{elderlyId}
+  final String elderlyId; // same ID under medication_log/{elderlyId}
   const MedsSummaryPage({super.key, required this.elderlyId});
 
   @override
@@ -37,11 +37,66 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     if (v == null) return null;
     if (v is Timestamp) return v.toDate();
     if (v is String) return DateTime.tryParse(v);
+    if (v is int) {
+      try { return DateTime.fromMillisecondsSinceEpoch(v); } catch (_) {}
+    }
     return null;
   }
 
-  // Stream for current month using documentId range (yyyy-MM-dd)
-  Stream<QuerySnapshot<Map<String, dynamic>>> _monthStream() {
+  // ---------- Helpers ----------
+
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  DateTime? _scheduledOnDay(String schedStr, DateTime dayDate) {
+    if (schedStr.isEmpty) return null;
+    try {
+      final p = schedStr.split(':');
+      return DateTime(
+        dayDate.year, dayDate.month, dayDate.day,
+        int.parse(p[0]), int.parse(p[1]),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _weekdayName(DateTime d) => DateFormat('EEEE').format(d); // Monday..
+
+  bool _looksLikeDose(Map v) {
+    return v.containsKey('scheduledTime') ||
+        v.containsKey('medicationName') ||
+        v.containsKey('timeIndex') ||
+        v.containsKey('status') ||
+        v.containsKey('takenAt') ||
+        v.containsKey('medicationId');
+  }
+
+  /// ✅ تاريخ بداية الدواء المعتمد: createdAt فقط
+  DateTime _medStartDate(Map<String, dynamic> med) {
+    final raw = med['createdAt'];
+    final dt = _toDateTime(raw);
+    if (dt != null) return _dateOnly(dt);
+    // fallback آمن: اليوم (حتى لا نلوّن الماضي بالخطأ)
+    return _dateOnly(DateTime.now());
+  }
+
+  bool _isOverdueMissedByClock(String schedHHmm, DateTime dayDate) {
+    final schedDT = _scheduledOnDay(schedHHmm, dayDate);
+    if (schedDT == null) return false;
+    final now = DateTime.now();
+    final dayOnly = _dateOnly(dayDate);
+    final todayOnly = _dateOnly(now);
+    if (dayOnly.isBefore(todayOnly)) return true;
+    if (dayOnly.isAtSameMomentAs(todayOnly)) {
+      return now.isAfter(schedDT.add(const Duration(minutes: 10)));
+    }
+    return false;
+  }
+
+  // ---------- Streams ----------
+
+  // Logs for current month
+  Stream<QuerySnapshot<Map<String, dynamic>>> _monthLogsStream() {
     final first = DateTime(_current.year, _current.month, 1);
     final last = DateTime(_current.year, _current.month, _daysInMonth);
     final startId = DateFormat('yyyy-MM-dd').format(first);
@@ -57,63 +112,176 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
         .snapshots();
   }
 
-  // snapshot → map: yyyy-MM-dd → List<Map> of doses
-  Map<String, List<Map<String, dynamic>>> _collectMonth(
+  // Meds schedule doc (contains medsList)
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _medsStream() {
+    return FirebaseFirestore.instance
+        .collection('medications')
+        .doc(widget.elderlyId)
+        .snapshots();
+  }
+
+  // ---------- Collect logs-only ----------
+  Map<String, List<Map<String, dynamic>>> _collectMonthFromLogs(
       QuerySnapshot<Map<String, dynamic>> snap) {
     final res = <String, List<Map<String, dynamic>>>{};
     for (final doc in snap.docs) {
       final list = <Map<String, dynamic>>[];
-      doc.data().forEach((k, v) {
-        if (v is Map<String, dynamic>) list.add(v);
+      final data = doc.data();
+
+      // top-level array 'doses'
+      final dosesField = data['doses'];
+      if (dosesField is List) {
+        for (final item in dosesField) {
+          if (item is Map<String, dynamic> && _looksLikeDose(item)) {
+            list.add(item);
+          }
+        }
+      }
+
+      // top-level maps + nested 'doses'
+      data.forEach((k, v) {
+        if (k == 'doses') return;
+        if (v is Map<String, dynamic>) {
+          if (_looksLikeDose(v)) list.add(v);
+          final nested = v['doses'];
+          if (nested is List) {
+            for (final it in nested) {
+              if (it is Map<String, dynamic> && _looksLikeDose(it)) {
+                list.add(it);
+              }
+            }
+          }
+        }
       });
+
       res[doc.id] = list;
     }
     return res;
   }
 
-  // Decide circle background color for a given day
-  Color? _bgForDay(int day, Map<String, List<Map<String, dynamic>>> month) {
-    final today = DateTime.now();
-    final d = DateTime(_current.year, _current.month, day);
-    final isFuture = d.isAfter(DateTime(today.year, today.month, today.day));
-    final key = DateFormat('yyyy-MM-dd').format(d);
-    final doses = month[key] ?? const [];
+  // ---------- Merge schedule with logs, inject Missed after createdAt ----------
+  Map<String, List<Map<String, dynamic>>> _enrichWithSchedule({
+    required Map<String, List<Map<String, dynamic>>> monthLogs,
+    required Map<String, dynamic>? medsDocData,
+  }) {
+    // Start with a copy of logs
+    final res = <String, List<Map<String, dynamic>>>{};
+    monthLogs.forEach((k, v) => res[k] = [...v]);
 
-    if (isFuture) return Colors.grey.shade200; // upcoming (filled light grey)
-    if (doses.isEmpty) return null; // past day with no logs → transparent
+    if (medsDocData == null) return res;
 
-    final statuses =
-        doses.map((m) => (m['status'] ?? '').toString().toLowerCase()).toList();
+    final medsList = medsDocData['medsList'];
+    if (medsList is! List) return res;
 
-    final hasMissed = statuses.contains('missed');
-    final hasLate = statuses.contains('taken_late');
-    final allOnTime =
-        statuses.isNotEmpty && statuses.every((s) => s == 'taken_on_time');
+    final todayOnly = _dateOnly(DateTime.now());
 
-    if (hasMissed) return Colors.red.shade600;    // missed
-    if (hasLate) return Colors.amber.shade700;    // late
-    if (allOnTime) return Colors.green.shade600;  // on time
+    for (int day = 1; day <= _daysInMonth; day++) {
+      final date = DateTime(_current.year, _current.month, day);
+      final dayOnly = _dateOnly(date);
+      final key = DateFormat('yyyy-MM-dd').format(date);
+      final weekday = _weekdayName(date);
 
-    // Fallback (mixed unexpected): treat as late
-    return Colors.amber.shade700;
+      final logsForDay = res[key] ?? <Map<String, dynamic>>[];
+
+      // Build indices for quick matching
+      final byPair = <String, Map<String, dynamic>>{};
+      final byTime = <String, Map<String, dynamic>>{};
+      for (final m in logsForDay) {
+        final mid = (m['medicationId'] ?? '').toString();
+        final ti = (m['timeIndex'] is int)
+            ? m['timeIndex'] as int
+            : int.tryParse('${m['timeIndex']}') ?? -1;
+        final sk = (m['scheduledTime'] ?? '').toString();
+        if (mid.isNotEmpty && ti >= 0) byPair['$mid#$ti'] = m;
+        if (sk.isNotEmpty) byTime[sk] = m;
+      }
+
+      for (final raw in medsList) {
+        if (raw is! Map) continue;
+        final med = Map<String, dynamic>.from(raw as Map);
+        final medId = (med['id'] ?? '').toString();
+        final medName = (med['name'] ?? 'Med').toString();
+
+        // ✅ لا نحسب أي شيء قبل createdAt
+        final start = _medStartDate(med);
+        if (dayOnly.isBefore(start)) continue;
+
+        // Optional: endDate / archived
+        final end = _toDateTime(med['endDate']);
+        if (end != null && dayOnly.isAfter(_dateOnly(end))) continue;
+        if (med['archived'] == true) continue;
+
+        // Does med run this weekday?
+        final days = (med['days'] is List)
+            ? (med['days'] as List).map((e) => e.toString()).toList()
+            : <String>[];
+        final runsToday = days.contains('Every day') || days.contains(weekday);
+        if (!runsToday) continue;
+
+        // times -> "HH:mm"
+        final timesRaw = med['times'];
+        final times = <String>[];
+        if (timesRaw is List) {
+          for (final t in timesRaw) {
+            if (t is String && t.contains(':')) {
+              times.add(t);
+            } else if (t is Map) {
+              final hh = int.tryParse('${t['hour'] ?? t['h'] ?? t['HH'] ?? ''}');
+              final mm = int.tryParse('${t['minute'] ?? t['m'] ?? t['MM'] ?? ''}');
+              if (hh != null && mm != null) {
+                times.add('${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}');
+              }
+            }
+          }
+        }
+
+        for (int i = 0; i < times.length; i++) {
+          final sched = times[i];
+
+          // existing log?
+          Map<String, dynamic>? log =
+              (medId.isNotEmpty) ? byPair['$medId#$i'] : null;
+          log ??= byTime[sched];
+          if (log != null) continue;
+
+          // inject Missed iff day is past OR (today & >10m overdue)
+          final isPast = dayOnly.isBefore(todayOnly);
+          final isOverdueToday = _isOverdueMissedByClock(sched, date);
+
+          if (isPast || isOverdueToday) {
+            logsForDay.add({
+              'medicationId': medId,
+              'medicationName': medName,
+              'timeIndex': i,
+              'scheduledTime': sched,
+              'status': 'missed',
+              '_injected': true,
+            });
+          }
+        }
+      }
+
+      if (logsForDay.isNotEmpty) {
+        logsForDay.sort((a, b) {
+          final ai = (a['timeIndex'] is int)
+              ? a['timeIndex'] as int
+              : int.tryParse('${a['timeIndex']}') ?? 0;
+          final bi = (b['timeIndex'] is int)
+              ? b['timeIndex'] as int
+              : int.tryParse('${b['timeIndex']}') ?? 0;
+        if (ai != bi) return ai.compareTo(bi);
+          final at = (a['scheduledTime'] ?? '').toString();
+          final bt = (b['scheduledTime'] ?? '').toString();
+          return at.compareTo(bt);
+        });
+        res[key] = logsForDay;
+      }
+    }
+
+    return res;
   }
 
-  List<Map<String, dynamic>> _dosesFor(
-      DateTime day, Map<String, List<Map<String, dynamic>>> month) {
-    final key = DateFormat('yyyy-MM-dd').format(day);
-    final doses = month[key] ?? const [];
-    final sorted = [...doses];
-    sorted.sort((a, b) {
-      final ai = (a['timeIndex'] is int)
-          ? a['timeIndex'] as int
-          : int.tryParse('${a['timeIndex']}') ?? 0;
-      final bi = (b['timeIndex'] is int)
-          ? b['timeIndex'] as int
-          : int.tryParse('${b['timeIndex']}') ?? 0;
-      return ai.compareTo(bi);
-    });
-    return sorted;
-  }
+  // ---------- UI ----------
 
   @override
   Widget build(BuildContext context) {
@@ -123,116 +291,155 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Summary')),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: _monthStream(),
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
+        stream: _monthLogsStream(),
+        builder: (context, logsSnap) {
+          if (logsSnap.hasError) {
+            return Center(child: Text('Error: ${logsSnap.error}'));
           }
-          if (!snap.hasData) {
+          if (!logsSnap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
+          final monthLogs = _collectMonthFromLogs(logsSnap.data!);
 
-          final monthData = _collectMonth(snap.data!);
+          return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: _medsStream(),
+            builder: (context, medsSnap) {
+              final medsData = medsSnap.data?.data();
+              final monthData =
+                  _enrichWithSchedule(monthLogs: monthLogs, medsDocData: medsData);
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Month header
-              Row(
+              return ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  IconButton(
-                      onPressed: _goPrevMonth,
-                      icon: const Icon(Icons.chevron_left)),
-                  Expanded(
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: cs.primary.withOpacity(.08),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          monthName,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                  // Month header
+                  Row(
+                    children: [
+                      IconButton(
+                          onPressed: _goPrevMonth,
+                          icon: const Icon(Icons.chevron_left)),
+                      Expanded(
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 12),
+                            decoration: BoxDecoration(
+                              // 👇 نفس درجة الأزرق (primary) لكن بخلفية خفيفة
+                              color: cs.primary.withOpacity(.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              monthName,
+                              // 👇 النص بنفس الـ primary
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: cs.primary,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      IconButton(
+                          onPressed: _goNextMonth,
+                          icon: const Icon(Icons.chevron_right)),
+                    ],
                   ),
-                  IconButton(
-                      onPressed: _goNextMonth,
-                      icon: const Icon(Icons.chevron_right)),
+                  const SizedBox(height: 8),
+
+                  // Weekday headers
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      _SummaryDow('Mon'),
+                      _SummaryDow('Tue'),
+                      _SummaryDow('Wed'),
+                      _SummaryDow('Thu'),
+                      _SummaryDow('Fri'),
+                      _SummaryDow('Sat'),
+                      _SummaryDow('Sun'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Calendar grid
+                  _buildCalendarGrid(context, monthData),
+
+                  const SizedBox(height: 12),
+
+                  // Legend
+                  _LegendRow(),
+
+                  const SizedBox(height: 16),
+
+                  // Selected day details
+                  if (_selectedDay != null) ...[
+                    Text(
+                      DateFormat('d MMMM').format(_selectedDay!),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    ...(() {
+                      final key = DateFormat('yyyy-MM-dd').format(_selectedDay!);
+                      final doses = [...(monthData[key] ?? const [])];
+                      if (doses.isEmpty) return const [Text('No logs for this day')];
+
+                      doses.sort((a, b) {
+                        final ai = (a['timeIndex'] is int)
+                            ? a['timeIndex'] as int
+                            : int.tryParse('${a['timeIndex']}') ?? 0;
+                        final bi = (b['timeIndex'] is int)
+                            ? b['timeIndex'] as int
+                            : int.tryParse('${b['timeIndex']}') ?? 0;
+                        if (ai != bi) return ai.compareTo(bi);
+                        final at = (a['scheduledTime'] ?? '').toString();
+                        final bt = (b['scheduledTime'] ?? '').toString();
+                        return at.compareTo(bt);
+                      });
+
+                      return doses.map((m) {
+                        final status =
+                            (m['status'] ?? '').toString().toLowerCase();
+                        final name =
+                            (m['medicationName'] ?? 'Med').toString();
+                        final sched = (m['scheduledTime'] ?? '').toString();
+                        final takenAt = _toDateTime(m['takenAt']);
+
+                        String timeLabel = 'Scheduled $sched';
+                        if (takenAt != null) {
+                          timeLabel +=
+                              ' • Taken ${DateFormat('hh:mm a').format(takenAt)}';
+                        }
+
+                        DoseTone tone;
+                        if (status == 'missed' ||
+                            (takenAt == null &&
+                                _isOverdueMissedByClock(sched, _selectedDay!))) {
+                          tone = DoseTone.missed;
+                          if (!timeLabel.contains('Missed')) {
+                            timeLabel += ' • Missed (>10m overdue)';
+                          }
+                        } else if (status == 'taken_late') {
+                          tone = DoseTone.late;
+                          if (!timeLabel.contains('Taken late')) {
+                            timeLabel += ' • Taken late';
+                          }
+                        } else if (status == 'taken_on_time') {
+                          tone = DoseTone.onTime;
+                        } else {
+                          tone = DoseTone.onTime;
+                        }
+
+                        return _SummaryMedStatusRow(
+                          name: name,
+                          time: timeLabel,
+                          tone: tone,
+                        );
+                      }).toList();
+                    })(),
+                  ] else
+                    const Text('Select a day to view details'),
                 ],
-              ),
-              const SizedBox(height: 8),
-
-              // Weekday headers
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  _SummaryDow('Mon'),
-                  _SummaryDow('Tue'),
-                  _SummaryDow('Wed'),
-                  _SummaryDow('Thu'),
-                  _SummaryDow('Fri'),
-                  _SummaryDow('Sat'),
-                  _SummaryDow('Sun'),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Calendar grid
-              _buildCalendarGrid(context, monthData),
-
-              const SizedBox(height: 12),
-
-              // Legend (style #2)
-              _LegendRow(),
-
-              const SizedBox(height: 16),
-
-              // Selected day details
-              if (_selectedDay != null) ...[
-                Text(
-                  DateFormat('d MMMM').format(_selectedDay!),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                ...(() {
-                  final doses = _dosesFor(_selectedDay!, monthData);
-                  if (doses.isEmpty) {
-                    return const [Text('No logs for this day')];
-                  }
-                  return doses.map((m) {
-                    final status =
-                        (m['status'] ?? '').toString().toLowerCase();
-                    final name = (m['medicationName'] ?? 'Med').toString();
-                    final sched = (m['scheduledTime'] ?? '').toString();
-                    final takenAt = _toDateTime(m['takenAt']);
-
-                    String timeLabel = 'Scheduled $sched';
-                    if (takenAt != null) {
-                      timeLabel +=
-                          ' • Taken ${DateFormat('hh:mm a').format(takenAt)}';
-                    }
-
-                    // tone per-card (onTime / late / missed)
-                    final tone = status == 'missed'
-                        ? DoseTone.missed
-                        : (status == 'taken_late'
-                            ? DoseTone.late
-                            : DoseTone.onTime);
-
-                    return _SummaryMedStatusRow(
-                      name: name,
-                      time: timeLabel,
-                      tone: tone,
-                    );
-                  }).toList();
-                })(),
-              ] else
-                const Text('Select a day to view details'),
-            ],
+              );
+            },
           );
         },
       ),
@@ -247,9 +454,49 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     final totalCells = leadingEmpty + _daysInMonth;
     final rows = (totalCells / 7).ceil();
 
-    final today = DateTime.now();
-    final todayKey =
-        DateTime(today.year, today.month, today.day); // for comparison
+    final todayKey = _dateOnly(DateTime.now());
+
+    Color? _bgForDay(int day) {
+      final d = DateTime(_current.year, _current.month, day);
+      final isFuture = _dateOnly(d).isAfter(todayKey);
+      final key = DateFormat('yyyy-MM-dd').format(d);
+      final doses = monthData[key] ?? const [];
+
+      if (isFuture) return Colors.grey.shade200;
+      if (doses.isEmpty) return null;
+
+      bool anyMissed = false;
+      bool anyLate = false;
+      bool allOnTime = true;
+
+      for (final dose in doses) {
+        final status = (dose['status'] ?? '').toString().toLowerCase();
+        final takenAt = _toDateTime(dose['takenAt']);
+        final sched = (dose['scheduledTime'] ?? '').toString();
+
+        if (status == 'missed' ||
+            (takenAt == null && _isOverdueMissedByClock(sched, d))) {
+          anyMissed = true;
+          allOnTime = false;
+          continue;
+        }
+        if (status == 'taken_late') {
+          anyLate = true;
+          allOnTime = false;
+          continue;
+        }
+        if (status == 'taken_on_time') {
+          // keep allOnTime
+        } else {
+          allOnTime = false;
+        }
+      }
+
+      if (anyMissed) return Colors.red.shade600;
+      if (anyLate) return Colors.amber.shade700;
+      if (allOnTime) return Colors.green.shade600;
+      return null;
+    }
 
     return Column(
       children: List.generate(rows, (row) {
@@ -268,17 +515,13 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                 dayDate.year == _selectedDay!.year &&
                 dayDate.month == _selectedDay!.month &&
                 dayDate.day == _selectedDay!.day;
-
-            final bg = _bgForDay(dayNumber, monthData);
-            final isToday = dayDate.year == todayKey.year &&
-                dayDate.month == todayKey.month &&
-                dayDate.day == todayKey.day;
+            final isToday = _dateOnly(dayDate).isAtSameMomentAs(todayKey);
 
             return _SummaryDayCell(
               day: dayNumber,
-              bgColor: bg,          // may be null (transparent)
+              bgColor: _bgForDay(dayNumber),
               selected: isSelected,
-              isToday: isToday,     // blue border for today
+              isToday: isToday,
               onTap: () => setState(() => _selectedDay = dayDate),
             );
           }),
@@ -310,7 +553,7 @@ class _SummaryDayCell extends StatelessWidget {
   final int? day;
   final bool selected;
   final bool isToday;
-  final Color? bgColor;      // circle color (nullable)
+  final Color? bgColor;
   final VoidCallback? onTap;
 
   const _SummaryDayCell({
@@ -333,15 +576,12 @@ class _SummaryDayCell extends StatelessWidget {
   Widget build(BuildContext context) {
     if (day == null) return const Expanded(child: SizedBox(height: 52));
 
-    // Medium size circle with clear colors
     final hasColor = bgColor != null;
 
-    // Blue border for "today", primary for selected, else light grey
+    final primary = Theme.of(context).colorScheme.primary;
     final Color borderColor = selected
-        ? Theme.of(context).colorScheme.primary
-        : (isToday
-            ? Colors.blue // as requested
-            : Colors.grey.shade300);
+        ? primary
+        : (isToday ? primary : Colors.grey.shade300); // 👈 اليوم بنفس primary
 
     return Expanded(
       child: GestureDetector(
@@ -349,8 +589,8 @@ class _SummaryDayCell extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Container(
-            width: 40,  // medium
-            height: 40, // medium
+            width: 40,
+            height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -383,7 +623,7 @@ class _SummaryDayCell extends StatelessWidget {
   }
 }
 
-// ===== New tone-based card =====
+// ===== tone-based card =====
 enum DoseTone { onTime, late, missed }
 
 class _SummaryMedStatusRow extends StatelessWidget {
@@ -399,7 +639,6 @@ class _SummaryMedStatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // same layout; only the color changes per tone
     late final Color base;
     late final IconData icon;
     late final IconData trailingIcon;
@@ -411,13 +650,13 @@ class _SummaryMedStatusRow extends StatelessWidget {
         trailingIcon = Icons.check;
         break;
       case DoseTone.late:
-        base = Colors.amber.shade700; // yellow variant
-        icon = Icons.check_circle;    // same icon as onTime (as requested)
-        trailingIcon = Icons.check;   // same trailing check
+        base = Colors.amber.shade700;
+        icon = Icons.check_circle;
+        trailingIcon = Icons.check;
         break;
       case DoseTone.missed:
         base = Colors.red.shade700;
-        icon = Icons.error;
+        icon = Icons.cancel;
         trailingIcon = Icons.close;
         break;
     }
@@ -444,12 +683,10 @@ class _SummaryMedStatusRow extends StatelessWidget {
   }
 }
 
-// Legend (style #2): colored bullets + labels in a single row
+// Legend
 class _LegendRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-        fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w600);
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 16,
@@ -471,19 +708,23 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-        fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w600);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 12,
           height: 12,
-          decoration:
-              BoxDecoration(color: color, shape: BoxShape.circle),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(label, style: style),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade800,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
