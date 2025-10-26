@@ -48,10 +48,10 @@ class _AudioListPageState extends State<AudioListPage> {
   Widget build(BuildContext context) {
     final Map<String, List<Map<String, String>>> audioData = {
       "Story": [
-        {"title": "The Necklace", "image": "assets/images/story_necklace.jpg"},
-        {"title": "The Tell-Tale Heart", "image": "assets/images/story_heart.jpg"},
-        {"title": "The Open Window", "image": "assets/images/story_window.jpg"},
-        {"title": "The Bet", "image": "assets/images/story_bet.jpg"},
+        {"title": " Story1 ", "image": "assets/images/story_necklace.jpg"},
+        {"title": "Story2", "image": "assets/images/story_heart.jpg"},
+        {"title": "Story3", "image": "assets/images/story_window.jpg"},
+        {"title": "Story4", "image": "assets/images/story_bet.jpg"},
       ],
       "Quran": [
         {"title": "Surah Yaseen", "image": "assets/images/quran_yaseen.jpg"},
@@ -205,6 +205,7 @@ class _AudioListPageState extends State<AudioListPage> {
                                   color: nowFav
                                       ? Colors.green.shade700
                                       : Colors.red.shade700,
+                                       seconds: 1,
                                 );
                               },
                             ),

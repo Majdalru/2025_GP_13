@@ -28,7 +28,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   void _update() => setState(() {});
 
-  void _showTopBanner(String message, {Color color = kPrimary, int seconds = 1200}) {
+  void _showTopBanner(String message, {Color color = kPrimary, int seconds = 700}) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     messenger
@@ -182,7 +182,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                               onPressed: () {
                                 favoritesManager.toggleFavorite(audio);
 
-                                _showTopBanner('Removed from Favorites', color: Colors.red.shade700);
+                                _showTopBanner('Removed from Favorites', color: Colors.red.shade700 );
                               },
                               tooltip: 'Remove from Favorites',
                               splashRadius: 28,

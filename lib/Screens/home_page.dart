@@ -380,9 +380,7 @@ class _NextMedicationCardReal extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: cs.primary.withOpacity(0.2),
-        ),
+        border: Border.all(color: cs.primary.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -391,11 +389,11 @@ class _NextMedicationCardReal extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text("Next Up", style: TextStyle(color: Colors.grey)),
+              children: [
+                const Text("Next Up", style: TextStyle(color: Colors.grey)),
                 Text(
-                  " ",
-                  style: TextStyle(
+                  medName, 
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -418,6 +416,7 @@ class _NextMedicationCardReal extends StatelessWidget {
     );
   }
 }
+
 
 class _MedicationStatusSummaryRow extends StatelessWidget {
   final int taken, late, missed;
