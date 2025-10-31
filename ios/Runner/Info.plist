@@ -29,6 +29,11 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
+
+	<key>NSMicrophoneUsageDescription</key>
+<string>We need microphone access for voice commands</string>
+<key>NSSpeechRecognitionUsageDescription</key>
+<string>We need speech recognition to understand your commands</string>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>

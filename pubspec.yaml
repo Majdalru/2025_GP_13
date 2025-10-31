@@ -49,6 +49,9 @@ dependencies:
   intl: ^0.20.2
   shared_preferences: ^2.0.15 # Add this line
 
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

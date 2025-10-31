@@ -9,6 +9,10 @@ import 'media_page.dart';
 import 'elderly_med.dart';
 import '../../Screens/login_page.dart';
 
+
+import '../../services/voice_assistant_service.dart';
+import '../../widgets/voice_chat_widget.dart';
+
 /// =====================
 ///  Styles (Unified)
 /// =====================
@@ -70,11 +74,83 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   List<String> caregiverNames = [];
   bool loading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    fetchUserData();
+ @override
+void initState() {
+  super.initState();
+  fetchUserData();
+  
+  // ✅ بدء المحادثة الصوتية تلقائياً بعد 2 ثانية
+  Future.delayed(const Duration(seconds: 2), () {
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => VoiceChatWidget(
+          onCommand: (command) => _handleVoiceCommand(context, command),
+        ),
+      );
+    }
+  });
+}
+
+void _handleVoiceCommand(BuildContext context, VoiceCommand command) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  
+  switch (command) {
+    case VoiceCommand.goToMedication:
+      if (uid != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ElderlyMedicationPage(elderlyId: uid),
+          ),
+        );
+      }
+      break;
+      
+    case VoiceCommand.addMedication:
+      if (uid != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ElderlyMedicationPage(elderlyId: uid),
+          ),
+        );
+      }
+      break;
+      
+    case VoiceCommand.goToMedia:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MediaPage()),
+      );
+      break;
+      
+    case VoiceCommand.goToHome:
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You are already on the home page!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      break;
+      
+    case VoiceCommand.sos:
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('SOS activated!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      break;
+      
+    default:
+      break;
   }
+}
 
   void _showTopBanner(
     String message, {
@@ -593,14 +669,52 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Colors.black,
-                      size: 36,
-                    ),
-                    splashRadius: 28,
-                    onPressed: () {
+                
+
+IconButton(
+  icon: Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: const LinearGradient(
+        colors: [Color(0xFF1B3A52), Color(0xFF2C5F7D)],
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF1B3A52).withOpacity(0.3),
+          blurRadius: 8,
+          spreadRadius: 2,
+        ),
+      ],
+    ),
+    child: const Icon(
+      Icons.mic,
+      color: Colors.white,
+      size: 26,
+    ),
+  ),
+  splashRadius: 28,
+  onPressed: () {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => VoiceChatWidget(
+        onCommand: (command) => _handleVoiceCommand(context, command),
+      ),
+    );
+  },
+),
+    
+    IconButton(
+      icon: const Icon(
+        Icons.logout,
+        color: Colors.black,
+        size: 36,
+      ),
+      splashRadius: 28,
+      onPressed: () {
                       HapticFeedback.selectionClick();
                       showDialog(
                         context: context,
