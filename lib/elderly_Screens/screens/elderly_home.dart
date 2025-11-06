@@ -9,9 +9,7 @@ import 'media_page.dart';
 import 'elderly_med.dart';
 import '../../Screens/login_page.dart';
 
-
-import '../../services/voice_assistant_service.dart';
-import '../../widgets/voice_chat_widget.dart';
+import '../../widgets/floating_voice_button.dart'; // ✅ الجديد
 
 /// =====================
 ///  Styles (Unified)
@@ -78,78 +76,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 void initState() {
   super.initState();
   fetchUserData();
-  
-  // ✅ بدء المحادثة الصوتية تلقائياً بعد 2 ثانية
-  Future.delayed(const Duration(seconds: 2), () {
-    if (mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => VoiceChatWidget(
-          onCommand: (command) => _handleVoiceCommand(context, command),
-        ),
-      );
-    }
-  });
-}
-
-void _handleVoiceCommand(BuildContext context, VoiceCommand command) {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  
-  switch (command) {
-    case VoiceCommand.goToMedication:
-      if (uid != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ElderlyMedicationPage(elderlyId: uid),
-          ),
-        );
-      }
-      break;
-      
-    case VoiceCommand.addMedication:
-      if (uid != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ElderlyMedicationPage(elderlyId: uid),
-          ),
-        );
-      }
-      break;
-      
-    case VoiceCommand.goToMedia:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const MediaPage()),
-      );
-      break;
-      
-    case VoiceCommand.goToHome:
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You are already on the home page!'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      break;
-      
-    case VoiceCommand.sos:
-      HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SOS activated!'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      break;
-      
-    default:
-      break;
-  }
 }
 
   void _showTopBanner(
@@ -655,66 +581,60 @@ void _handleVoiceCommand(BuildContext context, VoiceCommand command) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // top bar
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(
-                        Icons.menu,
-                        size: 42,
-                        color: Colors.black,
-                      ),
-                      splashRadius: 28,
-                      onPressed: () => Scaffold.of(context).openDrawer(),
-                    ),
-                  ),
-                
-
-IconButton(
-  icon: Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF1B3A52), Color(0xFF2C5F7D)],
+         Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    Builder(
+      builder: (context) => IconButton(
+        icon: const Icon(Icons.menu, size: 42, color: Colors.black),
+        splashRadius: 28,
+        onPressed: () => Scaffold.of(context).openDrawer(),
       ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color(0xFF1B3A52).withOpacity(0.3),
-          blurRadius: 8,
-          spreadRadius: 2,
-        ),
-      ],
     ),
-    child: const Icon(
-      Icons.mic,
-      color: Colors.white,
-      size: 26,
+    
+    // ✅ الزر العائم الجديد
+    FloatingVoiceButton(
+      onCommand: (command) {
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        
+        switch (command) {
+          case VoiceCommand.goToMedication:
+            if (uid != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ElderlyMedicationPage(elderlyId: uid),
+                ),
+              );
+            }
+            break;
+            
+          case VoiceCommand.goToMedia:
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MediaPage()),
+            );
+            break;
+            
+          case VoiceCommand.goToHome:
+            // Already on home
+            break;
+            
+          case VoiceCommand.sos:
+            HapticFeedback.heavyImpact();
+            break;
+            
+          default:
+            break;
+        }
+      },
     ),
-  ),
-  splashRadius: 28,
-  onPressed: () {
-    HapticFeedback.selectionClick();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => VoiceChatWidget(
-        onCommand: (command) => _handleVoiceCommand(context, command),
-      ),
-    );
-  },
-),
     
     IconButton(
-      icon: const Icon(
-        Icons.logout,
-        color: Colors.black,
-        size: 36,
-      ),
+      icon: const Icon(Icons.logout, color: Colors.black, size: 36),
       splashRadius: 28,
       onPressed: () {
+
                       HapticFeedback.selectionClick();
                       showDialog(
                         context: context,
