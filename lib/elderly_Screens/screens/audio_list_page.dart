@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'audio_player_page.dart';
 import 'favorites_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/audio_item.dart';
 
 class AudioListPage extends StatefulWidget {
   final String category;
@@ -16,7 +18,8 @@ class _AudioListPageState extends State<AudioListPage> {
 
   static const kPrimary = Color(0xFF1B3A52);
 
-  void _showTopBanner(String message, {Color color = kPrimary, int seconds = 5}) {
+  void _showTopBanner(String message,
+      {Color color = kPrimary, int seconds = 5}) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     messenger
@@ -35,7 +38,7 @@ class _AudioListPageState extends State<AudioListPage> {
               color: Colors.white,
             ),
           ),
-          actions: const [SizedBox.shrink()], //  
+          actions: const [SizedBox.shrink()],
         ),
       );
 
@@ -46,37 +49,6 @@ class _AudioListPageState extends State<AudioListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, List<Map<String, String>>> audioData = {
-      "Story": [
-        {"title": " Story1 ", "image": "assets/images/story_necklace.jpg"},
-        {"title": "Story2", "image": "assets/images/story_heart.jpg"},
-        {"title": "Story3", "image": "assets/images/story_window.jpg"},
-        {"title": "Story4", "image": "assets/images/story_bet.jpg"},
-      ],
-      "Quran": [
-        {"title": "Surah Yaseen", "image": "assets/images/quran_yaseen.jpg"},
-        {"title": "Surah Al-Mulk", "image": "assets/images/quran_mulk.jpg"},
-      ],
-      "Courses": [
-        {"title": "Using Your Phone Safely", "image": "assets/images/course_phone.jpg"},
-        {"title": "Keeping Your Memory Sharp", "image": "assets/images/course_memory.jpg"},
-        {"title": "Introduction to AI (Simple Talk)", "image": "assets/images/course_ai.jpg"},
-      ],
-      "Health": [
-        {"title": "Easy Morning Exercises", "image": "assets/images/health_morning.jpg"},
-        {"title": "Tips for Better Sleep", "image": "assets/images/health_sleep.jpg"},
-        {"title": "Foods That Boost Memory", "image": "assets/images/health_food.jpg"},
-        {"title": "Stretching for Seniors", "image": "assets/images/health_stretch.jpg"},
-      ],
-    };
-
-    final allItems = audioData[widget.category] ?? [];
-    final filteredItems = allItems
-        .where((item) => item["title"]!
-            .toLowerCase()
-            .contains(searchQuery.toLowerCase()))
-        .toList();
-
     const cardColor = Colors.white;
 
     return Scaffold(
@@ -110,18 +82,22 @@ class _AudioListPageState extends State<AudioListPage> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
               child: TextField(
                 onChanged: (value) => setState(() => searchQuery = value),
-                style: const TextStyle(fontSize: 22, fontFamily: 'NotoSansArabic'),
+                style: const TextStyle(
+                    fontSize: 22, fontFamily: 'NotoSansArabic'),
                 decoration: InputDecoration(
                   hintText: 'Search for audio...',
-                  hintStyle: const TextStyle(fontSize: 22, color: Colors.grey),
-                  prefixIcon: const Icon(Icons.search, size: 30, color: Colors.grey),
+                  hintStyle:
+                      const TextStyle(fontSize: 22, color: Colors.grey),
+                  prefixIcon:
+                      const Icon(Icons.search, size: 30, color: Colors.grey),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 15, horizontal: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                    borderSide:
+                        BorderSide(color: Colors.grey.withOpacity(0.3)),
                   ),
                 ),
               ),
@@ -131,8 +107,48 @@ class _AudioListPageState extends State<AudioListPage> {
 
             // ===== List of Audio Cards =====
             Expanded(
-              child: filteredItems.isEmpty
-                  ? const Center(
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('audioMedia')
+                    .where('category', isEqualTo: widget.category)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    debugPrint(
+                        ' Firestore error in AudioListPage: ${snapshot.error}');
+                    return Center(
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.red,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  // نحول الـ docs إلى List<AudioItem>
+                  final allItems =
+                      docs.map((doc) => AudioItem.fromDoc(doc)).toList();
+
+                  // نطبق الفلترة حسب البحث
+                  final filteredItems = allItems
+                      .where((item) => item.title
+                          .toLowerCase()
+                          .contains(searchQuery.toLowerCase()))
+                      .toList();
+
+                  if (filteredItems.isEmpty) {
+                    return const Center(
                       child: Text(
                         'No results found',
                         style: TextStyle(
@@ -141,89 +157,98 @@ class _AudioListPageState extends State<AudioListPage> {
                           color: Colors.grey,
                         ),
                       ),
-                    )
-                  : ListView.builder(
-                      itemCount: filteredItems.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredItems[index];
-                        final isFavorite =
-                            favoritesManager.isFavorite(item["title"]!);
+                    );
+                  }
 
-                        return Card(
-                          color: cardColor,
-                          elevation: 3,
-                          shadowColor: kPrimary.withOpacity(0.1),
-                          margin: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                            side: BorderSide(
-                              color: kPrimary.withOpacity(0.8),
-                              width: 2,
+                  return ListView.builder(
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+
+                      // ✅ نستخدم id بدل title
+                      final isFavorite =favoritesManager.isFavorite(item.id);
+                          
+
+                      return Card(
+                        color: cardColor,
+                        elevation: 3,
+                        shadowColor: kPrimary.withOpacity(0.1),
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: BorderSide(
+                            color: kPrimary.withOpacity(0.8),
+                            width: 2,
+                          ),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(20),
+                          leading: CircleAvatar(
+                            radius: 35,
+                            backgroundImage: AssetImage(item.imageAsset),
+                          ),
+                          title: Text(
+                            item.title,
+                            style: const TextStyle(
+                              fontFamily: 'NotoSansArabic',
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              color: kPrimary,
                             ),
                           ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(20),
-                            leading: CircleAvatar(
-                              radius: 35,
-                              backgroundImage: AssetImage(item["image"]!),
+                          trailing: IconButton(
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color:
+                                  isFavorite ? Colors.red : Colors.grey,
+                              size: 36,
                             ),
-                            title: Text(
-                              item["title"]!,
-                              style: const TextStyle(
-                                fontFamily: 'NotoSansArabic',
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                color: kPrimary,
-                              ),
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(
-                                isFavorite
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                color: isFavorite ? Colors.red : Colors.grey,
-                                size: 36,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  favoritesManager.toggleFavorite({
-                                    "title": item["title"]!,
-                                    "category": widget.category,
-                                    "image": item["image"]!,
-                                  });
-                                });
 
-                                final nowFav =
-                                    favoritesManager.isFavorite(item["title"]!);
+                            // ✅ Async + audioId + باقي الحقول
+                            onPressed: () async {
+                              await favoritesManager.toggleFavorite({
+                                "audioId": item.id,
+                                "title": item.title,
+                                "category": item.category,
+                                "image": item.imageAsset,
+                                "fileName": item.fileName,
+                              });
 
-                                // ===== إشعار علوي بدل SnackBar =====
-                                _showTopBanner(
-                                  nowFav
-                                      ? 'Added to Favorites successfully'
-                                      : 'Removed from Favorites',
-                                  color: nowFav
-                                      ? Colors.green.shade700
-                                      : Colors.red.shade700,
-                                       seconds: 1,
-                                );
-                              },
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AudioPlayerPage(
-                                    title: item["title"]!,
-                                    category: widget.category,
-                                  ),
-                                ),
+                              final nowFav =
+                                  favoritesManager.isFavorite(item.id);
+
+                              _showTopBanner(
+                                nowFav
+                                    ? 'Added to Favorites successfully'
+                                    : 'Removed from Favorites',
+                                color: nowFav
+                                    ? Colors.green.shade700
+                                    : Colors.red.shade700,
+                                seconds: 1,
                               );
+
+                              if (mounted) setState(() {});
                             },
                           ),
-                        );
-                      },
-                    ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AudioPlayerPage(
+                                  item: item,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),

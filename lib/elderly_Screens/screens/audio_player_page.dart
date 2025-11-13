@@ -1,27 +1,113 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import '../../models/audio_item.dart';
 
-class AudioPlayerPage extends StatelessWidget {
-  final String title;
-  final String category;
+class AudioPlayerPage extends StatefulWidget {
+  final AudioItem item;
 
   const AudioPlayerPage({
     super.key,
-    required this.title,
-    required this.category,
+    required this.item,
   });
 
   static const kPrimary = Color(0xFF1B3A52);
 
   @override
+  State<AudioPlayerPage> createState() => _AudioPlayerPageState();
+}
+
+class _AudioPlayerPageState extends State<AudioPlayerPage> {
+  late AudioPlayer _player;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    _initPlayer();
+  }
+
+  Future<void> _initPlayer() async {
+    try {
+      // نحمل الملف من assets/audio/<fileName>
+      await _player.setAsset('assets/audio/${widget.item.fileName}');
+
+      // نسمع لتغيّر الـ duration
+      _player.durationStream.listen((d) {
+        if (d != null && mounted) {
+          setState(() {
+            _duration = d;
+          });
+        }
+      });
+
+      // نسمع لتغيّر الـ position
+      _player.positionStream.listen((pos) {
+        if (mounted) {
+          setState(() {
+            _position = pos;
+          });
+        }
+      });
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading audio: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  String _formatTime(Duration d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final m = two(d.inMinutes.remainder(60));
+    final s = two(d.inSeconds.remainder(60));
+    return '$m:$s';
+  }
+
+  /// ⏪ / ⏩ قفزة نسبية بعدد ثواني (سالب يرجع، موجب يتقدّم)
+  Future<void> _seekRelative(int seconds) async {
+    if (_duration == Duration.zero) return;
+
+    final current = _position.inSeconds;
+    final target = current + seconds;
+
+    final minSec = 0;
+    final maxSec = _duration.inSeconds;
+
+    final clamped = target.clamp(minSec, maxSec); // num
+    await _player.seek(Duration(seconds: clamped.toInt()));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // أقصى قيمة للـ Slider
+    final maxSeconds =
+        _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0;
+
+    // القيمة الحالية للـ Slider
+    final currentSeconds = _position.inSeconds.toDouble();
+    final sliderValue =
+        currentSeconds.clamp(0.0, maxSeconds); // double بين 0 و max
+
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // AppBar موحّد مثل الصفحات السابقة
       appBar: AppBar(
         toolbarHeight: 110,
-        backgroundColor: kPrimary,
-        title: Text(title, overflow: TextOverflow.ellipsis),
+        backgroundColor: AudioPlayerPage.kPrimary,
+        title: Text(widget.item.title, overflow: TextOverflow.ellipsis),
         titleTextStyle: const TextStyle(
           fontSize: 28,
           color: Colors.white,
@@ -43,20 +129,21 @@ class AudioPlayerPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
           child: Column(
             children: [
-              // مساحة بسيطة تحت الـAppBar
               const SizedBox(height: 10),
 
-              // بطاقة المشغّل
               Expanded(
                 child: Center(
                   child: Card(
                     color: Colors.white,
                     elevation: 4,
-                    shadowColor: kPrimary.withOpacity(0.15),
+                    shadowColor: AudioPlayerPage.kPrimary.withOpacity(0.15),
                     margin: const EdgeInsets.all(10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
-                      side: BorderSide(color: kPrimary.withOpacity(0.85), width: 2),
+                      side: BorderSide(
+                        color: AudioPlayerPage.kPrimary.withOpacity(0.85),
+                        width: 2,
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(30.0),
@@ -66,21 +153,22 @@ class AudioPlayerPage extends StatelessWidget {
                           // العنوان + صورة
                           Row(
                             children: [
-                              const CircleAvatar(
+                              CircleAvatar(
                                 radius: 45,
-                                backgroundImage: AssetImage('assets/images/sample.jpg'),
+                                backgroundImage:
+                                    AssetImage(widget.item.imageAsset),
                               ),
                               const SizedBox(width: 20),
                               Expanded(
                                 child: Text(
-                                  title,
+                                  widget.item.title,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontFamily: 'NotoSansArabic',
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
-                                    color: kPrimary,
+                                    color: AudioPlayerPage.kPrimary,
                                   ),
                                 ),
                               ),
@@ -90,70 +178,129 @@ class AudioPlayerPage extends StatelessWidget {
                           const SizedBox(height: 40),
 
                           // المؤشر (Slider)
-                          SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
-                              trackHeight: 4,
+                          if (_isLoading)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: CircularProgressIndicator(),
+                            )
+                          else
+                            Column(
+                              children: [
+                                SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                    thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 10),
+                                    overlayShape:
+                                        const RoundSliderOverlayShape(
+                                            overlayRadius: 18),
+                                    trackHeight: 4,
+                                  ),
+                                  child: Slider(
+                                    min: 0,
+                                    max: maxSeconds,
+                                    value: sliderValue,
+                                    onChanged: (value) {
+                                      final pos =
+                                          Duration(seconds: value.toInt());
+                                      _player.seek(pos);
+                                    },
+                                    activeColor: AudioPlayerPage.kPrimary,
+                                    inactiveColor: Colors.grey[300],
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _formatTime(_position),
+                                      style: const TextStyle(
+                                        fontFamily: 'NotoSansArabic',
+                                        fontSize: 18,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatTime(_duration),
+                                      style: const TextStyle(
+                                        fontFamily: 'NotoSansArabic',
+                                        fontSize: 18,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            child: Slider(
-                              value: 0, // UI فقط حالياً
-                              onChanged: (_) {},
-                              min: 0,
-                              max: 100,
-                              activeColor: kPrimary,
-                              inactiveColor: Colors.grey[300],
-                            ),
-                          ),
 
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "00:00",
-                              style: TextStyle(
-                                fontFamily: 'NotoSansArabic',
-                                fontSize: 20,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 30),
 
                           // أزرار التحكم
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              // ⏪ رجوع 10 ثواني
                               IconButton(
-                                icon: const Icon(Icons.skip_previous),
+                                icon: const Icon(Icons.replay_10),
                                 iconSize: 50,
-                                color: kPrimary,
-                                onPressed: () {},
+                                color: AudioPlayerPage.kPrimary,
+                                onPressed: () => _seekRelative(-10),
                                 splashRadius: 30,
                               ),
                               const SizedBox(width: 20),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  shape: const CircleBorder(),
-                                  backgroundColor: kPrimary,
-                                  padding: const EdgeInsets.all(22),
-                                  elevation: 4,
-                                ),
-                                onPressed: () {},
-                                child: const Icon(Icons.play_arrow, color: Colors.white, size: 60),
+
+                              // Play / Pause
+                              StreamBuilder<PlayerState>(
+                                stream: _player.playerStateStream,
+                                builder: (context, snapshot) {
+                                  final state = snapshot.data;
+                                  final playing = state?.playing ?? false;
+
+                                  IconData icon;
+                                  VoidCallback? onPressed;
+
+                                  if (_isLoading) {
+                                    icon = Icons.hourglass_empty;
+                                    onPressed = null;
+                                  } else if (!playing) {
+                                    icon = Icons.play_arrow;
+                                    onPressed = () => _player.play();
+                                  } else {
+                                    icon = Icons.pause;
+                                    onPressed = () => _player.pause();
+                                  }
+
+                                  return ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      shape: const CircleBorder(),
+                                      backgroundColor:
+                                          AudioPlayerPage.kPrimary,
+                                      padding: const EdgeInsets.all(22),
+                                      elevation: 4,
+                                    ),
+                                    onPressed: onPressed,
+                                    child: Icon(
+                                      icon,
+                                      color: Colors.white,
+                                      size: 60,
+                                    ),
+                                  );
+                                },
                               ),
                               const SizedBox(width: 20),
+
+                              // ⏩ تقدّم 10 ثواني
                               IconButton(
-                                icon: const Icon(Icons.skip_next),
+                                icon: const Icon(Icons.forward_10),
                                 iconSize: 50,
-                                color: kPrimary,
-                                onPressed: () {},
+                                color: AudioPlayerPage.kPrimary,
+                                onPressed: () => _seekRelative(10),
                                 splashRadius: 30,
                               ),
                             ],
                           ),
 
-                          const SizedBox(height: 35),
+                          const SizedBox(height: 25),
 
                           const Text(
                             "Tap play to start listening",

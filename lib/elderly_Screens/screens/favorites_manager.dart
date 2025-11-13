@@ -1,22 +1,86 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class FavoritesManager extends ChangeNotifier {
-  final List<Map<String, String>> _favorites = [];
+  final _db = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
 
-  List<Map<String, String>> get favorites => _favorites;
+  String? _userId;
+  String? _role;
 
-  bool isFavorite(String title) {
-    return _favorites.any((item) => item["title"] == title);
+  final List<Map<String, dynamic>> _favorites = [];
+  List<Map<String, dynamic>> get favorites => List.unmodifiable(_favorites);
+
+  /// تحميل الفيفورت للـ Elderly فقط
+  Future<void> init() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    _userId = user.uid;
+
+    final userDoc = await _db.collection("users").doc(_userId).get();
+    _role = userDoc.data()?["role"] ?? "unknown";
+
+    if (_role != "elderly") {
+      // الكيرقفر ما له فيفورت
+      _favorites.clear();
+      notifyListeners();
+      return;
+    }
+
+    final snap = await _db
+        .collection("users")
+        .doc(_userId)
+        .collection("favorites")
+        .orderBy("createdAt", descending: true)
+        .get();
+
+    _favorites
+      ..clear()
+      ..addAll(snap.docs.map((d) => d.data()));
+
+    notifyListeners();
   }
 
-  void toggleFavorite(Map<String, String> item) {
-    final existingIndex =
-        _favorites.indexWhere((fav) => fav["title"] == item["title"]);
-    if (existingIndex >= 0) {
-      _favorites.removeAt(existingIndex);
+  /// هل الصوت مضاف في الفيفورت؟
+  bool isFavorite(String audioId) {
+    return _favorites.any((f) => f["audioId"] == audioId);
+  }
+
+  /// إضافة/إزالة من الفيفورت
+  Future<void> toggleFavorite(Map<String, dynamic> audio) async {
+    if (_role != "elderly" || _userId == null) return;
+
+    final favCol =
+        _db.collection("users").doc(_userId).collection("favorites");
+
+    final audioId = audio["audioId"];
+
+    // هل موجود مسبقًا؟
+    final existing = await favCol
+        .where("audioId", isEqualTo: audioId)
+        .limit(1)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      // إزالة
+      await existing.docs.first.reference.delete();
+      _favorites.removeWhere((f) => f["audioId"] == audioId);
     } else {
-      _favorites.add(item);
+      // إضافة جديد
+      final data = {
+        "audioId": audio["audioId"],
+        "title": audio["title"],
+        "category": audio["category"],
+        "fileName": audio["fileName"],
+        "image": audio["image"],
+        "createdAt": FieldValue.serverTimestamp(),
+      };
+      await favCol.add(data);
+      _favorites.add(data);
     }
+
     notifyListeners();
   }
 }

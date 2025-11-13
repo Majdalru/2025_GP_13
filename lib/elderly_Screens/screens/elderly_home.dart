@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'media_page.dart';
 import 'elderly_med.dart';
+import 'favorites_manager.dart';
 import '../../Screens/login_page.dart';
 
 import '../../widgets/floating_voice_button.dart'; // ✅ الجديد
@@ -76,6 +77,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 void initState() {
   super.initState();
   fetchUserData();
+ favoritesManager.init();
 }
 
   void _showTopBanner(

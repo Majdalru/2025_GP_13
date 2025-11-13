@@ -52,6 +52,10 @@ dependencies:
   speech_to_text: ^7.0.0
   flutter_tts: ^4.0.2
 
+  just_audio: ^0.9.36
+  audioplayers: ^6.0.0
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -72,6 +76,17 @@ flutter:
 
   assets:
     - assets/khalil_logo.png
+    - assets/books.jpeg
+    - assets/gift.jpg 
+    - assets/Health.png
+    - assets/Quran_cover.jpg
+    - assets/audio.jpg
+    - assets/audio/Al-faatiha.mp3
+    - assets/audio/Al-falaq.mp3
+    - assets/audio/Al-ikhlaas.mp3
+    - assets/audio/Al-mulk.mp3
+    - assets/audio/An-naas.mp3
+    
     
 
   # To add assets to your application, add an assets section, like this:
