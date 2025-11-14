@@ -107,7 +107,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: AudioPlayerPage.kPrimary,
-        title: Text(widget.item.title, overflow: TextOverflow.ellipsis),
+
+        // ✅ تعديل العنوان هنا: FittedBox عشان العنوان الطويل يصغر بدال ما ينقص
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            widget.item.title,
+            textAlign: TextAlign.center,
+          ),
+        ),
+
         titleTextStyle: const TextStyle(
           fontSize: 28,
           color: Colors.white,
@@ -159,11 +168,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                     AssetImage(widget.item.imageAsset),
                               ),
                               const SizedBox(width: 20),
+
+                              // ✅ تعديل العنوان داخل الكرت: بدون ellipsis ويلتف على عدة أسطر
                               Expanded(
                                 child: Text(
                                   widget.item.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: true,
+                                  maxLines: 3, // زيديه لو تبين أكثر
                                   style: const TextStyle(
                                     fontFamily: 'NotoSansArabic',
                                     fontSize: 28,
