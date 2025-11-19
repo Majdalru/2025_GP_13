@@ -4,8 +4,8 @@ import 'firebase_options.dart'; // ✅ الملف الذي تم توليده ت�
 import 'Screens/login_page.dart';
 import 'services/notification_service.dart';
 
-// This is the custom navy color from your addmed.dart file
-const Color customNavyColor = Color.fromRGBO(12, 45, 93, 1);
+// This is the custom navy color from your addmed.dart file (revert)
+const Color customNavyColor = Color.fromRGBO(13, 45, 93, 1);
 // Let's also define your teal color
 const Color customTealColor = Colors.teal;
 void main() async {
