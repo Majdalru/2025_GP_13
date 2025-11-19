@@ -7,12 +7,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as math;
 
+import '../../models/voice_command.dart';
+
+/// Floating voice button:
+/// - Normal mode: analyzes speech -> VoiceCommand (intent)
+/// - Answer mode: returns raw text only (no intent, no greeting)
 class FloatingVoiceButton extends StatefulWidget {
-  final Function(VoiceCommand, {Map<String, dynamic>? data}) onCommand;
+  final Function(VoiceCommand) onCommand;
+
+  /// Used when we are inside an interactive flow (add / edit / delete)
+  final Function(String)? onAnswer;
+
+  /// If true: the button acts as a mic that returns raw text only.
+  final bool isAnswerMode;
 
   const FloatingVoiceButton({
     super.key,
     required this.onCommand,
+    this.onAnswer,
+    this.isAnswerMode = false,
   });
 
   @override
@@ -23,18 +36,12 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     with TickerProviderStateMixin {
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
-  
+
   bool _isListening = false;
   bool _isSpeaking = false;
   bool _isInitialized = false;
   String? _userName;
-  String? _elderlyId;
-  
-  // للحوار المتقدم
-  ConversationState _conversationState = ConversationState.idle;
-  String? _pendingMedicationName;
-  List<Map<String, dynamic>> _availableMedications = [];
-  
+
   late AnimationController _rippleController;
   late AnimationController _pulseController;
   late AnimationController _rotateController;
@@ -42,22 +49,22 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   @override
   void initState() {
     super.initState();
-    
+
     _rippleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
-    
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    
+
     _rotateController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     );
-    
+
     _loadUserInfo();
     _initialize();
   }
@@ -66,13 +73,11 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        _elderlyId = user.uid;
-        
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
-        
+
         if (doc.exists) {
           final data = doc.data()!;
           final first = (data['firstName'] ?? '').toString().trim();
@@ -80,37 +85,9 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
             _userName = first.isNotEmpty ? first : null;
           });
         }
-        
-        // تحميل الأدوية
-        await _loadMedications();
       }
     } catch (e) {
       debugPrint('Error loading user info: $e');
-    }
-  }
-
-  Future<void> _loadMedications() async {
-    try {
-      if (_elderlyId == null) return;
-      
-      final doc = await FirebaseFirestore.instance
-          .collection('medications')
-          .doc(_elderlyId)
-          .get();
-      
-      if (doc.exists && doc.data()?['medsList'] != null) {
-        final medsList = doc.data()!['medsList'] as List;
-        setState(() {
-          _availableMedications = medsList
-              .map((m) => {
-                    'id': m['id'],
-                    'name': m['name'],
-                  })
-              .toList();
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading medications: $e');
     }
   }
 
@@ -151,13 +128,13 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     }
 
     if (_isListening || _isSpeaking) {
+      // stop everything
       await _speech.stop();
       await _tts.stop();
       _stopAnimations();
       setState(() {
         _isListening = false;
         _isSpeaking = false;
-        _conversationState = ConversationState.idle;
       });
       return;
     }
@@ -178,31 +155,42 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   }
 
   Future<void> _startConversation() async {
+    // Answer mode: no greeting, just listen
+    if (widget.isAnswerMode) {
+      _startAnimations();
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _isSpeaking = false;
+      });
+      await _startListening();
+      return;
+    }
+
+    // Normal mode: greeting once per activation
     setState(() {
       _isSpeaking = true;
-      _conversationState = ConversationState.greeting;
     });
-    
+
     _startAnimations();
     HapticFeedback.mediumImpact();
 
     final hour = DateTime.now().hour;
     String greeting;
-    
+
     if (hour < 12) {
-      greeting = _userName != null 
-          ? "Good morning, $_userName! How can I help you?" 
+      greeting = _userName != null
+          ? "Good morning, $_userName! How can I help you?"
           : "Good morning! How can I help you?";
     } else if (hour < 17) {
-      greeting = _userName != null 
-          ? "Good afternoon, $_userName! What would you like?" 
+      greeting = _userName != null
+          ? "Good afternoon, $_userName! What would you like?"
           : "Good afternoon! What would you like?";
     } else {
-      greeting = _userName != null 
-          ? "Good evening, $_userName! How can I assist you?" 
+      greeting = _userName != null
+          ? "Good evening, $_userName! How can I assist you?"
           : "Good evening! How can I assist you?";
     }
-    
+
     await _speak(greeting);
     await _startListening();
   }
@@ -220,25 +208,25 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
 
     try {
       bool gotFinalResult = false;
-      
+
       await _speech.listen(
         onResult: (result) {
           if (!mounted) return;
-          
+
           if (result.finalResult && !gotFinalResult) {
             gotFinalResult = true;
             _processCommand(result.recognizedWords);
           }
         },
-        listenFor: const Duration(seconds: 10),
+        listenFor: const Duration(seconds: 8),
         pauseFor: const Duration(seconds: 3),
         partialResults: true,
         cancelOnError: true,
         listenMode: stt.ListenMode.confirmation,
       );
 
-      await Future.delayed(const Duration(seconds: 10));
-      
+      await Future.delayed(const Duration(seconds: 8));
+
       if (mounted && _isListening && !gotFinalResult) {
         await _speech.stop();
         await _handleNoResponse();
@@ -253,201 +241,59 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   }
 
   Future<void> _processCommand(String text) async {
-    if (text.trim().isEmpty) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
       await _handleNoResponse();
       return;
     }
 
+    // Answer mode: just send raw text back to the parent
+    if (widget.isAnswerMode && widget.onAnswer != null) {
+      debugPrint("🎤 Voice answer mode: $trimmed");
+      _stopAnimations();
+      setState(() {
+        _isListening = false;
+        _isSpeaking = false;
+      });
+      widget.onAnswer!(trimmed);
+      return;
+    }
+
+    // Normal mode: map to intent
     setState(() {
       _isListening = false;
       _isSpeaking = true;
     });
 
-    // معالجة حسب حالة المحادثة
-    switch (_conversationState) {
-      case ConversationState.greeting:
-        await _handleGreetingResponse(text);
-        break;
-      
-      case ConversationState.waitingForMedicationName:
-        await _handleMedicationNameResponse(text);
-        break;
-      
-      case ConversationState.waitingForEditSelection:
-        await _handleEditSelectionResponse(text);
-        break;
-      
-      case ConversationState.waitingForDeleteConfirmation:
-        await _handleDeleteConfirmationResponse(text);
-        break;
-      
-      default:
-        await _handleGreetingResponse(text);
-    }
-  }
+    final command = _analyzeCommand(trimmed);
 
-  Future<void> _handleGreetingResponse(String text) async {
-    final command = _analyzeCommand(text);
-    
     if (command != null) {
-      switch (command) {
-        case VoiceCommand.addMedication:
-          await _speak("Sure! What's the name of the medication you want to add?");
-          setState(() {
-            _conversationState = ConversationState.waitingForMedicationName;
-          });
-          await _startListening();
-          break;
-        
-        case VoiceCommand.editMedication:
-          if (_availableMedications.isEmpty) {
-            await _speak("You don't have any medications to edit yet.");
-            _stopAnimations();
-            setState(() {
-              _isSpeaking = false;
-              _conversationState = ConversationState.idle;
-            });
-          } else {
-            final medNames = _availableMedications.map((m) => m['name']).join(', ');
-            await _speak("Which medication would you like to edit? You have: $medNames");
-            setState(() {
-              _conversationState = ConversationState.waitingForEditSelection;
-            });
-            await _startListening();
-          }
-          break;
-        
-        case VoiceCommand.deleteMedication:
-          if (_availableMedications.isEmpty) {
-            await _speak("You don't have any medications to delete.");
-            _stopAnimations();
-            setState(() {
-              _isSpeaking = false;
-              _conversationState = ConversationState.idle;
-            });
-          } else {
-            final medNames = _availableMedications.map((m) => m['name']).join(', ');
-            await _speak("Which medication would you like to delete? You have: $medNames");
-            setState(() {
-              _conversationState = ConversationState.waitingForDeleteConfirmation;
-            });
-            await _startListening();
-          }
-          break;
-        
-        case VoiceCommand.goToMedication:
-          await _speak("Opening your medications.");
-          HapticFeedback.heavyImpact();
-          _stopAnimations();
-          setState(() {
-            _isSpeaking = false;
-            _conversationState = ConversationState.idle;
-          });
-          widget.onCommand(command);
-          break;
-        
-        case VoiceCommand.goToMedia:
-          await _speak("Opening your media.");
-          HapticFeedback.heavyImpact();
-          _stopAnimations();
-          setState(() {
-            _isSpeaking = false;
-            _conversationState = ConversationState.idle;
-          });
-          widget.onCommand(command);
-          break;
-        
-        default:
-          await _speak("Got it!");
-          HapticFeedback.heavyImpact();
-          _stopAnimations();
-          setState(() {
-            _isSpeaking = false;
-            _conversationState = ConversationState.idle;
-          });
-          widget.onCommand(command);
-      }
-    } else {
-      await _speak("I can help you add, edit, or delete medications. Or open medications and media. What would you like?");
-      setState(() {
-        _isSpeaking = false;
-      });
-      _stopAnimations();
-    }
-  }
-
-  Future<void> _handleMedicationNameResponse(String text) async {
-    _pendingMedicationName = text.trim();
-    
-    await _speak("Great! Opening the form to add $_pendingMedicationName.");
-    
-    HapticFeedback.heavyImpact();
-    _stopAnimations();
-    
-    setState(() {
-      _isSpeaking = false;
-      _conversationState = ConversationState.idle;
-    });
-    
-    widget.onCommand(
-      VoiceCommand.addMedication,
-      data: {'medicationName': _pendingMedicationName},
-    );
-  }
-
-  Future<void> _handleEditSelectionResponse(String text) async {
-    final selectedMed = _findMedicationByName(text);
-    
-    if (selectedMed != null) {
-      await _speak("Opening ${selectedMed['name']} for editing.");
-      
+      String confirmation = _getConfirmation(command);
       HapticFeedback.heavyImpact();
+      await _speak(confirmation);
+
       _stopAnimations();
-      
+
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+          _isListening = false;
+        });
+
+        // IMPORTANT: we only notify; parent decides navigation / flows.
+        widget.onCommand(command);
+      }
+    } else {
+      await _speak(
+        "I'm not sure what you mean. Try saying: medications, media, or home.",
+      );
+
       setState(() {
         _isSpeaking = false;
-        _conversationState = ConversationState.idle;
       });
-      
-      widget.onCommand(
-        VoiceCommand.editMedication,
-        data: {'medicationId': selectedMed['id']},
-      );
-    } else {
-      await _speak("I couldn't find that medication. Please try again.");
-      await _startListening();
-    }
-  }
 
-  Future<void> _handleDeleteConfirmationResponse(String text) async {
-    final selectedMed = _findMedicationByName(text);
-    
-    if (selectedMed != null) {
-      await _speak("Are you sure you want to delete ${selectedMed['name']}? Say yes to confirm.");
-      
-      setState(() {
-        _pendingMedicationName = selectedMed['name'];
-        _conversationState = ConversationState.waitingForFinalDeleteConfirmation;
-      });
-      
-      await _startListening();
-    } else {
-      await _speak("I couldn't find that medication. Please try again.");
-      await _startListening();
+      _stopAnimations();
     }
-  }
-
-  Map<String, dynamic>? _findMedicationByName(String spokenName) {
-    final lower = spokenName.toLowerCase().trim();
-    
-    for (final med in _availableMedications) {
-      if (med['name'].toString().toLowerCase().contains(lower) ||
-          lower.contains(med['name'].toString().toLowerCase())) {
-        return med;
-      }
-    }
-    
-    return null;
   }
 
   Future<void> _handleNoResponse() async {
@@ -455,79 +301,122 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       _isSpeaking = true;
       _isListening = false;
     });
-    
+
     await _speak("I didn't hear you. Please try again.");
-    
+
     _stopAnimations();
-    
+
     setState(() {
       _isSpeaking = false;
-      _conversationState = ConversationState.idle;
     });
   }
 
   VoiceCommand? _analyzeCommand(String text) {
     final lower = text.toLowerCase().trim();
-    
-    // Add medication
+
     if (_containsAny(lower, [
-      'add medication', 'add medicine', 'add new medication', 'add med',
-      'new medication', 'create medication', 'add a medication',
-      'أضف دواء', 'دواء جديد', 'اضافة دواء'
-    ])) {
-      return VoiceCommand.addMedication;
-    }
-    
-    // Edit medication
-    if (_containsAny(lower, [
-      'edit medication', 'edit medicine', 'change medication', 'modify medication',
-      'update medication', 'edit med',
-      'عدل دواء', 'تعديل دواء', 'غير دواء'
-    ])) {
-      return VoiceCommand.editMedication;
-    }
-    
-    // Delete medication
-    if (_containsAny(lower, [
-      'delete medication', 'delete medicine', 'remove medication', 'delete med',
-      'احذف دواء', 'حذف دواء', 'امسح دواء'
-    ])) {
-      return VoiceCommand.deleteMedication;
-    }
-    
-    // View medications
-    if (_containsAny(lower, [
-      'medication', 'medicine', 'show medication', 'my medications',
-      'دواء', 'أدوية', 'ادويتي'
+      'medication',
+      'medicine',
+      'med',
+      'pill',
+      'drug',
+      'دواء',
+      'أدوية',
+      'حبوب'
     ])) {
       return VoiceCommand.goToMedication;
     }
-    
-    // Media
+
     if (_containsAny(lower, [
-      'media', 'video', 'music',
-      'ميديا', 'فيديو'
+      'add',
+      'new',
+      'اضيف',
+      'اضافة',
+      'أضيف',
+    ])) {
+      return VoiceCommand.addMedication;
+    }
+
+    if (_containsAny(lower, [
+      'edit',
+      'change',
+      'تعديل',
+      'غير',
+    ])) {
+      return VoiceCommand.editMedication;
+    }
+
+    if (_containsAny(lower, [
+      'delete',
+      'remove',
+      'احذف',
+      'حذف',
+    ])) {
+      return VoiceCommand.deleteMedication;
+    }
+
+    if (_containsAny(lower, [
+      'media',
+      'video',
+      'music',
+      'watch',
+      'listen',
+      'ميديا',
+      'فيديو'
     ])) {
       return VoiceCommand.goToMedia;
     }
-    
-    // Home
+
     if (_containsAny(lower, [
-      'home', 'main', 'back',
-      'رئيسية', 'رجوع'
+      'home',
+      'main',
+      'back',
+      'رئيسية',
+      'رجوع'
     ])) {
       return VoiceCommand.goToHome;
     }
-    
-    // SOS
+
     if (_containsAny(lower, [
-      'sos', 'emergency', 'help',
-      'طوارئ', 'مساعدة'
+      'sos',
+      'emergency',
+      'help',
+      'طوارئ',
+      'مساعدة'
     ])) {
       return VoiceCommand.sos;
     }
-    
+
+    if (_containsAny(lower, [
+      'settings',
+      'اعدادات',
+      'الإعدادات',
+    ])) {
+      return VoiceCommand.goToSettings;
+    }
+
     return null;
+  }
+
+  String _getConfirmation(VoiceCommand command) {
+    switch (command) {
+      case VoiceCommand.goToMedication:
+        return "Opening your medications.";
+      case VoiceCommand.addMedication:
+        return "Okay, let's add a new medicine.";
+      case VoiceCommand.editMedication:
+        return "Let's edit a medicine.";
+      case VoiceCommand.deleteMedication:
+        return "Okay, which medicine do you want to delete?";
+      case VoiceCommand.goToMedia:
+        return "Opening your media.";
+      case VoiceCommand.goToHome:
+        return "Going to home.";
+      case VoiceCommand.sos:
+        return "Activating emergency!";
+      case VoiceCommand.goToSettings:
+        return "Opening settings.";
+    }
   }
 
   bool _containsAny(String text, List<String> keywords) {
@@ -554,6 +443,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         child: Stack(
           alignment: Alignment.center,
           children: [
+            // Ripples
             if (_isListening || _isSpeaking) ...[
               AnimatedBuilder(
                 animation: _rippleController,
@@ -568,19 +458,22 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                 },
               ),
             ],
-            
+
+            // Main circular button
             AnimatedBuilder(
-              animation: Listenable.merge([_pulseController, _rotateController]),
+              animation: Listenable.merge(
+                [_pulseController, _rotateController],
+              ),
               builder: (context, child) {
                 final scale = (_isListening || _isSpeaking)
                     ? 1.0 + (_pulseController.value * 0.15)
                     : 1.0;
-                
+
                 return Transform.scale(
                   scale: scale,
                   child: Transform.rotate(
-                    angle: (_isListening || _isSpeaking) 
-                        ? _rotateController.value * 2 * math.pi 
+                    angle: (_isListening || _isSpeaking)
+                        ? _rotateController.value * 2 * math.pi
                         : 0,
                     child: Container(
                       width: 80,
@@ -629,6 +522,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   }
 }
 
+/// Custom painter for animated ripples
 class RipplePainter extends CustomPainter {
   final double animation;
   final Color color;
@@ -642,11 +536,12 @@ class RipplePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
 
+    // 3 ripple circles
     for (int i = 0; i < 3; i++) {
       final progress = (animation + (i * 0.33)) % 1.0;
       final radius = 40 + (progress * 50);
       final opacity = 1.0 - progress;
-      
+
       paint.color = color.withOpacity(opacity * 0.6);
       canvas.drawCircle(center, radius, paint);
     }
@@ -654,25 +549,7 @@ class RipplePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(RipplePainter oldDelegate) {
-    return oldDelegate.animation != animation || oldDelegate.color != color;
+    return oldDelegate.animation != animation ||
+        oldDelegate.color != color;
   }
-}
-
-enum ConversationState {
-  idle,
-  greeting,
-  waitingForMedicationName,
-  waitingForEditSelection,
-  waitingForDeleteConfirmation,
-  waitingForFinalDeleteConfirmation,
-}
-
-enum VoiceCommand {
-  goToMedication,
-  addMedication,
-  editMedication,
-  deleteMedication,
-  goToMedia,
-  goToHome,
-  sos,
 }

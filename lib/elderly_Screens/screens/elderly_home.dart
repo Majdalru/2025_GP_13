@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,19 +8,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'media_page.dart';
 import 'elderly_med.dart';
+import 'addmedeld.dart';
 import 'favorites_manager.dart';
 import '../../Screens/login_page.dart';
 
-import '../../widgets/floating_voice_button.dart'; // ✅ الجديد
-import '../screens/addmedeld.dart';  // ← للـ AddMedScreen
-import '../../models/medication.dart';                // ← للـ Medication model
-import '../../services/medication_scheduler.dart';    // ← للـ MedicationScheduler
+import '../../widgets/floating_voice_button.dart';
+import '../../services/voice_assistant_service.dart';
+import 'package:flutter_application_1/models/voice_command.dart';
+import 'package:flutter_application_1/models/medication.dart';
+
 /// =====================
 ///  Styles (Unified)
 /// =====================
 const kPrimary = Color(0xFF1B3A52);
 const kAccentRed = Color(0xFFD62828);
-const kSurface =  Color(0xFFF5F5F5);
+const kSurface = Color(0xFFF5F5F5);
 const kCardRadius = 16.0;
 const kFieldRadius = 14.0;
 
@@ -38,28 +41,34 @@ const kButtonText = TextStyle(
 );
 
 InputDecoration kInput(String label) => InputDecoration(
-  labelText: label,
-  labelStyle: const TextStyle(
-    fontSize: 20,
-    color: kPrimary,
-    fontWeight: FontWeight.w600,
-  ),
-  filled: true,
-  fillColor: Colors.white,
-  focusedBorder: OutlineInputBorder(
-    borderSide: const BorderSide(color: kPrimary, width: 2),
-    borderRadius: BorderRadius.circular(kFieldRadius),
-  ),
-  border: OutlineInputBorder(borderRadius: BorderRadius.circular(kFieldRadius)),
-  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-);
+      labelText: label,
+      labelStyle: const TextStyle(
+        fontSize: 20,
+        color: kPrimary,
+        fontWeight: FontWeight.w600,
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: kPrimary, width: 2),
+        borderRadius: BorderRadius.circular(kFieldRadius),
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(kFieldRadius),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    );
 
-ButtonStyle kBigButton(Color bg, {EdgeInsets? pad}) => ElevatedButton.styleFrom(
-  backgroundColor: bg,
-  padding: pad ?? const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
-  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-  elevation: 4,
-);
+ButtonStyle kBigButton(Color bg, {EdgeInsets? pad}) =>
+    ElevatedButton.styleFrom(
+      backgroundColor: bg,
+      padding: pad ?? const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      elevation: 4,
+    );
 
 class ElderlyHomePage extends StatefulWidget {
   const ElderlyHomePage({super.key});
@@ -75,12 +84,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   List<String> caregiverNames = [];
   bool loading = true;
 
- @override
-void initState() {
-  super.initState();
-  fetchUserData();
- favoritesManager.init();
-}
+  final VoiceAssistantService _voice = VoiceAssistantService();
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserData();
+    favoritesManager.init();
+  }
 
   void _showTopBanner(
     String message, {
@@ -117,7 +128,9 @@ void initState() {
   List<List<T>> _chunk<T>(List<T> list, int size) {
     final out = <List<T>>[];
     for (var i = 0; i < list.length; i += size) {
-      out.add(list.sublist(i, i + size > list.length ? list.length : i + size));
+      out.add(
+        list.sublist(i, i + size > list.length ? list.length : i + size),
+      );
     }
     return out;
   }
@@ -180,9 +193,9 @@ void initState() {
     } catch (e) {
       setState(() => loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading profile: $e')),
+        );
       }
     }
   }
@@ -288,10 +301,10 @@ void initState() {
                                     constraints: BoxConstraints(
                                       maxWidth:
                                           MediaQuery.of(context).size.width *
-                                          0.95,
+                                              0.95,
                                       maxHeight:
                                           MediaQuery.of(context).size.height *
-                                          0.80,
+                                              0.80,
                                     ),
                                     child: SingleChildScrollView(
                                       child: Form(
@@ -308,23 +321,21 @@ void initState() {
                                               decoration: kInput("Name"),
                                               validator: (v) =>
                                                   (v == null ||
-                                                      v.trim().isEmpty)
-                                                  ? "Name is required"
-                                                  : null,
+                                                          v.trim().isEmpty)
+                                                      ? "Name is required"
+                                                      : null,
                                             ),
                                             const SizedBox(height: 18),
                                             DropdownButtonFormField<String>(
-                                              value:
-                                                  genderController
-                                                      .text
-                                                      .isNotEmpty
+                                              value: genderController
+                                                      .text.isNotEmpty
                                                   ? genderController.text
                                                   : null,
                                               decoration: kInput("Gender")
                                                   .copyWith(
-                                                    filled: true,
-                                                    fillColor: Colors.white,
-                                                  ),
+                                                filled: true,
+                                                fillColor: Colors.white,
+                                              ),
                                               dropdownColor: Colors.white,
                                               style: kBodyText,
                                               items: const [
@@ -348,8 +359,8 @@ void initState() {
                                                       val ?? '',
                                               validator: (v) =>
                                                   v == null || v.isEmpty
-                                                  ? "Select gender"
-                                                  : null,
+                                                      ? "Select gender"
+                                                      : null,
                                             ),
                                             const SizedBox(height: 18),
                                             TextFormField(
@@ -368,9 +379,8 @@ void initState() {
                                               ),
                                               validator: (v) {
                                                 final txt = (v ?? "").trim();
-                                                final reg = RegExp(
-                                                  r'^05\d{8}$',
-                                                );
+                                                final reg =
+                                                    RegExp(r'^05\d{8}$');
                                                 return !reg.hasMatch(txt)
                                                     ? "Mobile must start with 05 and have 10 digits"
                                                     : null;
@@ -389,7 +399,6 @@ void initState() {
                                   ),
                                   actionsAlignment:
                                       MainAxisAlignment.spaceEvenly,
-
                                   actions: [
                                     Row(
                                       children: [
@@ -408,12 +417,11 @@ void initState() {
                                                   borderRadius:
                                                       BorderRadius.circular(14),
                                                 ),
-                                                // نفس البادينغ تقريبًا لكن الارتفاع مضمون بـ SizedBox
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 0,
-                                                    ),
+                                                  horizontal: 16,
+                                                  vertical: 0,
+                                                ),
                                               ),
                                               onPressed: () =>
                                                   Navigator.pop(context),
@@ -435,28 +443,25 @@ void initState() {
                                           child: SizedBox(
                                             height: 56,
                                             child: ElevatedButton(
-                                              style:
-                                                  kBigButton(
-                                                    kPrimary,
-                                                    pad:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 16,
-                                                          vertical: 0,
-                                                        ),
-                                                  ).copyWith(
-                                                    elevation:
-                                                        const WidgetStatePropertyAll(
-                                                          2,
-                                                        ),
-                                                  ),
+                                              style: kBigButton(
+                                                kPrimary,
+                                                pad:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 0,
+                                                ),
+                                              ).copyWith(
+                                                elevation:
+                                                    const WidgetStatePropertyAll(
+                                                  2,
+                                                ),
+                                              ),
                                               onPressed: () async {
                                                 if (!_formKey.currentState!
-                                                    .validate())
-                                                  return;
+                                                    .validate()) return;
 
                                                 final user = FirebaseAuth
-                                                    .instance
-                                                    .currentUser;
+                                                    .instance.currentUser;
                                                 if (user != null) {
                                                   final name = nameController
                                                       .text
@@ -469,8 +474,8 @@ void initState() {
                                                       : '';
                                                   final last = parts.length > 1
                                                       ? parts
-                                                            .sublist(1)
-                                                            .join(' ')
+                                                          .sublist(1)
+                                                          .join(' ')
                                                       : '';
 
                                                   await FirebaseFirestore
@@ -478,15 +483,14 @@ void initState() {
                                                       .collection('users')
                                                       .doc(user.uid)
                                                       .update({
-                                                        'firstName': first,
-                                                        'lastName': last,
-                                                        'gender':
-                                                            genderController
-                                                                .text,
-                                                        'phone': phoneController
-                                                            .text
-                                                            .trim(),
-                                                      });
+                                                    'firstName': first,
+                                                    'lastName': last,
+                                                    'gender':
+                                                        genderController.text,
+                                                    'phone': phoneController
+                                                        .text
+                                                        .trim(),
+                                                  });
 
                                                   setState(() {
                                                     fullName = nameController
@@ -502,8 +506,8 @@ void initState() {
                                                     Navigator.pop(context);
                                                     _showTopBanner(
                                                       'Information updated successfully',
-                                                      color:
-                                                          Colors.green.shade700,
+                                                      color: Colors
+                                                          .green.shade700,
                                                     );
                                                   }
                                                 }
@@ -585,108 +589,29 @@ void initState() {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // top bar
-         Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    Builder(
-      builder: (context) => IconButton(
-        icon: const Icon(Icons.menu, size: 42, color: Colors.black),
-        splashRadius: 28,
-        onPressed: () => Scaffold.of(context).openDrawer(),
-      ),
-    ),
-    
-    // ✅ الزر العائم الجديد
- FloatingVoiceButton(
-  onCommand: (command, {data}) async {
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu,
+                          size: 42, color: Colors.black),
+                      splashRadius: 28,
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+
+                  // ✅ Floating voice button with advanced flows
+                  FloatingVoiceButton(
+  onCommand: (command) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    
+
+    debugPrint(
+      '🎯 Voice command received in ElderlyHomePage: $command',
+    );
+
     switch (command) {
-      case VoiceCommand.addMedication:
-        if (uid != null) {
-          // فتح صفحة الإضافة
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddMedScreen(
-                elderlyId: uid,
-                // يمكنك استخدام data?['medicationName'] لو تبين تعبئة الاسم تلقائياً
-              ),
-            ),
-          );
-        }
-        break;
-        
-      case VoiceCommand.editMedication:
-        if (uid != null && data != null && data['medicationId'] != null) {
-          // تحميل بيانات الدواء وفتح صفحة التعديل
-          final medId = data['medicationId'];
-          
-          // جلب الدواء من Firestore
-          final doc = await FirebaseFirestore.instance
-              .collection('medications')
-              .doc(uid)
-              .get();
-          
-          if (doc.exists && doc.data()?['medsList'] != null) {
-            final medsList = doc.data()!['medsList'] as List;
-            final medication = medsList.firstWhere(
-              (m) => m['id'] == medId,
-              orElse: () => null,
-            );
-            
-            if (medication != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AddMedScreen(
-                    elderlyId: uid,
-                    medicationToEdit: Medication.fromMap(medication),
-                  ),
-                ),
-              );
-            }
-          }
-        }
-        break;
-        
-      case VoiceCommand.deleteMedication:
-        if (uid != null && data != null && data['medicationId'] != null) {
-          // حذف الدواء مباشرة
-          final medId = data['medicationId'];
-          
-          try {
-            final docRef = FirebaseFirestore.instance
-                .collection('medications')
-                .doc(uid);
-            
-            final doc = await docRef.get();
-            
-            if (doc.exists && doc.data()?['medsList'] != null) {
-              final medsList = (doc.data()!['medsList'] as List)
-                  .where((m) => m['id'] != medId)
-                  .toList();
-              
-              await docRef.update({'medsList': medsList});
-              
-              // إعادة جدولة التنبيهات
-              await MedicationScheduler().scheduleAllMedications(uid);
-              
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Medication deleted successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
-          } catch (e) {
-            debugPrint('Error deleting medication: $e');
-          }
-        }
-        break;
-        
+      // ====== MEDICATIONS (Navigation Only in Home) ======
       case VoiceCommand.goToMedication:
         if (uid != null) {
           Navigator.push(
@@ -695,32 +620,95 @@ void initState() {
               builder: (_) => ElderlyMedicationPage(elderlyId: uid),
             ),
           );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot open medications: user not found.'),
+            ),
+          );
         }
         break;
-        
-      case VoiceCommand.goToMedia:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MediaPage()),
+
+      // هذي الأوامر ممنوعة من الهوم: بس رسالة توجيه
+      case VoiceCommand.addMedication:
+      case VoiceCommand.editMedication:
+      case VoiceCommand.deleteMedication:
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'To add, edit, or delete medications, please go to the Medications page.',
+            ),
+          ),
         );
         break;
-        
-      case VoiceCommand.sos:
-        HapticFeedback.heavyImpact();
-        // كود SOS هنا
+
+      // ====== MEDIA ======
+      case VoiceCommand.goToMedia:
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const MediaPage(),
+          ),
+        );
         break;
-        
-      default:
+
+      // ====== HOME ======
+      case VoiceCommand.goToHome:
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You are already on the home page.'),
+            ),
+          );
+        }
+        break;
+
+      // ====== SOS ======
+      case VoiceCommand.sos:
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Emergency'),
+              content: const Text(
+                'Here we will trigger the SOS flow (calling caregiver, sending alert, etc.).',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+        break;
+
+      // ====== SETTINGS ======
+      case VoiceCommand.goToSettings:
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Voice: settings command – settings page will be opened here later.',
+              ),
+            ),
+          );
+        }
         break;
     }
   },
 ),
-    
-    IconButton(
-      icon: const Icon(Icons.logout, color: Colors.black, size: 36),
-      splashRadius: 28,
-      onPressed: () {
 
+
+                  IconButton(
+                    icon: const Icon(Icons.logout,
+                        color: Colors.black, size: 36),
+                    splashRadius: 28,
+                    onPressed: () {
                       HapticFeedback.selectionClick();
                       showDialog(
                         context: context,
@@ -728,7 +716,10 @@ void initState() {
                           backgroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
-                            side: const BorderSide(color: kPrimary, width: 2),
+                            side: const BorderSide(
+                              color: kPrimary,
+                              width: 2,
+                            ),
                           ),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -744,7 +735,8 @@ void initState() {
                               ),
                               const SizedBox(height: 20),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
                                 children: [
                                   TextButton(
                                     style: TextButton.styleFrom(
@@ -754,14 +746,17 @@ void initState() {
                                         width: 2,
                                       ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius:
+                                            BorderRadius.circular(14),
                                       ),
-                                      padding: const EdgeInsets.symmetric(
+                                      padding:
+                                          const EdgeInsets.symmetric(
                                         horizontal: 30,
                                         vertical: 16,
                                       ),
                                     ),
-                                    onPressed: () => Navigator.pop(context),
+                                    onPressed: () =>
+                                        Navigator.pop(context),
                                     child: const Text(
                                       "No",
                                       style: TextStyle(
@@ -785,7 +780,8 @@ void initState() {
                                       Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => const LoginPage(),
+                                          builder: (_) =>
+                                              const LoginPage(),
                                         ),
                                         (_) => false,
                                       );
@@ -863,7 +859,9 @@ void initState() {
                         HapticFeedback.selectionClick();
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const MediaPage()),
+                          MaterialPageRoute(
+                            builder: (_) => const MediaPage(),
+                          ),
                         );
                       },
                     ),
@@ -875,13 +873,15 @@ void initState() {
                       title: "Medic",
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        final uid =
+                            FirebaseAuth.instance.currentUser?.uid;
                         if (uid != null) {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  ElderlyMedicationPage(elderlyId: uid),
+                              builder: (_) => ElderlyMedicationPage(
+                                elderlyId: uid,
+                              ),
                             ),
                           );
                         } else {
@@ -920,11 +920,13 @@ class _InfoBox extends StatelessWidget {
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding:
+              const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
             color: kSurface,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
+            border:
+                Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
@@ -958,7 +960,8 @@ class _CaregiversBox extends StatelessWidget {
             decoration: BoxDecoration(
               color: kSurface,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
+              border:
+                  Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             ),
             child: const Text(
               'No caregivers linked',
@@ -1071,9 +1074,9 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
           .collection('users')
           .doc(user.uid)
           .update({
-            'pairingCode': newCode,
-            'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
-          });
+        'pairingCode': newCode,
+        'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
+      });
 
       if (mounted) {
         setState(() {
@@ -1085,9 +1088,9 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error generating code: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error generating code: $e")),
+        );
       }
     }
   }
@@ -1100,11 +1103,13 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
         if (_code != null)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            padding:
+                const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
             decoration: BoxDecoration(
               color: kSurface,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: kPrimary.withOpacity(0.6), width: 1.5),
+              border:
+                  Border.all(color: kPrimary.withOpacity(0.6), width: 1.5),
             ),
             child: Column(
               children: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../services/voice_assistant_service.dart';
+import '../models/voice_command.dart';
 
 class VoiceChatWidget extends StatefulWidget {
   final Function(VoiceCommand) onCommand;
@@ -26,17 +27,17 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
   @override
   void initState() {
     super.initState();
-    
+
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
-    
+
     _initializeAndStart();
   }
 
@@ -44,7 +45,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     setState(() {
       _statusText = 'Initializing...';
     });
-    
+
     final initialized = await _assistant.initialize();
     if (!initialized) {
       if (mounted) {
@@ -65,7 +66,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
       _isSpeaking = true;
       _statusText = _assistant.getGreeting();
     });
-    
+
     _waveController?.repeat();
 
     await _assistant.startConversation(
@@ -93,16 +94,11 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
       _isListening = true;
       _statusText = 'Listening...';
     });
-    
+
     _waveController?.repeat();
 
-    final result = await _assistant.listen(
-      onResult: (partial) {
-        if (mounted) {
-          setState(() => _statusText = partial);
-        }
-      },
-    );
+    // ✅ نستخدم Whisper بدل STT القديم
+    final result = await _assistant.listenWhisper(seconds: 4);
 
     _waveController?.stop();
 
@@ -111,17 +107,18 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
         _statusText = 'Processing...';
       });
 
-      final command = _assistant.analyzeCommand(result);
+      final command = await _assistant.analyzeSmartCommand(result);
+
       if (command != null) {
         setState(() {
           _isSpeaking = true;
           _statusText = 'Taking you there now!';
         });
         _waveController?.repeat();
-        
+
         await _assistant.speak("Taking you there now!");
         await Future.delayed(const Duration(seconds: 1));
-        
+
         _waveController?.stop();
         widget.onCommand(command);
         if (mounted) {
@@ -132,17 +129,18 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
 
       setState(() {
         _isSpeaking = true;
-        _statusText = "I can help you navigate. Try saying medication, media, or home.";
+        _statusText =
+            "I can help you navigate. Try saying medication, media, or home.";
       });
-      
+
       _waveController?.repeat();
-      
+
       await _assistant.speak(
         "I can help you navigate to medication, media, or home. What would you like?",
       );
-      
+
       _waveController?.stop();
-      
+
       setState(() {
         _isSpeaking = false;
         _statusText = 'Tap microphone to speak';
@@ -163,7 +161,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     _waveController?.dispose();
     _pulseController?.dispose();
     _assistant.stopSpeaking();
-    _assistant.stopListening();
+    // ما عاد فيه stopListening في السيرفس بعد Whisper
     super.dispose();
   }
 
@@ -357,15 +355,14 @@ class _WavePainter extends CustomPainter {
       canvas.drawPath(path, paint);
     }
 
-    final circlePaint = Paint()
-      ..style = PaintingStyle.fill;
+    final circlePaint = Paint()..style = PaintingStyle.fill;
 
     for (int i = 0; i < 3; i++) {
       final radius = 8.0 + (i * 4);
       final opacity = 0.6 - (i * 0.15);
       final xPos = (size.width / 2) +
           (50 * math.cos(animation * 2 * math.pi + (i * math.pi / 3)));
-      
+
       circlePaint.color = Colors.white.withOpacity(opacity);
       canvas.drawCircle(
         Offset(xPos, centerY),
@@ -377,6 +374,7 @@ class _WavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WavePainter oldDelegate) {
-    return oldDelegate.animation != animation || oldDelegate.isActive != isActive;
+    return oldDelegate.animation != animation ||
+        oldDelegate.isActive != isActive;
   }
 }
