@@ -11,7 +11,9 @@ import 'favorites_manager.dart';
 import '../../Screens/login_page.dart';
 
 import '../../widgets/floating_voice_button.dart'; // ✅ الجديد
-
+import '../screens/addmedeld.dart';  // ← للـ AddMedScreen
+import '../../models/medication.dart';                // ← للـ Medication model
+import '../../services/medication_scheduler.dart';    // ← للـ MedicationScheduler
 /// =====================
 ///  Styles (Unified)
 /// =====================
@@ -595,42 +597,124 @@ void initState() {
     ),
     
     // ✅ الزر العائم الجديد
-    FloatingVoiceButton(
-      onCommand: (command) {
-        final uid = FirebaseAuth.instance.currentUser?.uid;
+ FloatingVoiceButton(
+  onCommand: (command, {data}) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    
+    switch (command) {
+      case VoiceCommand.addMedication:
+        if (uid != null) {
+          // فتح صفحة الإضافة
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddMedScreen(
+                elderlyId: uid,
+                // يمكنك استخدام data?['medicationName'] لو تبين تعبئة الاسم تلقائياً
+              ),
+            ),
+          );
+        }
+        break;
         
-        switch (command) {
-          case VoiceCommand.goToMedication:
-            if (uid != null) {
+      case VoiceCommand.editMedication:
+        if (uid != null && data != null && data['medicationId'] != null) {
+          // تحميل بيانات الدواء وفتح صفحة التعديل
+          final medId = data['medicationId'];
+          
+          // جلب الدواء من Firestore
+          final doc = await FirebaseFirestore.instance
+              .collection('medications')
+              .doc(uid)
+              .get();
+          
+          if (doc.exists && doc.data()?['medsList'] != null) {
+            final medsList = doc.data()!['medsList'] as List;
+            final medication = medsList.firstWhere(
+              (m) => m['id'] == medId,
+              orElse: () => null,
+            );
+            
+            if (medication != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ElderlyMedicationPage(elderlyId: uid),
+                  builder: (_) => AddMedScreen(
+                    elderlyId: uid,
+                    medicationToEdit: Medication.fromMap(medication),
+                  ),
                 ),
               );
             }
-            break;
-            
-          case VoiceCommand.goToMedia:
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MediaPage()),
-            );
-            break;
-            
-          case VoiceCommand.goToHome:
-            // Already on home
-            break;
-            
-          case VoiceCommand.sos:
-            HapticFeedback.heavyImpact();
-            break;
-            
-          default:
-            break;
+          }
         }
-      },
-    ),
+        break;
+        
+      case VoiceCommand.deleteMedication:
+        if (uid != null && data != null && data['medicationId'] != null) {
+          // حذف الدواء مباشرة
+          final medId = data['medicationId'];
+          
+          try {
+            final docRef = FirebaseFirestore.instance
+                .collection('medications')
+                .doc(uid);
+            
+            final doc = await docRef.get();
+            
+            if (doc.exists && doc.data()?['medsList'] != null) {
+              final medsList = (doc.data()!['medsList'] as List)
+                  .where((m) => m['id'] != medId)
+                  .toList();
+              
+              await docRef.update({'medsList': medsList});
+              
+              // إعادة جدولة التنبيهات
+              await MedicationScheduler().scheduleAllMedications(uid);
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Medication deleted successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            }
+          } catch (e) {
+            debugPrint('Error deleting medication: $e');
+          }
+        }
+        break;
+        
+      case VoiceCommand.goToMedication:
+        if (uid != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ElderlyMedicationPage(elderlyId: uid),
+            ),
+          );
+        }
+        break;
+        
+      case VoiceCommand.goToMedia:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MediaPage()),
+        );
+        break;
+        
+      case VoiceCommand.sos:
+        HapticFeedback.heavyImpact();
+        // كود SOS هنا
+        break;
+        
+      default:
+        break;
+    }
+  },
+),
     
     IconButton(
       icon: const Icon(Icons.logout, color: Colors.black, size: 36),
