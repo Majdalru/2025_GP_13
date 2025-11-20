@@ -41,34 +41,28 @@ const kButtonText = TextStyle(
 );
 
 InputDecoration kInput(String label) => InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(
-        fontSize: 20,
-        color: kPrimary,
-        fontWeight: FontWeight.w600,
-      ),
-      filled: true,
-      fillColor: Colors.white,
-      focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: kPrimary, width: 2),
-        borderRadius: BorderRadius.circular(kFieldRadius),
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(kFieldRadius),
-      ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-    );
+  labelText: label,
+  labelStyle: const TextStyle(
+    fontSize: 20,
+    color: kPrimary,
+    fontWeight: FontWeight.w600,
+  ),
+  filled: true,
+  fillColor: Colors.white,
+  focusedBorder: OutlineInputBorder(
+    borderSide: const BorderSide(color: kPrimary, width: 2),
+    borderRadius: BorderRadius.circular(kFieldRadius),
+  ),
+  border: OutlineInputBorder(borderRadius: BorderRadius.circular(kFieldRadius)),
+  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+);
 
-ButtonStyle kBigButton(Color bg, {EdgeInsets? pad}) =>
-    ElevatedButton.styleFrom(
-      backgroundColor: bg,
-      padding: pad ?? const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-      elevation: 4,
-    );
+ButtonStyle kBigButton(Color bg, {EdgeInsets? pad}) => ElevatedButton.styleFrom(
+  backgroundColor: bg,
+  padding: pad ?? const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  elevation: 4,
+);
 
 class ElderlyHomePage extends StatefulWidget {
   const ElderlyHomePage({super.key});
@@ -128,9 +122,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   List<List<T>> _chunk<T>(List<T> list, int size) {
     final out = <List<T>>[];
     for (var i = 0; i < list.length; i += size) {
-      out.add(
-        list.sublist(i, i + size > list.length ? list.length : i + size),
-      );
+      out.add(list.sublist(i, i + size > list.length ? list.length : i + size));
     }
     return out;
   }
@@ -193,9 +185,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     } catch (e) {
       setState(() => loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
       }
     }
   }
@@ -301,10 +293,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     constraints: BoxConstraints(
                                       maxWidth:
                                           MediaQuery.of(context).size.width *
-                                              0.95,
+                                          0.95,
                                       maxHeight:
                                           MediaQuery.of(context).size.height *
-                                              0.80,
+                                          0.80,
                                     ),
                                     child: SingleChildScrollView(
                                       child: Form(
@@ -321,21 +313,23 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                               decoration: kInput("Name"),
                                               validator: (v) =>
                                                   (v == null ||
-                                                          v.trim().isEmpty)
-                                                      ? "Name is required"
-                                                      : null,
+                                                      v.trim().isEmpty)
+                                                  ? "Name is required"
+                                                  : null,
                                             ),
                                             const SizedBox(height: 18),
                                             DropdownButtonFormField<String>(
-                                              value: genderController
-                                                      .text.isNotEmpty
+                                              value:
+                                                  genderController
+                                                      .text
+                                                      .isNotEmpty
                                                   ? genderController.text
                                                   : null,
                                               decoration: kInput("Gender")
                                                   .copyWith(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                              ),
+                                                    filled: true,
+                                                    fillColor: Colors.white,
+                                                  ),
                                               dropdownColor: Colors.white,
                                               style: kBodyText,
                                               items: const [
@@ -359,8 +353,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                                       val ?? '',
                                               validator: (v) =>
                                                   v == null || v.isEmpty
-                                                      ? "Select gender"
-                                                      : null,
+                                                  ? "Select gender"
+                                                  : null,
                                             ),
                                             const SizedBox(height: 18),
                                             TextFormField(
@@ -379,8 +373,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                               ),
                                               validator: (v) {
                                                 final txt = (v ?? "").trim();
-                                                final reg =
-                                                    RegExp(r'^05\d{8}$');
+                                                final reg = RegExp(
+                                                  r'^05\d{8}$',
+                                                );
                                                 return !reg.hasMatch(txt)
                                                     ? "Mobile must start with 05 and have 10 digits"
                                                     : null;
@@ -419,9 +414,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                                 ),
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 0,
-                                                ),
+                                                      horizontal: 16,
+                                                      vertical: 0,
+                                                    ),
                                               ),
                                               onPressed: () =>
                                                   Navigator.pop(context),
@@ -443,25 +438,28 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                           child: SizedBox(
                                             height: 56,
                                             child: ElevatedButton(
-                                              style: kBigButton(
-                                                kPrimary,
-                                                pad:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 0,
-                                                ),
-                                              ).copyWith(
-                                                elevation:
-                                                    const WidgetStatePropertyAll(
-                                                  2,
-                                                ),
-                                              ),
+                                              style:
+                                                  kBigButton(
+                                                    kPrimary,
+                                                    pad:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 16,
+                                                          vertical: 0,
+                                                        ),
+                                                  ).copyWith(
+                                                    elevation:
+                                                        const WidgetStatePropertyAll(
+                                                          2,
+                                                        ),
+                                                  ),
                                               onPressed: () async {
                                                 if (!_formKey.currentState!
-                                                    .validate()) return;
+                                                    .validate())
+                                                  return;
 
                                                 final user = FirebaseAuth
-                                                    .instance.currentUser;
+                                                    .instance
+                                                    .currentUser;
                                                 if (user != null) {
                                                   final name = nameController
                                                       .text
@@ -474,8 +472,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                                       : '';
                                                   final last = parts.length > 1
                                                       ? parts
-                                                          .sublist(1)
-                                                          .join(' ')
+                                                            .sublist(1)
+                                                            .join(' ')
                                                       : '';
 
                                                   await FirebaseFirestore
@@ -483,14 +481,15 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                                       .collection('users')
                                                       .doc(user.uid)
                                                       .update({
-                                                    'firstName': first,
-                                                    'lastName': last,
-                                                    'gender':
-                                                        genderController.text,
-                                                    'phone': phoneController
-                                                        .text
-                                                        .trim(),
-                                                  });
+                                                        'firstName': first,
+                                                        'lastName': last,
+                                                        'gender':
+                                                            genderController
+                                                                .text,
+                                                        'phone': phoneController
+                                                            .text
+                                                            .trim(),
+                                                      });
 
                                                   setState(() {
                                                     fullName = nameController
@@ -506,8 +505,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                                     Navigator.pop(context);
                                                     _showTopBanner(
                                                       'Information updated successfully',
-                                                      color: Colors
-                                                          .green.shade700,
+                                                      color:
+                                                          Colors.green.shade700,
                                                     );
                                                   }
                                                 }
@@ -594,8 +593,11 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                 children: [
                   Builder(
                     builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu,
-                          size: 42, color: Colors.black),
+                      icon: const Icon(
+                        Icons.menu,
+                        size: 42,
+                        color: Colors.black,
+                      ),
                       splashRadius: 28,
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
@@ -603,110 +605,117 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                   // ✅ Floating voice button with advanced flows
                   FloatingVoiceButton(
-  onCommand: (command) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+                    onCommand: (command) async {
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    debugPrint(
-      '🎯 Voice command received in ElderlyHomePage: $command',
-    );
+                      debugPrint(
+                        '🎯 Voice command received in ElderlyHomePage: $command',
+                      );
 
-    switch (command) {
-      // ====== MEDICATIONS (Navigation Only in Home) ======
-      case VoiceCommand.goToMedication:
-        if (uid != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ElderlyMedicationPage(elderlyId: uid),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cannot open medications: user not found.'),
-            ),
-          );
-        }
-        break;
+                      switch (command) {
+                        // ====== MEDICATIONS (Navigation Only in Home) ======
+                        case VoiceCommand.goToMedication:
+                          if (uid != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ElderlyMedicationPage(elderlyId: uid),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Cannot open medications: user not found.',
+                                ),
+                              ),
+                            );
+                          }
+                          break;
 
-      // هذي الأوامر ممنوعة من الهوم: بس رسالة توجيه
-      case VoiceCommand.addMedication:
-      case VoiceCommand.editMedication:
-      case VoiceCommand.deleteMedication:
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'To add, edit, or delete medications, please go to the Medications page.',
-            ),
-          ),
-        );
-        break;
+                        // هذي الأوامر ممنوعة من الهوم: بس رسالة توجيه
+                        case VoiceCommand.addMedication:
+                        case VoiceCommand.editMedication:
+                        case VoiceCommand.deleteMedication:
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'To add, edit, or delete medications, please go to the Medications page.',
+                              ),
+                            ),
+                          );
+                          break;
 
-      // ====== MEDIA ======
-      case VoiceCommand.goToMedia:
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const MediaPage(),
-          ),
-        );
-        break;
+                        // ====== MEDIA ======
+                        case VoiceCommand.goToMedia:
+                          if (!mounted) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MediaPage(),
+                            ),
+                          );
+                          break;
 
-      // ====== HOME ======
-      case VoiceCommand.goToHome:
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You are already on the home page.'),
-            ),
-          );
-        }
-        break;
+                        // ====== HOME ======
+                        case VoiceCommand.goToHome:
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'You are already on the home page.',
+                                ),
+                              ),
+                            );
+                          }
+                          break;
 
-      // ====== SOS ======
-      case VoiceCommand.sos:
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Emergency'),
-              content: const Text(
-                'Here we will trigger the SOS flow (calling caregiver, sending alert, etc.).',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-        break;
+                        // ====== SOS ======
+                        case VoiceCommand.sos:
+                          if (!mounted) return;
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Emergency'),
+                                content: const Text(
+                                  'Here we will trigger the SOS flow (calling caregiver, sending alert, etc.).',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                          break;
 
-      // ====== SETTINGS ======
-      case VoiceCommand.goToSettings:
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Voice: settings command – settings page will be opened here later.',
-              ),
-            ),
-          );
-        }
-        break;
-    }
-  },
-),
-
+                        // ====== SETTINGS ======
+                        case VoiceCommand.goToSettings:
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Voice: settings command – settings page will be opened here later.',
+                                ),
+                              ),
+                            );
+                          }
+                          break;
+                      }
+                    },
+                  ),
 
                   IconButton(
-                    icon: const Icon(Icons.logout,
-                        color: Colors.black, size: 36),
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Colors.black,
+                      size: 36,
+                    ),
                     splashRadius: 28,
                     onPressed: () {
                       HapticFeedback.selectionClick();
@@ -716,10 +725,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                           backgroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
-                            side: const BorderSide(
-                              color: kPrimary,
-                              width: 2,
-                            ),
+                            side: const BorderSide(color: kPrimary, width: 2),
                           ),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -735,8 +741,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                               ),
                               const SizedBox(height: 20),
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   TextButton(
                                     style: TextButton.styleFrom(
@@ -746,17 +751,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                         width: 2,
                                       ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
-                                      padding:
-                                          const EdgeInsets.symmetric(
+                                      padding: const EdgeInsets.symmetric(
                                         horizontal: 30,
                                         vertical: 16,
                                       ),
                                     ),
-                                    onPressed: () =>
-                                        Navigator.pop(context),
+                                    onPressed: () => Navigator.pop(context),
                                     child: const Text(
                                       "No",
                                       style: TextStyle(
@@ -780,8 +782,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                       Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              const LoginPage(),
+                                          builder: (_) => const LoginPage(),
                                         ),
                                         (_) => false,
                                       );
@@ -808,21 +809,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                 style: const TextStyle(
                   fontSize: 42,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: Color.fromARGB(255, 6, 10, 65),
                 ),
               ),
               const SizedBox(height: 55),
-
-              // spacer bar
-              Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 188, 191, 193),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-
-              const SizedBox(height: 40),
 
               // SOS
               ElevatedButton(
@@ -859,9 +849,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                         HapticFeedback.selectionClick();
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const MediaPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const MediaPage()),
                         );
                       },
                     ),
@@ -870,18 +858,16 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   Expanded(
                     child: _HomeCard(
                       icon: Icons.medical_services,
-                      title: "Medic",
+                      title: "Medication",
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        final uid =
-                            FirebaseAuth.instance.currentUser?.uid;
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
                         if (uid != null) {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ElderlyMedicationPage(
-                                elderlyId: uid,
-                              ),
+                              builder: (_) =>
+                                  ElderlyMedicationPage(elderlyId: uid),
                             ),
                           );
                         } else {
@@ -920,13 +906,11 @@ class _InfoBox extends StatelessWidget {
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
-          padding:
-              const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
             color: kSurface,
             borderRadius: BorderRadius.circular(15),
-            border:
-                Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
+            border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
@@ -960,8 +944,7 @@ class _CaregiversBox extends StatelessWidget {
             decoration: BoxDecoration(
               color: kSurface,
               borderRadius: BorderRadius.circular(15),
-              border:
-                  Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
+              border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             ),
             child: const Text(
               'No caregivers linked',
@@ -987,7 +970,10 @@ class _CaregiversBox extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.person, color: kPrimary),
+                    const Icon(
+                      Icons.person,
+                      color: Color.fromARGB(255, 27, 108, 113),
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -1074,9 +1060,9 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
           .collection('users')
           .doc(user.uid)
           .update({
-        'pairingCode': newCode,
-        'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
-      });
+            'pairingCode': newCode,
+            'pairingCodeCreatedAt': FieldValue.serverTimestamp(),
+          });
 
       if (mounted) {
         setState(() {
@@ -1088,9 +1074,9 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error generating code: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error generating code: $e")));
       }
     }
   }
@@ -1103,13 +1089,11 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
         if (_code != null)
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
             decoration: BoxDecoration(
               color: kSurface,
               borderRadius: BorderRadius.circular(15),
-              border:
-                  Border.all(color: kPrimary.withOpacity(0.6), width: 1.5),
+              border: Border.all(color: kPrimary.withOpacity(0.6), width: 1.5),
             ),
             child: Column(
               children: [
@@ -1135,7 +1119,7 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
         const SizedBox(height: 15),
         ElevatedButton(
           style: kBigButton(
-            kPrimary,
+            const Color.fromARGB(255, 61, 137, 113),
             pad: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
           ),
           onPressed: _isLoading ? null : _generateNewCode,

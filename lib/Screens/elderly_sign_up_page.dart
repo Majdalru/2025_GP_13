@@ -302,159 +302,175 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
   }
 
   Widget _stepEmail(ColorScheme cs) => Form(
-        key: _form0,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          children: [
-            const Text(
-              'Account Info',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text('Email',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(fontSize: 20),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.email_outlined),
-              ),
-              validator: (v) {
-                final s = (v ?? '').trim();
-                if (s.isEmpty) return 'Required';
-                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
-                  return 'Enter a valid email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            const Text('Password',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _pass,
-              obscureText: _ob,
-              style: const TextStyle(fontSize: 20),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  onPressed: () => setState(() => _ob = !_ob),
-                  icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
-                ),
-              ),
-              validator: (v) =>
-                  (v == null || v.length < 6) ? 'Min 6 characters' : null,
-            ),
-          ],
+    key: _form0,
+    autovalidateMode: AutovalidateMode.onUserInteraction,
+    child: ListView(
+      children: [
+        const Text(
+          'Account Info',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-      );
-
-  Widget _stepNameGender(ColorScheme cs) => Form(
-        key: _form1,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          children: [
-            const Text('Personal Info',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            const Text('First name',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _first,
-              style: const TextStyle(fontSize: 20),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.person_outline),
-              ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 14),
-            const Text('Last name',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _last,
-              style: const TextStyle(fontSize: 20),
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.person)),
-              validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 14),
-            const Text('Gender',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<String>(
-              value: _gender,
-              items: const [
-                DropdownMenuItem(value: 'Male', child: Text('Male')),
-                DropdownMenuItem(value: 'Female', child: Text('Female')),
-              ],
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.wc_outlined),
-              ),
-              onChanged: (v) => setState(() => _gender = v ?? 'Male'),
-            ),
-          ],
+        const SizedBox(height: 12),
+        const Text(
+          'Email',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
         ),
-      );
-
-  Widget _stepPhone(ColorScheme cs) => Form(
-        key: _form2,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          children: [
-            const Text('Contact Info',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            const Text('Phone number',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _phone,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(fontSize: 20),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
-              ],
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.phone_outlined),
-              ),
-              validator: (v) {
-                final s = (v ?? '').trim();
-                if (s.isEmpty) return 'Required';
-                if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
-                  return 'Enter a valid Saudi number (05XXXXXXXX)';
-                }
-                return null;
-              },
-            ),
-          ],
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(fontSize: 20),
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.email_outlined),
+          ),
+          validator: (v) {
+            final s = (v ?? '').trim();
+            if (s.isEmpty) return 'Required';
+            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
+              return 'Enter a valid email';
+            }
+            return null;
+          },
         ),
-      );
-
-  Widget _stepConfirm(ColorScheme cs) => ListView(
-        children: [
-          const Text('Confirm',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Card(
-            color: cs.surfaceVariant,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                '📧 Email: ${_email.text}\n'
-                '👤 Name: ${_first.text} ${_last.text}\n'
-                '🚻 Gender: $_gender\n'
-                '📞 Phone: ${_phone.text}',
-                style: const TextStyle(fontSize: 18, height: 1.6),
-              ),
+        const SizedBox(height: 14),
+        const Text(
+          'Password',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _pass,
+          obscureText: _ob,
+          style: const TextStyle(fontSize: 20),
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              onPressed: () => setState(() => _ob = !_ob),
+              icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
             ),
           ),
-        ],
-      );
+          validator: (v) =>
+              (v == null || v.length < 6) ? 'Min 6 characters' : null,
+        ),
+      ],
+    ),
+  );
+
+  Widget _stepNameGender(ColorScheme cs) => Form(
+    key: _form1,
+    autovalidateMode: AutovalidateMode.onUserInteraction,
+    child: ListView(
+      children: [
+        const Text(
+          'Personal Info',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'First name',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _first,
+          style: const TextStyle(fontSize: 20),
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.person_outline),
+          ),
+          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'Last name',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _last,
+          style: const TextStyle(fontSize: 20),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.person)),
+          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'Gender',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: _gender,
+          items: const [
+            DropdownMenuItem(value: 'Male', child: Text('Male')),
+            DropdownMenuItem(value: 'Female', child: Text('Female')),
+          ],
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.wc_outlined),
+          ),
+          onChanged: (v) => setState(() => _gender = v ?? 'Male'),
+        ),
+      ],
+    ),
+  );
+
+  Widget _stepPhone(ColorScheme cs) => Form(
+    key: _form2,
+    autovalidateMode: AutovalidateMode.onUserInteraction,
+    child: ListView(
+      children: [
+        const Text(
+          'Contact Info',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Phone number',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _phone,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(fontSize: 20),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.phone_outlined),
+          ),
+          validator: (v) {
+            final s = (v ?? '').trim();
+            if (s.isEmpty) return 'Required';
+            if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
+              return 'Enter a valid Saudi number (05XXXXXXXX)';
+            }
+            return null;
+          },
+        ),
+      ],
+    ),
+  );
+
+  Widget _stepConfirm(ColorScheme cs) => ListView(
+    children: [
+      const Text(
+        'Confirm',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        color: cs.surfaceVariant,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            '📧 Email: ${_email.text}\n'
+            '👤 Name: ${_first.text} ${_last.text}\n'
+            '🚻 Gender: $_gender\n'
+            '📞 Phone: ${_phone.text}',
+            style: const TextStyle(fontSize: 18, height: 1.6),
+          ),
+        ),
+      ),
+    ],
+  );
 }

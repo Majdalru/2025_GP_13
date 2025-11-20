@@ -47,7 +47,8 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       switch (widget.initialCommand) {
         case VoiceCommand.addMedication:
-          _navigateAndAddMedication(context);
+          // Run voice-guided medication addition
+          _voiceService.runAddMedicationFlow(widget.elderlyId);
           break;
 
         case VoiceCommand.deleteMedication:
@@ -55,11 +56,8 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
           break;
 
         case VoiceCommand.editMedication:
-          final med =
-              await _voiceService.pickMedicationForEdit(widget.elderlyId);
-          if (med != null && mounted) {
-            _navigateAndEditMedication(med);
-          }
+          // Run the complete voice edit flow
+          await _voiceService.runEditMedicationFlow(widget.elderlyId);
           break;
 
         default:
@@ -122,10 +120,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
           SnackBar(
             content: const Text(
               'Medication deleted',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             backgroundColor: Colors.red.shade600,
@@ -139,8 +134,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
             ),
-            padding:
-                const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           ),
         );
       }
@@ -233,78 +227,77 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                       ),
                       const SizedBox(height: 24),
                       Expanded(
-                        child: StreamBuilder<
-                            DocumentSnapshot<Map<String, dynamic>>>(
-                          stream: FirebaseFirestore.instance
-                              .collection('medications')
-                              .doc(widget.elderlyId)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              _currentMeds = [];
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-                            if (!snapshot.hasData ||
-                                !snapshot.data!.exists) {
-                              _currentMeds = [];
-                              return const Center(
-                                child: Text(
-                                  "No medications added yet.",
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                              );
-                            }
-                            if (snapshot.hasError) {
-                              _currentMeds = [];
-                              return const Center(
-                                child: Text(
-                                    "Error loading medications."),
-                              );
-                            }
+                        child:
+                            StreamBuilder<
+                              DocumentSnapshot<Map<String, dynamic>>
+                            >(
+                              stream: FirebaseFirestore.instance
+                                  .collection('medications')
+                                  .doc(widget.elderlyId)
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  _currentMeds = [];
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                                if (!snapshot.hasData ||
+                                    !snapshot.data!.exists) {
+                                  _currentMeds = [];
+                                  return const Center(
+                                    child: Text(
+                                      "No medications added yet.",
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                }
+                                if (snapshot.hasError) {
+                                  _currentMeds = [];
+                                  return const Center(
+                                    child: Text("Error loading medications."),
+                                  );
+                                }
 
-                            final data = snapshot.data!.data();
-                            final medsList =
-                                (data?['medsList'] as List?)
+                                final data = snapshot.data!.data();
+                                final medsList =
+                                    (data?['medsList'] as List?)
                                         ?.map(
                                           (medMap) => Medication.fromMap(
-                                            medMap
-                                                as Map<String, dynamic>,
+                                            medMap as Map<String, dynamic>,
                                           ),
                                         )
                                         .toList() ??
                                     [];
 
-                            _currentMeds = medsList;
+                                _currentMeds = medsList;
 
-                            if (medsList.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  "No medications added yet.",
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                              );
-                            }
+                                if (medsList.isEmpty) {
+                                  return const Center(
+                                    child: Text(
+                                      "No medications added yet.",
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                }
 
-                            return ListView.builder(
-                              itemCount: medsList.length,
-                              itemBuilder: (context, index) {
-                                final medication = medsList[index];
-                                return MedicationCard(
-                                  medication: medication,
-                                  onEdit: () =>
-                                      _navigateAndEditMedication(
+                                return ListView.builder(
+                                  itemCount: medsList.length,
+                                  itemBuilder: (context, index) {
+                                    final medication = medsList[index];
+                                    return MedicationCard(
+                                      medication: medication,
+                                      onEdit: () => _navigateAndEditMedication(
                                         medication,
                                       ),
-                                  onDelete: () =>
-                                      _deleteMedication(medication),
+                                      onDelete: () =>
+                                          _deleteMedication(medication),
+                                    );
+                                  },
                                 );
                               },
-                            );
-                          },
-                        ),
+                            ),
                       ),
                     ],
                   ),
@@ -320,28 +313,23 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
         onCommand: (command) async {
           switch (command) {
             case VoiceCommand.addMedication:
-              _navigateAndAddMedication(context);
+              // Run voice-guided medication addition
+              await _voiceService.runAddMedicationFlow(widget.elderlyId);
               break;
 
             case VoiceCommand.deleteMedication:
-              await _voiceService
-                  .runDeleteMedicationFlow(widget.elderlyId);
+              await _voiceService.runDeleteMedicationFlow(widget.elderlyId);
               break;
 
             case VoiceCommand.editMedication:
-              final med = await _voiceService
-                  .pickMedicationForEdit(widget.elderlyId);
-              if (med != null && mounted) {
-                _navigateAndEditMedication(med);
-              }
+              // Run the complete voice edit flow
+              await _voiceService.runEditMedicationFlow(widget.elderlyId);
               break;
 
             case VoiceCommand.goToMedication:
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                    'You are already on the medications page.',
-                  ),
+                  content: Text('You are already on the medications page.'),
                 ),
               );
               break;
@@ -376,12 +364,10 @@ class CustomSegmentedControl extends StatefulWidget {
   const CustomSegmentedControl({super.key, required this.tabController});
 
   @override
-  State<CustomSegmentedControl> createState() =>
-      _CustomSegmentedControlState();
+  State<CustomSegmentedControl> createState() => _CustomSegmentedControlState();
 }
 
-class _CustomSegmentedControlState
-    extends State<CustomSegmentedControl> {
+class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
   late int _selectedIndex;
 
   @override
@@ -420,10 +406,7 @@ class _CustomSegmentedControlState
         ],
       ),
       child: Row(
-        children: [
-          _buildTab(0, "Today's Meds"),
-          _buildTab(1, "Med list"),
-        ],
+        children: [_buildTab(0, "Today's Meds"), _buildTab(1, "Med list")],
       ),
     );
   }
@@ -439,15 +422,12 @@ class _CustomSegmentedControlState
           duration: const Duration(milliseconds: 300),
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF5FA5A0)
-                : Colors.transparent,
+            color: isSelected ? const Color(0xFF5FA5A0) : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF5FA5A0)
-                          .withOpacity(0.3),
+                      color: const Color(0xFF5FA5A0).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -458,9 +438,7 @@ class _CustomSegmentedControlState
             text,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected
-                  ? Colors.white
-                  : const Color(0xFF616161),
+              color: isSelected ? Colors.white : const Color(0xFF616161),
               fontWeight: FontWeight.bold,
               fontSize: 22,
               letterSpacing: 0.5,
@@ -485,9 +463,7 @@ class MedicationCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Future<void> _showDeleteConfirmation(
-    BuildContext context,
-  ) async {
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -497,10 +473,7 @@ class MedicationCard extends StatelessWidget {
           ),
           title: const Text(
             'Confirm Deletion',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           content: Text(
             'Are you sure you want to delete "${medication.name}"?',
@@ -510,10 +483,7 @@ class MedicationCard extends StatelessWidget {
             TextButton(
               child: const Text(
                 'Cancel',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
@@ -539,17 +509,18 @@ class MedicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeString =
-        medication.times.map((t) => t.format(context)).join(', ');
+    final timeString = medication.times
+        .map((t) => t.format(context))
+        .join(', ');
     final labelStyle = DefaultTextStyle.of(context).style.copyWith(
       fontSize: 22,
       fontWeight: FontWeight.bold,
       color: const Color(0xFF1B3A52),
       letterSpacing: 0.3,
     );
-    final valueStyle = DefaultTextStyle.of(context)
-        .style
-        .copyWith(fontSize: 22, color: const Color(0xFF212121), height: 1.4);
+    final valueStyle = DefaultTextStyle.of(
+      context,
+    ).style.copyWith(fontSize: 22, color: const Color(0xFF212121), height: 1.4);
 
     return Card(
       elevation: 6,
@@ -603,8 +574,7 @@ class MedicationCard extends StatelessWidget {
                 color: const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
-                  color:
-                      const Color(0xFF5FA5A0).withOpacity(0.2),
+                  color: const Color(0xFF5FA5A0).withOpacity(0.2),
                   width: 1,
                 ),
               ),
@@ -631,8 +601,7 @@ class MedicationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  if (medication.notes != null &&
-                      medication.notes!.isNotEmpty)
+                  if (medication.notes != null && medication.notes!.isNotEmpty)
                     RichText(
                       text: TextSpan(
                         style: valueStyle,
@@ -656,8 +625,7 @@ class MedicationCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: const Color(0xFF5FA5A0),
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 18),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       textStyle: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -673,15 +641,13 @@ class MedicationCard extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        _showDeleteConfirmation(context),
+                    onPressed: () => _showDeleteConfirmation(context),
                     icon: const Icon(Icons.delete, size: 28),
                     label: const Text('Delete'),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: const Color(0xFFC62828),
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 18),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       textStyle: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,

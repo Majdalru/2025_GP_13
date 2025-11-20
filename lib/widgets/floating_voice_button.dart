@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as math;
 
-import '../../models/voice_command.dart';
+import '../models/voice_command.dart';
+import '../services/voice_assistant_service.dart'; // ✅ This uses Whisper
 
-/// Floating voice button:
-/// - Normal mode: analyzes speech -> VoiceCommand (intent)
-/// - Answer mode: returns raw text only (no intent, no greeting)
+/// Floating voice button that uses Whisper API
 class FloatingVoiceButton extends StatefulWidget {
   final Function(VoiceCommand) onCommand;
-
-  /// Used when we are inside an interactive flow (add / edit / delete)
   final Function(String)? onAnswer;
-
-  /// If true: the button acts as a mic that returns raw text only.
   final bool isAnswerMode;
 
   const FloatingVoiceButton({
@@ -34,7 +28,8 @@ class FloatingVoiceButton extends StatefulWidget {
 
 class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     with TickerProviderStateMixin {
-  final stt.SpeechToText _speech = stt.SpeechToText();
+  final VoiceAssistantService _voiceService =
+      VoiceAssistantService(); // ✅ Uses Whisper
   final FlutterTts _tts = FlutterTts();
 
   bool _isListening = false;
@@ -87,7 +82,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         }
       }
     } catch (e) {
-      debugPrint('Error loading user info: $e');
+      debugPrint('❌ Error loading user info: $e');
     }
   }
 
@@ -95,29 +90,21 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     try {
       final micStatus = await Permission.microphone.request();
       if (!micStatus.isGranted) {
+        debugPrint('❌ Microphone permission not granted');
         return;
       }
 
-      _isInitialized = await _speech.initialize(
-        onError: (error) {
-          debugPrint('Speech error: $error');
-          if (mounted) {
-            setState(() {
-              _isListening = false;
-            });
-            _stopAnimations();
-          }
-        },
-      );
+      // ✅ Initialize Whisper service
+      _isInitialized = await _voiceService.initialize();
 
       await _tts.setLanguage('en-US');
       await _tts.setSpeechRate(0.45);
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.1);
 
-      debugPrint('Voice assistant initialized: $_isInitialized');
+      debugPrint('✅ Voice assistant initialized (Whisper): $_isInitialized');
     } catch (e) {
-      debugPrint('Initialize error: $e');
+      debugPrint('❌ Initialize error: $e');
     }
   }
 
@@ -128,8 +115,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     }
 
     if (_isListening || _isSpeaking) {
-      // stop everything
-      await _speech.stop();
       await _tts.stop();
       _stopAnimations();
       setState(() {
@@ -155,7 +140,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   }
 
   Future<void> _startConversation() async {
-    // Answer mode: no greeting, just listen
     if (widget.isAnswerMode) {
       _startAnimations();
       HapticFeedback.mediumImpact();
@@ -166,7 +150,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       return;
     }
 
-    // Normal mode: greeting once per activation
     setState(() {
       _isSpeaking = true;
     });
@@ -207,32 +190,20 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     });
 
     try {
-      bool gotFinalResult = false;
+      debugPrint('🎤 Starting to listen with Whisper...');
 
-      await _speech.listen(
-        onResult: (result) {
-          if (!mounted) return;
+      // ✅ This uses Whisper API
+      final result = await _voiceService.listenWhisper(seconds: 5);
 
-          if (result.finalResult && !gotFinalResult) {
-            gotFinalResult = true;
-            _processCommand(result.recognizedWords);
-          }
-        },
-        listenFor: const Duration(seconds: 8),
-        pauseFor: const Duration(seconds: 3),
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: stt.ListenMode.confirmation,
-      );
+      debugPrint('🎤 Whisper result: "$result"');
 
-      await Future.delayed(const Duration(seconds: 8));
-
-      if (mounted && _isListening && !gotFinalResult) {
-        await _speech.stop();
+      if (result != null && result.trim().isNotEmpty) {
+        await _processCommand(result);
+      } else {
         await _handleNoResponse();
       }
     } catch (e) {
-      debugPrint('Listen error: $e');
+      debugPrint('❌ Listen error: $e');
       _stopAnimations();
       setState(() {
         _isListening = false;
@@ -247,7 +218,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       return;
     }
 
-    // Answer mode: just send raw text back to the parent
     if (widget.isAnswerMode && widget.onAnswer != null) {
       debugPrint("🎤 Voice answer mode: $trimmed");
       _stopAnimations();
@@ -259,7 +229,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       return;
     }
 
-    // Normal mode: map to intent
     setState(() {
       _isListening = false;
       _isSpeaking = true;
@@ -280,7 +249,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
           _isListening = false;
         });
 
-        // IMPORTANT: we only notify; parent decides navigation / flows.
         widget.onCommand(command);
       }
     } else {
@@ -322,36 +290,20 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       'drug',
       'دواء',
       'أدوية',
-      'حبوب'
+      'حبوب',
     ])) {
       return VoiceCommand.goToMedication;
     }
 
-    if (_containsAny(lower, [
-      'add',
-      'new',
-      'اضيف',
-      'اضافة',
-      'أضيف',
-    ])) {
+    if (_containsAny(lower, ['add', 'new', 'اضيف', 'اضافة', 'أضيف'])) {
       return VoiceCommand.addMedication;
     }
 
-    if (_containsAny(lower, [
-      'edit',
-      'change',
-      'تعديل',
-      'غير',
-    ])) {
+    if (_containsAny(lower, ['edit', 'change', 'تعديل', 'غير'])) {
       return VoiceCommand.editMedication;
     }
 
-    if (_containsAny(lower, [
-      'delete',
-      'remove',
-      'احذف',
-      'حذف',
-    ])) {
+    if (_containsAny(lower, ['delete', 'remove', 'احذف', 'حذف'])) {
       return VoiceCommand.deleteMedication;
     }
 
@@ -362,36 +314,20 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       'watch',
       'listen',
       'ميديا',
-      'فيديو'
+      'فيديو',
     ])) {
       return VoiceCommand.goToMedia;
     }
 
-    if (_containsAny(lower, [
-      'home',
-      'main',
-      'back',
-      'رئيسية',
-      'رجوع'
-    ])) {
+    if (_containsAny(lower, ['home', 'main', 'back', 'رئيسية', 'رجوع'])) {
       return VoiceCommand.goToHome;
     }
 
-    if (_containsAny(lower, [
-      'sos',
-      'emergency',
-      'help',
-      'طوارئ',
-      'مساعدة'
-    ])) {
+    if (_containsAny(lower, ['sos', 'emergency', 'help', 'طوارئ', 'مساعدة'])) {
       return VoiceCommand.sos;
     }
 
-    if (_containsAny(lower, [
-      'settings',
-      'اعدادات',
-      'الإعدادات',
-    ])) {
+    if (_containsAny(lower, ['settings', 'اعدادات', 'الإعدادات'])) {
       return VoiceCommand.goToSettings;
     }
 
@@ -428,7 +364,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     _rippleController.dispose();
     _pulseController.dispose();
     _rotateController.dispose();
-    _speech.stop();
     _tts.stop();
     super.dispose();
   }
@@ -443,7 +378,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Ripples
             if (_isListening || _isSpeaking) ...[
               AnimatedBuilder(
                 animation: _rippleController,
@@ -459,11 +393,11 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
               ),
             ],
 
-            // Main circular button
             AnimatedBuilder(
-              animation: Listenable.merge(
-                [_pulseController, _rotateController],
-              ),
+              animation: Listenable.merge([
+                _pulseController,
+                _rotateController,
+              ]),
               builder: (context, child) {
                 final scale = (_isListening || _isSpeaking)
                     ? 1.0 + (_pulseController.value * 0.15)
@@ -492,10 +426,11 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: ((_isListening || _isSpeaking)
-                                    ? Colors.red
-                                    : const Color(0xFF1B3A52))
-                                .withOpacity(0.5),
+                            color:
+                                ((_isListening || _isSpeaking)
+                                        ? Colors.red
+                                        : const Color(0xFF1B3A52))
+                                    .withOpacity(0.5),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),
@@ -505,8 +440,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                         _isListening
                             ? Icons.mic
                             : _isSpeaking
-                                ? Icons.volume_up
-                                : Icons.mic_none,
+                            ? Icons.volume_up
+                            : Icons.mic_none,
                         color: Colors.white,
                         size: 40,
                       ),
@@ -522,7 +457,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   }
 }
 
-/// Custom painter for animated ripples
 class RipplePainter extends CustomPainter {
   final double animation;
   final Color color;
@@ -536,7 +470,6 @@ class RipplePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
 
-    // 3 ripple circles
     for (int i = 0; i < 3; i++) {
       final progress = (animation + (i * 0.33)) % 1.0;
       final radius = 40 + (progress * 50);
@@ -549,7 +482,6 @@ class RipplePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(RipplePainter oldDelegate) {
-    return oldDelegate.animation != animation ||
-        oldDelegate.color != color;
+    return oldDelegate.animation != animation || oldDelegate.color != color;
   }
 }

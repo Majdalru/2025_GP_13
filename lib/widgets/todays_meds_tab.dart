@@ -55,6 +55,43 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
   final MedicationScheduler _scheduler = MedicationScheduler();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // --- ADD THIS BLOCK START ---
+  String _elderlyName = 'The elderly';
+
+  @override
+  void initState() {
+    super.initState();
+    // Only fetch the name if we are in the caregiver view
+    if (widget.isCaregiverView) {
+      _fetchElderlyName();
+    }
+  }
+
+  Future<void> _fetchElderlyName() async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(widget.elderlyId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null) {
+          final first = data['firstName'] as String? ?? '';
+          final last = data['lastName'] as String? ?? '';
+          final fullName = '$first $last'.trim();
+
+          if (mounted && fullName.isNotEmpty) {
+            setState(() {
+              _elderlyName = fullName;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching elderly name: $e');
+    }
+  }
+
   Stream<List<MedicationDose>> _getTodaysDosesStream() {
     final now = DateTime.now();
     final todayKey = DateFormat('yyyy-MM-dd').format(now);
@@ -473,6 +510,60 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (missed.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red.shade700, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.shade100.withOpacity(0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.red.shade800,
+                      size: 36,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reminder!',
+                            style: TextStyle(
+                              color: Colors.red.shade900,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            // Dynamic message based on view type
+                            widget.isCaregiverView
+                                ? '$_elderlyName has missed ${missed.length} missed dose${missed.length > 1 ? 's' : ''}!'
+                                : 'You have ${missed.length} missed medication${missed.length > 1 ? 's' : ''}!',
+                            style: TextStyle(
+                              color: Colors.red.shade800,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // --- Container 1: Upcoming (Next Up, Past Due, Later Today) ---
             _buildStatusContainer(
               title: 'Upcoming',
@@ -765,7 +856,12 @@ class _TodayMedicationCard extends StatelessWidget {
     switch (status) {
       case DoseStatus.takenOnTime:
         baseBorderColor = Colors.green;
-        statusBackgroundColor = const Color(0xFFE8F5E9); // Light green
+        statusBackgroundColor = const Color.fromARGB(
+          255,
+          243,
+          249,
+          244,
+        ); // Light green
         headerColor = Colors.green.shade700;
         headerIcon = Icons.check_circle;
         statusText = 'Taken on time';
@@ -773,7 +869,12 @@ class _TodayMedicationCard extends StatelessWidget {
         break;
       case DoseStatus.takenLate:
         baseBorderColor = Colors.orange;
-        statusBackgroundColor = Colors.orange.shade50; // Light orange
+        statusBackgroundColor = const Color.fromARGB(
+          255,
+          253,
+          248,
+          241,
+        ); // Light orange
         headerColor = Colors.orange.shade800;
         headerIcon = Icons.check_circle;
         statusText = 'Taken late';
@@ -781,7 +882,12 @@ class _TodayMedicationCard extends StatelessWidget {
         break;
       case DoseStatus.missed:
         baseBorderColor = Colors.red;
-        statusBackgroundColor = Colors.red.shade50; // Light red
+        statusBackgroundColor = const Color.fromARGB(
+          255,
+          250,
+          246,
+          246,
+        ); // Light red
         headerColor = Colors.red.shade700;
         headerIcon = Icons.cancel;
         statusText = 'Missed';
@@ -790,14 +896,24 @@ class _TodayMedicationCard extends StatelessWidget {
       case DoseStatus.upcoming:
         if (isStrictlyPastDue) {
           baseBorderColor = Colors.orange;
-          statusBackgroundColor = Colors.orange.shade50; // Light orange
+          statusBackgroundColor = const Color.fromARGB(
+            255,
+            253,
+            253,
+            253,
+          ); // Light orange
           headerColor = Colors.orange.shade700;
           headerIcon = Icons.hourglass_bottom;
           statusText = 'Past due';
           statusColor = Colors.orange.shade700;
         } else if (shouldHighlight) {
           baseBorderColor = Colors.blue;
-          statusBackgroundColor = Colors.blue.shade50; // Light blue
+          statusBackgroundColor = const Color.fromARGB(
+            255,
+            235,
+            241,
+            245,
+          ); // Light blue
           headerColor = Colors.blue.shade700;
           headerIcon = Icons.notification_important;
           statusText = dose.scheduledDateTime.isAfter(now)
@@ -931,38 +1047,17 @@ class _TodayMedicationCard extends StatelessWidget {
             // Notes
             if (med.notes != null && med.notes!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey.shade50.withOpacity(
-                      isDimmed ? 0.5 : 1.0,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blueGrey.shade200),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 1.0),
-                        child: Icon(
-                          Icons.info_outline,
-                          size: notesIconSize,
-                          color: Colors.blueGrey.shade700,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          med.notes!,
-                          style: TextStyle(
-                            fontSize: notesFontSize,
-                            color: Colors.blueGrey.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Notes: ${med.notes}',
+                  style: TextStyle(
+                    fontSize: notesFontSize,
+                    color: const Color.fromARGB(
+                      255,
+                      41,
+                      40,
+                      40,
+                    ), // Same dark grey as Frequency
                   ),
                 ),
               ),
@@ -990,9 +1085,26 @@ class _TodayMedicationCard extends StatelessWidget {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: canMarkAsTaken
-                          ? (isStrictlyPastDue || status == DoseStatus.missed
-                                ? const Color.fromARGB(255, 225, 116, 7)
-                                : const Color.fromARGB(255, 29, 119, 113))
+                          ? (status == DoseStatus.missed
+                                ? const Color.fromARGB(
+                                    255,
+                                    174,
+                                    30,
+                                    30,
+                                  ) // 🔴 Red for missed
+                                : isStrictlyPastDue
+                                ? const Color.fromARGB(
+                                    255,
+                                    210,
+                                    85,
+                                    8,
+                                  ) // 🟠 Orange for past due
+                                : const Color.fromARGB(
+                                    255,
+                                    26,
+                                    81,
+                                    154,
+                                  )) // 🔵 Blue for on time
                           : Colors.grey.shade400,
                       foregroundColor: const Color.fromARGB(255, 255, 255, 255),
                       padding: EdgeInsets.symmetric(vertical: buttonVPadding),
@@ -1029,7 +1141,12 @@ class _TodayMedicationCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(buttonRadius),
                         ),
-                        backgroundColor: const Color.fromARGB(255, 77, 75, 75),
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          134,
+                          131,
+                          131,
+                        ),
                       ),
                     ),
                   ),

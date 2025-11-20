@@ -6,10 +6,7 @@ import '../models/voice_command.dart';
 class VoiceChatWidget extends StatefulWidget {
   final Function(VoiceCommand) onCommand;
 
-  const VoiceChatWidget({
-    super.key,
-    required this.onCommand,
-  });
+  const VoiceChatWidget({super.key, required this.onCommand});
 
   @override
   State<VoiceChatWidget> createState() => _VoiceChatWidgetState();
@@ -241,10 +238,11 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
                                 : Colors.white,
                             boxShadow: [
                               BoxShadow(
-                                color: ((_isListening || _isSpeaking)
-                                        ? Colors.red
-                                        : Colors.white)
-                                    .withOpacity(0.5),
+                                color:
+                                    ((_isListening || _isSpeaking)
+                                            ? Colors.red
+                                            : Colors.white)
+                                        .withOpacity(0.5),
                                 blurRadius: 20,
                                 spreadRadius: 5,
                               ),
@@ -254,8 +252,8 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
                             _isListening
                                 ? Icons.mic
                                 : _isSpeaking
-                                    ? Icons.volume_up
-                                    : Icons.mic_none,
+                                ? Icons.volume_up
+                                : Icons.mic_none,
                             color: (_isListening || _isSpeaking)
                                 ? Colors.white
                                 : const Color(0xFF1B3A52),
@@ -304,8 +302,8 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
               _isListening
                   ? 'Listening to your command...'
                   : _isSpeaking
-                      ? 'Speaking...'
-                      : 'Tap the microphone to speak',
+                  ? 'Speaking...'
+                  : 'Tap the microphone to speak',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.7),
                 fontSize: 16,
@@ -346,7 +344,8 @@ class _WavePainter extends CustomPainter {
       path.moveTo(0, centerY);
 
       for (double x = 0; x <= size.width; x += 1) {
-        final y = centerY +
+        final y =
+            centerY +
             amplitude *
                 math.sin((x / size.width) * frequency * 2 * math.pi + phase);
         path.lineTo(x, y);
@@ -360,15 +359,12 @@ class _WavePainter extends CustomPainter {
     for (int i = 0; i < 3; i++) {
       final radius = 8.0 + (i * 4);
       final opacity = 0.6 - (i * 0.15);
-      final xPos = (size.width / 2) +
+      final xPos =
+          (size.width / 2) +
           (50 * math.cos(animation * 2 * math.pi + (i * math.pi / 3)));
 
       circlePaint.color = Colors.white.withOpacity(opacity);
-      canvas.drawCircle(
-        Offset(xPos, centerY),
-        radius,
-        circlePaint,
-      );
+      canvas.drawCircle(Offset(xPos, centerY), radius, circlePaint);
     }
   }
 

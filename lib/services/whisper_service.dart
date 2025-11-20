@@ -49,9 +49,7 @@ class WhisperService {
   /// يرسل الملف إلى OpenAI gpt-4o-transcribe ويترجم الصوت إلى نص
   Future<String?> transcribeAudio(File audioFile, String apiKey) async {
     try {
-      final uri = Uri.parse(
-        'https://api.openai.com/v1/audio/transcriptions',
-      );
+      final uri = Uri.parse('https://api.openai.com/v1/audio/transcriptions');
 
       final request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $apiKey'

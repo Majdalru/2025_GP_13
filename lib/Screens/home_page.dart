@@ -36,9 +36,11 @@ Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
       final all = (medsSnap.data()!['medsList'] as List)
           .map((m) => Medication.fromMap(m as Map<String, dynamic>))
           .toList();
-      meds.addAll(all.where(
-        (m) => m.days.contains('Every day') || m.days.contains(todayName),
-      ));
+      meds.addAll(
+        all.where(
+          (m) => m.days.contains('Every day') || m.days.contains(todayName),
+        ),
+      );
     }
     if (meds.isEmpty) return _TodaySummary();
 
@@ -58,7 +60,13 @@ Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
     for (final med in meds) {
       for (int i = 0; i < med.times.length; i++) {
         final t = med.times[i];
-        final when = DateTime(nowDT.year, nowDT.month, nowDT.day, t.hour, t.minute);
+        final when = DateTime(
+          nowDT.year,
+          nowDT.month,
+          nowDT.day,
+          t.hour,
+          t.minute,
+        );
         final logKey = '${med.id}_$i';
 
         String status = 'upcoming';
@@ -87,19 +95,26 @@ Stream<_TodaySummary> _todaySummaryStream(String elderlyId) {
     String? nextName;
     DateTime? nextTime;
 
-    final upcoming = doses
-        .where((d) => d['status'] == 'upcoming' && !(d['when'] as DateTime).isBefore(nowDT))
-        .toList()
-      ..sort((a, b) => (a['when'] as DateTime).compareTo(b['when'] as DateTime));
+    final upcoming =
+        doses
+            .where(
+              (d) =>
+                  d['status'] == 'upcoming' &&
+                  !(d['when'] as DateTime).isBefore(nowDT),
+            )
+            .toList()
+          ..sort(
+            (a, b) => (a['when'] as DateTime).compareTo(b['when'] as DateTime),
+          );
 
     if (upcoming.isNotEmpty) {
       nextName = upcoming.first['name'] as String;
       nextTime = upcoming.first['when'] as DateTime;
     } else {
-      final lates = doses
-          .where((d) => d['status'] == 'taken_late')
-          .toList()
-        ..sort((a, b) => (a['when'] as DateTime).compareTo(b['when'] as DateTime));
+      final lates = doses.where((d) => d['status'] == 'taken_late').toList()
+        ..sort(
+          (a, b) => (a['when'] as DateTime).compareTo(b['when'] as DateTime),
+        );
       if (lates.isNotEmpty) {
         nextName = lates.first['name'] as String;
         nextTime = lates.first['when'] as DateTime;
@@ -136,9 +151,11 @@ Stream<List<_NextDose>> _nextDosesStream(String elderlyId) {
       final all = (medsSnap.data()!['medsList'] as List)
           .map((m) => Medication.fromMap(m as Map<String, dynamic>))
           .toList();
-      meds.addAll(all.where(
-        (m) => m.days.contains('Every day') || m.days.contains(todayName),
-      ));
+      meds.addAll(
+        all.where(
+          (m) => m.days.contains('Every day') || m.days.contains(todayName),
+        ),
+      );
     }
     if (meds.isEmpty) return const <_NextDose>[];
 
@@ -157,7 +174,13 @@ Stream<List<_NextDose>> _nextDosesStream(String elderlyId) {
     for (final med in meds) {
       for (int i = 0; i < med.times.length; i++) {
         final t = med.times[i];
-        final when = DateTime(nowDT.year, nowDT.month, nowDT.day, t.hour, t.minute);
+        final when = DateTime(
+          nowDT.year,
+          nowDT.month,
+          nowDT.day,
+          t.hour,
+          t.minute,
+        );
         final logKey = '${med.id}_$i';
 
         String status = 'upcoming';
@@ -201,7 +224,9 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final formattedDate = DateFormat('d MMM').format(DateTime.now()).toUpperCase();
+    final formattedDate = DateFormat(
+      'd MMM',
+    ).format(DateTime.now()).toUpperCase();
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -263,8 +288,8 @@ class HomePage extends StatelessWidget {
                     Text(
                       'Today • $formattedDate',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const Spacer(),
                     IconButton.filledTonal(
@@ -273,7 +298,10 @@ class HomePage extends StatelessWidget {
                         backgroundColor: cs.primary.withOpacity(.10),
                       ),
                       onPressed: onTapArrowToMedmain,
-                      icon: const Icon(Icons.arrow_forward_rounded, color: Color.fromARGB(255, 1, 42, 75)),
+                      icon: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Color.fromARGB(255, 1, 42, 75),
+                      ),
                     ),
                   ],
                 ),
@@ -296,10 +324,13 @@ class HomePage extends StatelessWidget {
                         StreamBuilder<List<_NextDose>>(
                           stream: _nextDosesStream(elderlyId),
                           builder: (context, snapNext) {
-                            if (snapNext.connectionState == ConnectionState.waiting) {
+                            if (snapNext.connectionState ==
+                                ConnectionState.waiting) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 8),
-                                child: Center(child: CircularProgressIndicator()),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               );
                             }
                             final nexts = snapNext.data ?? const <_NextDose>[];
@@ -313,7 +344,9 @@ class HomePage extends StatelessWidget {
 
                             return Column(
                               children: nexts.map((n) {
-                                final timeText = DateFormat('h:mm a').format(n.when);
+                                final timeText = DateFormat(
+                                  'h:mm a',
+                                ).format(n.when);
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: _NextMedicationCardReal(
@@ -339,7 +372,10 @@ class HomePage extends StatelessWidget {
                             onPressed: onTapArrowToMedsSummary,
                             child: const Text(
                               'Monthly Overview',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Color.fromARGB(255, 1, 42, 76)),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 1, 42, 76),
+                              ),
                             ),
                           ),
                         ),
@@ -370,7 +406,10 @@ class HomePage extends StatelessWidget {
 class _NextMedicationCardReal extends StatelessWidget {
   final String medName;
   final String timeText;
-  const _NextMedicationCardReal({required this.medName, required this.timeText});
+  const _NextMedicationCardReal({
+    required this.medName,
+    required this.timeText,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -384,7 +423,10 @@ class _NextMedicationCardReal extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.upcoming_outlined, color: Color.fromARGB(255, 4, 54, 94)),
+          const Icon(
+            Icons.upcoming_outlined,
+            color: Color.fromARGB(255, 4, 54, 94),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -392,7 +434,7 @@ class _NextMedicationCardReal extends StatelessWidget {
               children: [
                 const Text("Next Up", style: TextStyle(color: Colors.grey)),
                 Text(
-                  medName, 
+                  medName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -416,7 +458,6 @@ class _NextMedicationCardReal extends StatelessWidget {
     );
   }
 }
-
 
 class _MedicationStatusSummaryRow extends StatelessWidget {
   final int taken, late, missed;
