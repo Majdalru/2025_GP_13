@@ -10,7 +10,7 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// حطي الـ API KEY هنا
-const String _openAIApiKey = 'key here ';
+const String _openAIApiKey = '';
 
 class VoiceAssistantService {
   // ===== Singleton =====
