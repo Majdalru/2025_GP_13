@@ -4,18 +4,19 @@ class AudioItem {
   final String id;
   final String title;
   final String category;
-  final String fileName;        // <-- مهم
-  final String imageAsset;      // صورة حسب الكاتيجوري
+  final String fileName;
+  final String tag;            //  
+  final String imageAsset;
 
   AudioItem({
     required this.id,
     required this.title,
     required this.category,
     required this.fileName,
+    required this.tag,         //  
     required this.imageAsset,
   });
 
-  // factory من Firestore
   factory AudioItem.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
     final category = data['category'] as String? ?? 'Story';
@@ -24,12 +25,12 @@ class AudioItem {
       id: doc.id,
       title: data['title'] as String? ?? 'Untitled',
       category: category,
-      fileName: data['fileName'] as String? ?? '',    // <-- نقرأ fileName
+      fileName: data['fileName'] as String? ?? '',
+      tag: data['tag'] as String? ?? 'All',     //  نقرأ tag من Firestore
       imageAsset: _imageForCategory(category),
     );
   }
 
-  // دالة تساعدنا تختار الصورة حسب الكاتيجوري
   static String _imageForCategory(String category) {
     switch (category) {
       case 'Story':

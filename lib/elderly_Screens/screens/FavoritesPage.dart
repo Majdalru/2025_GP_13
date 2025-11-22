@@ -29,8 +29,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   void _update() => setState(() {});
 
-  void _showTopBanner(String message,
-      {Color color = kPrimary, int seconds = 700}) {
+  void _showTopBanner(
+    String message, {
+    Color color = kPrimary,
+    int milliseconds = 700,
+  }) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
 
@@ -42,13 +45,16 @@ class _FavoritesPageState extends State<FavoritesPage> {
           content: Text(
             message,
             style: const TextStyle(
-                fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
           actions: const [SizedBox.shrink()],
         ),
       );
 
-    Future.delayed(Duration(milliseconds: seconds), () {
+    Future.delayed(Duration(milliseconds: milliseconds), () {
       if (mounted) messenger.hideCurrentMaterialBanner();
     });
   }
@@ -57,12 +63,20 @@ class _FavoritesPageState extends State<FavoritesPage> {
   Widget build(BuildContext context) {
     final favoriteAudios = favoritesManager.favorites;
 
+    // فلترة البحث
     final filteredFavorites = favoriteAudios.where((audio) {
-      final title = audio["title"].toLowerCase();
-      final category = audio["category"].toLowerCase();
+      final title = (audio["title"] ?? '').toLowerCase();
+      final category = (audio["category"] ?? '').toLowerCase();
       final query = searchQuery.toLowerCase();
       return title.contains(query) || category.contains(query);
     }).toList();
+
+    // نصنّف بحسب الكاتيجوري
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (var item in filteredFavorites) {
+      final cat = item["category"] ?? "Other";
+      grouped.putIfAbsent(cat, () => []).add(item);
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -84,22 +98,32 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
       body: Column(
         children: [
-          // Search bar
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
               onChanged: (value) => setState(() => searchQuery = value),
-              style:
-                  const TextStyle(fontSize: 22, fontFamily: 'NotoSansArabic'),
+              style: const TextStyle(
+                fontSize: 22,
+                fontFamily: 'NotoSansArabic',
+              ),
               decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white, // 🎉 أبيض
                 hintText: 'Search favorites...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 15,
+                  horizontal: 20,
+                ),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30)),
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
               ),
             ),
           ),
 
+          // ===== محتوى الصفحة =====
           Expanded(
             child: filteredFavorites.isEmpty
                 ? const Center(
@@ -112,75 +136,116 @@ class _FavoritesPageState extends State<FavoritesPage> {
                         Text(
                           "No results found",
                           style: TextStyle(
-                              fontSize: 24, color: Colors.grey),
+                            fontSize: 24,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),
                   )
-                : ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                    itemCount: filteredFavorites.length,
-                    itemBuilder: (context, index) {
-                      final audio = filteredFavorites[index];
 
-                      return Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          side:
-                              BorderSide(color: kPrimary.withOpacity(0.9), width: 2),
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(16),
-                          leading: CircleAvatar(
-                            radius: 35,
-                            backgroundImage: AssetImage(audio["image"]),
-                          ),
-                          title: Text(
-                            audio["title"],
-                            style: const TextStyle(
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    children: grouped.entries.map((entry) {
+                      final category = entry.key;
+                      final items = entry.value;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // عنوان القسم
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 10, horizontal: 4),
+                            child: Text(
+                              category,
+                              style: const TextStyle(
                                 fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                color: kPrimary),
-                          ),
-                          subtitle: Text(
-                            audio["category"],
-                            style: const TextStyle(
-                                fontSize: 20, color: Colors.grey),
+                                fontWeight: FontWeight.bold,
+                                color: kPrimary,
+                              ),
+                            ),
                           ),
 
-                          trailing: IconButton(
-                            icon: const Icon(Icons.favorite,
-                                color: Colors.red, size: 36),
-                            onPressed: () {
-                              favoritesManager.toggleFavorite(audio);
+                          // قائمة الفيفورت التابعة للقسم
+                          ...items.map((audio) {
+                            final title = audio["title"] ?? "";
+                            final image =
+                                audio["image"] ?? 'assets/audio.jpg';
 
-                              _showTopBanner("Removed from Favorites",
-                                  color: Colors.red.shade700);
-                            },
-                          ),
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                side: BorderSide(
+                                  color: kPrimary.withOpacity(0.9),
+                                  width: 2,
+                                ),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(16),
+                                leading: CircleAvatar(
+                                  radius: 35,
+                                  backgroundImage: AssetImage(image),
+                                ),
+                                title: Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w700,
+                                    color: kPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  category,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.grey,
+                                  ),
+                                ),
 
-                          onTap: () {
-                            final item = AudioItem(
-                              id: audio["audioId"],
-                              title: audio["title"],
-                              category: audio["category"],
-                              fileName: audio["fileName"],
-                              imageAsset: audio["image"],
-                            );
+                                //  زر حذف
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.favorite,
+                                    color: Colors.red,
+                                    size: 36,
+                                  ),
+                                  onPressed: () async {
+                                    await favoritesManager.toggleFavorite(audio);
 
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AudioPlayerPage(item: item),
+                                    _showTopBanner(
+                                      "Removed from Favorites",
+                                      color: Colors.red.shade700,
+                                    );
+                                  },
+                                ),
+
+                                onTap: () {
+                                  final item = AudioItem(
+                                    id: audio["audioId"] ?? '',
+                                    title: title,
+                                    category: category,
+                                    fileName: audio["fileName"] ?? '',
+                                    tag: audio["tag"] ?? '',
+                                    imageAsset: image,
+                                  );
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => AudioPlayerPage(item: item),
+                                    ),
+                                  );
+                                },
                               ),
                             );
-                          },
-                        ),
+                          }).toList(),
+                        ],
                       );
-                    },
+                    }).toList(),
                   ),
-          )
+          ),
         ],
       ),
     );

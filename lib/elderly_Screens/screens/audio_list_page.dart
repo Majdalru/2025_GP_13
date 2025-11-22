@@ -18,8 +18,37 @@ class _AudioListPageState extends State<AudioListPage> {
 
   static const kPrimary = Color(0xFF1B3A52);
 
-  void _showTopBanner(String message,
-      {Color color = kPrimary, int seconds = 5}) {
+  //  tags حسب كل كاتيجوري
+  final Map<String, List<String>> _tagsPerCategory = {
+    'Quran': [
+      'All',
+      'maher-almuaiqly',
+      'saad-alghamdi',
+      'alminshawi',
+    ],
+    'Story': [
+      'All',
+      'islamic',
+      'world',
+    ],
+    'Health': [
+      'All',
+      'food',
+      'sleep',
+      'general',
+    ],
+    'Caregiver': [
+      'All',
+    ],
+  };
+
+  String _selectedTag = 'All';
+
+  void _showTopBanner(
+    String message, {
+    Color color = kPrimary,
+    int seconds = 5,
+  }) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     messenger
@@ -50,6 +79,9 @@ class _AudioListPageState extends State<AudioListPage> {
   @override
   Widget build(BuildContext context) {
     const cardColor = Colors.white;
+
+    //  التاقات المناسبة للكاتيجوري الحالي
+    final tags = _tagsPerCategory[widget.category] ?? ['All'];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -83,17 +115,20 @@ class _AudioListPageState extends State<AudioListPage> {
               child: TextField(
                 onChanged: (value) => setState(() => searchQuery = value),
                 style: const TextStyle(
-                    fontSize: 22, fontFamily: 'NotoSansArabic'),
+                  fontSize: 22,
+                  fontFamily: 'NotoSansArabic',
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search for audio...',
-                  hintStyle:
-                      const TextStyle(fontSize: 22, color: Colors.grey),
+                  hintStyle: const TextStyle(fontSize: 22, color: Colors.grey),
                   prefixIcon:
                       const Icon(Icons.search, size: 30, color: Colors.grey),
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
-                      vertical: 15, horizontal: 20),
+                    vertical: 15,
+                    horizontal: 20,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide:
@@ -102,6 +137,57 @@ class _AudioListPageState extends State<AudioListPage> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 4),
+
+            // ✅ Filter by Tag (Chips)
+           // ✅ Filter by Tag (Chips) — scroll أفقي أوضح
+SizedBox(
+  height: 46,
+  child: ListView.separated(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    itemCount: tags.length,
+    separatorBuilder: (_, __) => const SizedBox(width: 8),
+    itemBuilder: (context, index) {
+      final tag = tags[index];
+      final isSelected = _selectedTag == tag;
+
+      // نسوي label ألطف لليوزر
+      String label = tag;
+      if (tag == 'All') label = 'All';
+      if (tag == 'maher-almuaiqly') label = 'Maher Al-Muaiqly';
+      if (tag == 'saad-alghamdi') label = 'Saad Al-Ghamdi';
+      if (tag == 'alminshawi') label = 'Al-Minshawi';
+
+      if (tag == 'islamic') label = 'Islamic Stories';
+      if (tag == 'world') label = 'World Stories';
+
+      if (tag == 'food') label = 'Food';
+      if (tag == 'sleep') label = 'Sleep';
+      if (tag == 'general') label = 'General Health';
+
+      return ChoiceChip(
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 16),
+        ),
+        selected: isSelected,
+        selectedColor: kPrimary,
+        backgroundColor: Colors.grey.shade200,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.black87,
+        ),
+        onSelected: (selected) {
+          setState(() {
+            _selectedTag = selected ? tag : 'All';
+          });
+        },
+      );
+    },
+  ),
+),
+
 
             const SizedBox(height: 4),
 
@@ -140,12 +226,19 @@ class _AudioListPageState extends State<AudioListPage> {
                   final allItems =
                       docs.map((doc) => AudioItem.fromDoc(doc)).toList();
 
-                  // نطبق الفلترة حسب البحث
-                  final filteredItems = allItems
-                      .where((item) => item.title
-                          .toLowerCase()
-                          .contains(searchQuery.toLowerCase()))
-                      .toList();
+                  final query = searchQuery.toLowerCase();
+                  final selectedTag = _selectedTag;
+
+                  //  فلترة بالبحث + التاق معاً
+                  final filteredItems = allItems.where((item) {
+                    final matchesSearch =
+                        item.title.toLowerCase().contains(query);
+
+                    final matchesTag =
+                        selectedTag == 'All' || item.tag == selectedTag;
+
+                    return matchesSearch && matchesTag;
+                  }).toList();
 
                   if (filteredItems.isEmpty) {
                     return const Center(
@@ -165,16 +258,18 @@ class _AudioListPageState extends State<AudioListPage> {
                     itemBuilder: (context, index) {
                       final item = filteredItems[index];
 
-                      // ✅ نستخدم id بدل title
-                      final isFavorite =favoritesManager.isFavorite(item.id);
-                          
+                      //  نستخدم id بدل title
+                      final isFavorite =
+                          favoritesManager.isFavorite(item.id);
 
                       return Card(
                         color: cardColor,
                         elevation: 3,
                         shadowColor: kPrimary.withOpacity(0.1),
                         margin: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 20),
+                          vertical: 12,
+                          horizontal: 20,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                           side: BorderSide(
@@ -202,12 +297,9 @@ class _AudioListPageState extends State<AudioListPage> {
                               isFavorite
                                   ? Icons.favorite
                                   : Icons.favorite_border,
-                              color:
-                                  isFavorite ? Colors.red : Colors.grey,
+                              color: isFavorite ? Colors.red : Colors.grey,
                               size: 36,
                             ),
-
-                            // ✅ Async + audioId + باقي الحقول
                             onPressed: () async {
                               await favoritesManager.toggleFavorite({
                                 "audioId": item.id,
@@ -215,6 +307,7 @@ class _AudioListPageState extends State<AudioListPage> {
                                 "category": item.category,
                                 "image": item.imageAsset,
                                 "fileName": item.fileName,
+                                "tag": item.tag, 
                               });
 
                               final nowFav =
