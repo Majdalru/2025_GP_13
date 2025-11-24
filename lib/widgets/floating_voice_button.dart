@@ -4,12 +4,12 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'dart:math' as math;
 
 import '../models/voice_command.dart';
-import '../services/voice_assistant_service.dart'; // ✅ This uses Whisper
+import '../services/voice_assistant_service.dart';
 
-/// Floating voice button that uses Whisper API
 class FloatingVoiceButton extends StatefulWidget {
   final Function(VoiceCommand) onCommand;
   final Function(String)? onAnswer;
@@ -32,9 +32,9 @@ class FloatingVoiceButton extends StatefulWidget {
 
 class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     with TickerProviderStateMixin {
-  final VoiceAssistantService _voiceService =
-      VoiceAssistantService(); // ✅ Uses Whisper
+  final VoiceAssistantService _voiceService = VoiceAssistantService();
   final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _beepPlayer = AudioPlayer();
 
   bool _isListening = false;
   bool _isSpeaking = false;
@@ -53,19 +53,35 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
-
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-
     _rotateController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     );
 
+    // ✅ خلي السيرفس يقول لنا متى listening / speaking (كل فلوات الأدوية)
+    _voiceService.setOnListeningStateChange(_handleServiceStateChange);
+
     _loadUserInfo();
     _initialize();
+  }
+
+  void _handleServiceStateChange(bool isListening, bool isSpeaking) {
+    if (!mounted) return;
+
+    setState(() {
+      _isListening = isListening;
+      _isSpeaking = isSpeaking;
+    });
+
+    if (isListening || isSpeaking) {
+      _startAnimations();
+    } else {
+      _stopAnimations();
+    }
   }
 
   Future<void> _loadUserInfo() async {
@@ -104,12 +120,10 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       await _tts.setSpeechRate(0.45);
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.1);
-
-      // ✅ NEW: This tells the phone to wait EXACTLY until speech finishes
-      // instead of us guessing the time with math.
       await _tts.awaitSpeakCompletion(true);
 
-      debugPrint('✅ Voice assistant initialized (Whisper): $_isInitialized');
+      debugPrint(
+          '✅ Voice assistant initialized (Whisper + ChatGPT): $_isInitialized');
     } catch (e) {
       debugPrint('❌ Initialize error: $e');
     }
@@ -146,13 +160,25 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     _rotateController.stop();
   }
 
+  Future<void> _playBeep() async {
+    try {
+      await _beepPlayer.stop();
+      await _beepPlayer.play(
+        AssetSource('sounds/beep.mp3'),
+        volume: 1.0,
+      );
+    } catch (e) {
+      debugPrint('❌ Beep error: $e');
+    }
+  }
+
   Future<void> _startConversation() async {
-    // 1. Answer Mode check (Keep as is)
     if (widget.isAnswerMode) {
       _startAnimations();
       HapticFeedback.mediumImpact();
       setState(() {
         _isSpeaking = false;
+        _isListening = true;
       });
       await _startListening();
       return;
@@ -160,17 +186,15 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
 
     setState(() {
       _isSpeaking = true;
+      _isListening = false;
     });
 
     _startAnimations();
     HapticFeedback.mediumImpact();
 
-    // 2. Logic: Custom Greeting OR Original Home Logic
     if (widget.customGreeting != null) {
-      // Case A: We are in Medication Page (Use the custom greeting)
       await _speak(widget.customGreeting!);
     } else {
-      // Case B: We are in Home Page (Use YOUR ORIGINAL logic)
       final hour = DateTime.now().hour;
       String greeting;
 
@@ -191,14 +215,18 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       await _speak(greeting);
     }
 
-    // 3. Start Listening
     await _startListening();
   }
 
   Future<void> _speak(String text) async {
-    // ✅ NEW: No more Future.delayed!
-    // This line will now wait exactly as long as needed, then finish immediately.
+    setState(() {
+      _isSpeaking = true;
+      _isListening = false;
+    });
     await _tts.speak(text);
+    setState(() {
+      _isSpeaking = false;
+    });
   }
 
   Future<void> _startListening() async {
@@ -207,10 +235,11 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       _isSpeaking = false;
     });
 
+    await _playBeep();
+
     try {
       debugPrint('🎤 Starting to listen with Whisper...');
 
-      // ✅ This uses Whisper API
       final result = await _voiceService.listenWhisper(seconds: 5);
 
       debugPrint('🎤 Whisper result: "$result"');
@@ -252,10 +281,10 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       _isSpeaking = true;
     });
 
-    final command = _analyzeCommand(trimmed);
+    final command = await _voiceService.analyzeSmartCommand(trimmed);
 
     if (command != null) {
-      String confirmation = _getConfirmation(command);
+      final confirmation = _getConfirmation(command);
       HapticFeedback.heavyImpact();
       await _speak(confirmation);
 
@@ -274,10 +303,9 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         );
       }
     } else {
-      // ✅ NEW LOGIC: Check for custom error message
       final String errorMessage =
           widget.customErrorResponse ??
-          "I'm not sure what you mean. Try saying: medications, media, or home.";
+              "I'm not sure what you mean. Try saying: medications, media, or home.";
 
       await _speak(errorMessage);
 
@@ -304,69 +332,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     });
   }
 
-  VoiceCommand? _analyzeCommand(String text) {
-    final lower = text.toLowerCase().trim();
-
-    // 1. MEDIA (Check this BEFORE Medication)
-    if (_containsAny(lower, [
-      'media',
-      'video',
-      'music',
-      'watch',
-      'listen',
-      'ميديا',
-      'فيديو',
-      'audio',
-      'song',
-    ])) {
-      return VoiceCommand.goToMedia;
-    }
-
-    // 2. MEDICATION (Now safe to use 'med')
-    if (_containsAny(lower, [
-      'medication',
-      'medicine',
-      'med',
-      'meds',
-      'pill',
-      'drug',
-      'dose',
-      'دواء',
-      'أدوية',
-      'حبوب',
-      'علاج',
-    ])) {
-      return VoiceCommand.goToMedication;
-    }
-
-    // 3. Other Commands...
-    if (_containsAny(lower, ['add', 'new', 'اضيف', 'اضافة', 'أضيف'])) {
-      return VoiceCommand.addMedication;
-    }
-
-    if (_containsAny(lower, ['edit', 'change', 'تعديل', 'غير'])) {
-      return VoiceCommand.editMedication;
-    }
-
-    if (_containsAny(lower, ['delete', 'remove', 'احذف', 'حذف'])) {
-      return VoiceCommand.deleteMedication;
-    }
-
-    if (_containsAny(lower, ['home', 'main', 'back', 'رئيسية', 'رجوع'])) {
-      return VoiceCommand.goToHome;
-    }
-
-    if (_containsAny(lower, ['sos', 'emergency', 'help', 'طوارئ', 'مساعدة'])) {
-      return VoiceCommand.sos;
-    }
-
-    if (_containsAny(lower, ['settings', 'اعدادات', 'الإعدادات'])) {
-      return VoiceCommand.goToSettings;
-    }
-
-    return null;
-  }
-
   String _getConfirmation(VoiceCommand command) {
     switch (command) {
       case VoiceCommand.goToMedication:
@@ -388,28 +353,32 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     }
   }
 
-  bool _containsAny(String text, List<String> keywords) {
-    for (final keyword in keywords) {
-      // \b ensures we match the whole word only
-      final pattern = r'\b' + RegExp.escape(keyword) + r'\b';
-      if (RegExp(pattern).hasMatch(text)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   @override
   void dispose() {
     _rippleController.dispose();
     _pulseController.dispose();
     _rotateController.dispose();
     _tts.stop();
+    _beepPlayer.dispose();
+    _voiceService.setOnListeningStateChange(null); // نفصل الكول باك
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const idleColor = Color(0xFF1B3A52);
+    final speakingColor = Colors.red;
+    final listeningColor = Colors.green;
+
+    Color micColor;
+    if (_isListening) {
+      micColor = listeningColor;
+    } else if (_isSpeaking) {
+      micColor = speakingColor;
+    } else {
+      micColor = idleColor;
+    }
+
     return GestureDetector(
       onTap: _toggleVoice,
       child: SizedBox(
@@ -426,13 +395,12 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                     size: const Size(100, 100),
                     painter: RipplePainter(
                       animation: _rippleController.value,
-                      color: (_isListening ? Colors.red : Colors.blue),
+                      color: micColor,
                     ),
                   );
                 },
               ),
             ],
-
             AnimatedBuilder(
               animation: Listenable.merge([
                 _pulseController,
@@ -456,21 +424,13 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            (_isListening || _isSpeaking)
-                                ? Colors.red
-                                : const Color(0xFF1B3A52),
-                            (_isListening || _isSpeaking)
-                                ? Colors.red.shade700
-                                : const Color(0xFF2C5F7D),
+                            micColor,
+                            micColor.withOpacity(0.8),
                           ],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                ((_isListening || _isSpeaking)
-                                        ? Colors.red
-                                        : const Color(0xFF1B3A52))
-                                    .withOpacity(0.5),
+                            color: micColor.withOpacity(0.5),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),
@@ -480,8 +440,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                         _isListening
                             ? Icons.mic
                             : _isSpeaking
-                            ? Icons.volume_up
-                            : Icons.mic_none,
+                                ? Icons.volume_up
+                                : Icons.mic_none,
                         color: Colors.white,
                         size: 40,
                       ),

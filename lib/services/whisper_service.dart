@@ -61,8 +61,8 @@ class WhisperService {
           ),
         )
         ..fields['model'] = 'gpt-4o-transcribe'
-        ..fields['response_format'] = 'json'
-        ..fields['language'] = 'en';
+        ..fields['response_format'] = 'json';
+      // لاحظ: ما حددنا language عشان الموديل يكتشف تلقائي
 
       print('📤 Sending audio to OpenAI...');
 

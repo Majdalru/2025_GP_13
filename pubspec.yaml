@@ -34,6 +34,7 @@ dependencies:
   record: ^4.4.0
   mime: ^1.0.4
   path_provider: ^2.0.13
+  
 
   # Firebase packages
   firebase_core: ^3.4.0
@@ -96,6 +97,7 @@ flutter:
     - assets/audio/Al-falaq-Saad.mp3
     - assets/audio/Story Of Prophet Muhammad  And The Blind Man .mp3
     - assets/audio/self_care_tips.mp3
+    - assets/sounds/beep.mp3
     
     
 

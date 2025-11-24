@@ -59,8 +59,7 @@ class Medication {
       name: map['name'] ?? 'Unnamed Medication',
       days: List<String>.from(map['days'] ?? []),
       frequency: map['frequency'],
-      times:
-          (map['times'] as List<dynamic>?)
+      times: (map['times'] as List<dynamic>?)
               ?.map((timeStr) => _parseTimeOfDay(timeStr.toString()))
               .toList() ??
           [],

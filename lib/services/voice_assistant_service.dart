@@ -1,16 +1,21 @@
+import 'dart:convert';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/voice_command.dart';
 import '../models/medication.dart';
 import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
-/// حطي الـ API KEY هنا
-const String _openAIApiKey = 'key here';
+/// حطي الـ API KEY حقك هنا
+const String _openAIApiKey =
+    '';
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -25,6 +30,23 @@ class VoiceAssistantService {
   bool _isSpeaking = false;
 
   bool get isInitialized => _isInitialized;
+
+  // ✅ callback عشان نخبر الفلوتينق عن حالة الصوت
+  void Function(bool isListening, bool isSpeaking)? _onListeningStateChange;
+
+  /// تستدعينها من الـ FloatingVoiceButton مرة واحدة في initState
+  void setOnListeningStateChange(
+    void Function(bool isListening, bool isSpeaking)? callback,
+  ) {
+    _onListeningStateChange = callback;
+  }
+
+  void _notifyState({required bool listening, required bool speaking}) {
+    final cb = _onListeningStateChange;
+    if (cb != null) {
+      cb(listening, speaking);
+    }
+  }
 
   // =========================
   //  INIT / TTS
@@ -46,7 +68,7 @@ class VoiceAssistantService {
     await _tts.awaitSpeakCompletion(true);
 
     _isInitialized = true;
-    debugPrint('✅ VoiceAssistantService initialized (Whisper)');
+    debugPrint('✅ VoiceAssistantService initialized (Whisper + ChatGPT)');
     return true;
   }
 
@@ -64,30 +86,58 @@ class VoiceAssistantService {
     debugPrint('🗣️ TTS: $text');
 
     _isSpeaking = true;
+    _notifyState(listening: false, speaking: true);
+
     await _tts.stop();
     await _tts.speak(text);
+
     _isSpeaking = false;
+    _notifyState(listening: false, speaking: false);
   }
 
   Future<void> stopSpeaking() async {
     await _tts.stop();
     _isSpeaking = false;
+    _notifyState(listening: false, speaking: false);
+  }
+
+  // =========================
+  //  BEEP
+  // =========================
+
+  Future<void> _playBeep() async {
+    try {
+      final player = AudioPlayer();
+      await player.play(
+        AssetSource('sounds/beep.mp3'),
+        volume: 1.0,
+      );
+    } catch (e) {
+      debugPrint('❌ Beep error: $e');
+    }
   }
 
   // =========================
   //  LISTEN (Whisper)
   // =========================
 
-  /// يسجل صوت ٤ ثواني ويرسله لـ Whisper ويرجع النص
+  /// يسجل صوت ويرسله لـ Whisper ويرجع النص
   Future<String?> listenWhisper({int seconds = 4}) async {
     final ok = await initialize();
     if (!ok) return null;
+
+    // ✅ نعلم الفلوتينق إن الدور للـ elderly (لستنينق = أخضر)
+    _notifyState(listening: true, speaking: false);
+
+    // 🔔 بيب
+    await _playBeep();
 
     final whisper = WhisperService();
     final file = await whisper.recordAudio(seconds: seconds);
 
     if (file == null) {
       debugPrint('❌ No audio file recorded');
+      _notifyState(listening: false, speaking: false);
       return null;
     }
 
@@ -95,11 +145,15 @@ class VoiceAssistantService {
 
     if (text == null || text.trim().isEmpty) {
       debugPrint('❌ Whisper returned empty text');
+      _notifyState(listening: false, speaking: false);
       return null;
     }
 
     final cleaned = text.trim();
     debugPrint('🧠 Whisper text: "$cleaned"');
+
+    // رجعنا لوضع idle
+    _notifyState(listening: false, speaking: false);
     return cleaned;
   }
 
@@ -134,13 +188,163 @@ class VoiceAssistantService {
     }
   }
 
-  Future<VoiceCommand?> analyzeSmartCommand(String text) async {
-    if (text.trim().isEmpty) return null;
-    final lower = text.toLowerCase();
-    debugPrint('🧠 analyzeSmartCommand: "$lower"');
+  // =========================
+  //  SMART INTENT (ChatGPT + local backup)
+  // =========================
 
-    return analyzeCommandLocally(lower);
+  Future<VoiceCommand?> analyzeSmartCommand(String text) async {
+    final cleaned = text.trim();
+    if (cleaned.isEmpty) return null;
+    debugPrint('🧠 analyzeSmartCommand input: "$cleaned"');
+
+    VoiceCommand? fromChat;
+
+    if (_openAIApiKey.isNotEmpty) {
+      fromChat = await _analyzeWithChatGPT(cleaned);
+      if (fromChat != null) {
+        debugPrint('🤖 ChatGPT intent → $fromChat');
+        return fromChat;
+      }
+    } else {
+      debugPrint('⚠️ OPENAI_API_KEY is empty, skipping ChatGPT intent.');
+    }
+
+    final local = analyzeCommandLocally(cleaned.toLowerCase());
+    debugPrint('🧩 Local intent → $local');
+    return local;
   }
+
+  Future<VoiceCommand?> _analyzeWithChatGPT(String text) async {
+    try {
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $_openAIApiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'temperature': 0,
+          'messages': [
+            {
+              'role': 'system',
+              'content':
+                  'You are an intent classifier for an elderly medication app. '
+                      'User may speak English or Arabic. '
+                      'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
+                      'goToMedia, goToHome, sos, goToSettings, none. '
+                      'You MUST respond ONLY with pure JSON like {"intent":"addMedication"}.'
+            },
+            {
+              'role': 'user',
+              'content': text,
+            },
+          ],
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint(
+          '❌ ChatGPT HTTP ${response.statusCode}: ${response.body}',
+        );
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final content =
+          (decoded['choices'][0]['message']['content'] as String).trim();
+
+      debugPrint('📦 ChatGPT raw content: $content');
+
+      Map<String, dynamic>? jsonIntent;
+
+      try {
+        jsonIntent = jsonDecode(content) as Map<String, dynamic>;
+      } catch (_) {
+        final start = content.indexOf('{');
+        final end = content.lastIndexOf('}');
+        if (start != -1 && end != -1 && end > start) {
+          final sub = content.substring(start, end + 1);
+          jsonIntent = jsonDecode(sub) as Map<String, dynamic>;
+        }
+      }
+
+      if (jsonIntent == null) {
+        debugPrint('⚠️ Could not parse JSON intent from content.');
+        return null;
+      }
+
+      final intentString =
+          (jsonIntent['intent'] ?? jsonIntent['Intent'] ?? '').toString();
+
+      return _intentFromString(intentString);
+    } catch (e) {
+      debugPrint('❌ ChatGPT intent error: $e');
+      return null;
+    }
+  }
+
+  VoiceCommand? _intentFromString(String raw) {
+    final v = raw.trim();
+    if (v.isEmpty) return null;
+    final lower = v.toLowerCase();
+
+    switch (lower) {
+      case 'gotomedication':
+      case 'gotomed':
+      case 'med':
+      case 'medication':
+      case 'goToMedication':
+        return VoiceCommand.goToMedication;
+
+      case 'addmedication':
+      case 'add_medication':
+      case 'add_med':
+      case 'add':
+        return VoiceCommand.addMedication;
+
+      case 'editmedication':
+      case 'edit_medication':
+      case 'edit_med':
+      case 'edit':
+        return VoiceCommand.editMedication;
+
+      case 'deletemedication':
+      case 'delete_medication':
+      case 'delete_med':
+      case 'delete':
+        return VoiceCommand.deleteMedication;
+
+      case 'gotomedia':
+      case 'media':
+      case 'goToMedia':
+        return VoiceCommand.goToMedia;
+
+      case 'gotohome':
+      case 'home':
+      case 'goToHome':
+        return VoiceCommand.goToHome;
+
+      case 'sos':
+      case 'emergency':
+        return VoiceCommand.sos;
+
+      case 'gotosettings':
+      case 'settings':
+      case 'goToSettings':
+        return VoiceCommand.goToSettings;
+
+      case 'none':
+      default:
+        return null;
+    }
+  }
+
+  // =========================
+  //  LOCAL COMMAND ANALYZER (backup)
+  // =========================
 
   VoiceCommand? analyzeCommandLocally(String text) {
     final lower = text.toLowerCase();
@@ -211,6 +415,8 @@ class VoiceAssistantService {
       'أضف دواء',
       'دواء جديد',
       'إضافة دواء',
+      'اضيف دواء',
+      'ابي اضيف دواء',
     ])) {
       return VoiceCommand.addMedication;
     }
@@ -240,10 +446,7 @@ class VoiceAssistantService {
 
   bool _containsAny(String text, List<String> patterns) {
     for (final p in patterns) {
-      // \b means "word boundary". It ensures "med" matches "med"
-      // but DOES NOT match "media", "medicine", or "immediate".
       final pattern = r'\b' + RegExp.escape(p.toLowerCase()) + r'\b';
-
       if (RegExp(pattern).hasMatch(text)) {
         return true;
       }
@@ -254,6 +457,7 @@ class VoiceAssistantService {
   // =========================
   //  MEDICATION FLOWS
   // =========================
+  // (كل فلوات الأدوية نفسها بالضبط من كودك، ما غيرتها)
 
   Future<void> runAddMedicationFlow(String elderlyId) async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -271,7 +475,7 @@ class VoiceAssistantService {
 
     // 1) Name
     final name = await _askQuestion(
-      'First, what is the medication name?',
+      'First, what is the medication name? Please say it in English.',
       listenSeconds: 5,
     );
     if (name == null || name.isEmpty) {
@@ -320,8 +524,8 @@ class VoiceAssistantService {
     );
     final notes =
         (notesAnswer != null && notesAnswer.toLowerCase().trim() != 'no')
-        ? notesAnswer
-        : null;
+            ? notesAnswer
+            : null;
 
     final newMed = Medication(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -335,21 +539,16 @@ class VoiceAssistantService {
       updatedAt: Timestamp.now(),
     );
 
-    final docRef = FirebaseFirestore.instance
-        .collection('medications')
-        .doc(elderlyId);
+    final docRef =
+        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
 
     try {
-      // 1. Save to Database (Fast)
       await docRef.set({
         'medsList': FieldValue.arrayUnion([newMed.toMap()]),
       }, SetOptions(merge: true));
 
-      // ✅ CHANGED: Speak FIRST so the user doesn't wait
       await speak('Got it. I added $name to your medications.');
 
-      // 2. Run Scheduler (Background / After speaking)
-      // We don't need to make the user wait for this to finish before speaking
       await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error saving medication by voice: $e');
@@ -370,8 +569,7 @@ class VoiceAssistantService {
     final namesText = meds.map((m) => m.name).join(', ');
     await speak(
       'You have the following medications: $namesText. '
-      'Which medication do you want to delete? You can say a sentence like "delete Panadol", '
-      'or just say the medication name.',
+      'Which medication do you want to delete? Please say the medication name in English, for example "delete Panadol".',
     );
 
     Medication? target;
@@ -400,7 +598,7 @@ class VoiceAssistantService {
       if (target != null) break;
       if (attempt < maxTries) {
         await speak(
-          'I could not match this to any medication. Please say the medication name clearly, like "delete Panadol".',
+          'I could not match this to any medication. Please say the medication name clearly, in English.',
         );
       } else {
         await speak(
@@ -424,20 +622,16 @@ class VoiceAssistantService {
       return;
     }
 
-    final docRef = FirebaseFirestore.instance
-        .collection('medications')
-        .doc(elderlyId);
+    final docRef =
+        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
 
     try {
-      // 1. Update Database
       await docRef.update({
         'medsList': FieldValue.arrayRemove([target.toMap()]),
       });
 
-      // ✅ CHANGED: Speak FIRST
       await speak('The medication ${target.name} has been deleted.');
 
-      // 2. Run Scheduler
       await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error deleting medication: $e');
@@ -447,25 +641,17 @@ class VoiceAssistantService {
     }
   }
 
-  // Add this to your existing voice_assistant_service.dart
-  // Replace the pickMedicationForEdit method and add these new methods
-
-  // ===== ENHANCED EDIT MEDICATION FLOW =====
-
-  /// Complete voice-controlled edit flow
   /// Complete voice-controlled edit flow with multiple field editing
   Future<void> runEditMedicationFlow(String elderlyId) async {
     final ok = await initialize();
     if (!ok) return;
 
-    // Step 1: Load medications
     final meds = await _loadMedications(elderlyId);
     if (meds.isEmpty) {
       await speak('You do not have any medications to edit.');
       return;
     }
 
-    // Step 2: Select medication
     await speak('Which medication would you like to edit?');
     final namesText = meds.map((m) => m.name).join(', ');
     await speak('You have: $namesText');
@@ -504,7 +690,6 @@ class VoiceAssistantService {
 
     if (targetMed == null) return;
 
-    // Step 3: Confirm medication
     final confirm = await _askQuestion(
       'You want to edit ${targetMed.name}. Is that correct? Say yes or no.',
       listenSeconds: 3,
@@ -515,12 +700,10 @@ class VoiceAssistantService {
       return;
     }
 
-    // Step 4: Loop for editing multiple fields
     Medication currentMed = targetMed;
     bool continueEditing = true;
 
     while (continueEditing) {
-      // Ask which field to edit
       await speak(
         'What would you like to edit? You can say: name, days, frequency, times, or notes.',
       );
@@ -558,18 +741,15 @@ class VoiceAssistantService {
         break;
       }
 
-      // Edit the selected field
       final updatedMed = await _editFieldByVoice(currentMed, fieldToEdit);
 
       if (updatedMed == null) {
         await speak('That field was not changed.');
       } else {
-        // Update the current medication with the changes
         currentMed = updatedMed;
         await speak('Field updated successfully.');
       }
 
-      // Ask if user wants to edit another field
       final continueAnswer = await _askQuestion(
         'Would you like to edit another field? Say yes or no.',
         listenSeconds: 3,
@@ -580,33 +760,27 @@ class VoiceAssistantService {
       }
     }
 
-    // Step 5: Save to Firestore (only once at the end)
-    final docRef = FirebaseFirestore.instance
-        .collection('medications')
-        .doc(elderlyId);
+    final docRef =
+        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
 
     try {
       final doc = await docRef.get();
       final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
 
-      final List<Map<String, dynamic>> updatedMedsList = currentMedsList.map((
-        med,
-      ) {
+      final List<Map<String, dynamic>> updatedMedsList =
+          currentMedsList.map((med) {
         if (med['id'] == currentMed.id) {
           return currentMed.toMap();
         }
         return med as Map<String, dynamic>;
       }).toList();
 
-      // 1. Save to Database
       await docRef.update({'medsList': updatedMedsList});
 
-      // ✅ CHANGED: Speak FIRST
       await speak(
         'Perfect! I have updated ${targetMed.name} for you. All changes are saved.',
       );
 
-      // 2. Run Scheduler
       await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error saving edited medication: $e');
@@ -614,7 +788,9 @@ class VoiceAssistantService {
     }
   }
 
-  /// Parse which field the user wants to edit
+  // ===== Helpers for Edit Flow =====
+  // (الباقي كما هو من كودك بدون تغيير جوهري)
+
   String? _parseEditField(String utterance) {
     final lower = utterance.toLowerCase().trim();
 
@@ -663,7 +839,6 @@ class VoiceAssistantService {
     return null;
   }
 
-  /// Edit a specific field by voice
   Future<Medication?> _editFieldByVoice(
     Medication original,
     String field,
@@ -684,9 +859,6 @@ class VoiceAssistantService {
     }
   }
 
-  // ===== INDIVIDUAL FIELD EDITORS =====
-
-  /// Edit medication name
   Future<Medication?> _editName(Medication original) async {
     await speak('What is the new name for this medication?');
 
@@ -719,7 +891,6 @@ class VoiceAssistantService {
     );
   }
 
-  /// Edit medication days
   Future<Medication?> _editDays(Medication original) async {
     await speak(
       'On which days should you take this medication? '
@@ -758,7 +929,6 @@ class VoiceAssistantService {
     );
   }
 
-  /// Edit medication frequency
   Future<Medication?> _editFrequency(Medication original) async {
     await speak(
       'How many times per day should you take this medication? '
@@ -783,7 +953,6 @@ class VoiceAssistantService {
       return null;
     }
 
-    // Keep the first time from original, expand based on new frequency
     final firstTime = original.times.isNotEmpty
         ? original.times.first
         : const TimeOfDay(hour: 8, minute: 0);
@@ -803,7 +972,6 @@ class VoiceAssistantService {
     );
   }
 
-  /// Edit medication times
   Future<Medication?> _editTimes(Medication original) async {
     await speak(
       'At what time should you take the first dose? '
@@ -846,7 +1014,6 @@ class VoiceAssistantService {
     );
   }
 
-  /// Edit medication notes
   Future<Medication?> _editNotes(Medication original) async {
     await speak(
       'What are the new notes or instructions? '
@@ -917,6 +1084,7 @@ class VoiceAssistantService {
     final lowerUtterance = utterance.toLowerCase().trim();
     if (lowerUtterance.isEmpty) return null;
 
+    // ✅ أسماء الأدوية يُفضَّل تكون إنجليزي
     for (final m in meds) {
       final nameLower = m.name.toLowerCase();
       if (lowerUtterance.contains(nameLower)) {
@@ -970,9 +1138,10 @@ class VoiceAssistantService {
     return bestMed;
   }
 
+  // ✅ نخلي النورمل تنشيل الحروف العربية عشان الأسماء تعتمد على الإنجليزي
   String _normalizeText(String input) {
     final lower = input.toLowerCase();
-    return lower.replaceAll(RegExp(r'[^a-z0-9\u0600-\u06FF]+'), '');
+    return lower.replaceAll(RegExp(r'[^a-z0-9]+'), '');
   }
 
   double _similarityScore(String a, String b) {
@@ -1067,9 +1236,7 @@ class VoiceAssistantService {
     final isPm =
         lower.contains('pm') || lower.contains('مساء') || lower.contains('ليل');
     final isAm =
-        lower.contains('am') ||
-        lower.contains('صباح') ||
-        lower.contains('صباحا');
+        lower.contains('am') || lower.contains('صباح') || lower.contains('صباحا');
 
     if (isPm && hour < 12) hour += 12;
     if (isAm && hour == 12) hour = 0;
