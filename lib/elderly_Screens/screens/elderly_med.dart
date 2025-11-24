@@ -310,10 +310,16 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
 
       // ✅ Voice button in medications page
       floatingActionButton: FloatingVoiceButton(
+        // ✅ The custom message you wanted:
+        customGreeting:
+            "You are in the medication page. I can help you with adding, editing, or deleting some meds. What would you like to do?",
+
+        customErrorResponse:
+            "I didn't understand. You can say add medication, edit medication, or delete medication.",
+
         onCommand: (command) async {
           switch (command) {
             case VoiceCommand.addMedication:
-              // Run voice-guided medication addition
               await _voiceService.runAddMedicationFlow(widget.elderlyId);
               break;
 
@@ -322,7 +328,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
               break;
 
             case VoiceCommand.editMedication:
-              // Run the complete voice edit flow
               await _voiceService.runEditMedicationFlow(widget.elderlyId);
               break;
 
@@ -335,19 +340,13 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
               break;
 
             case VoiceCommand.goToHome:
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
+              if (Navigator.canPop(context)) Navigator.pop(context);
               break;
 
-            case VoiceCommand.goToMedia:
-            case VoiceCommand.sos:
-            case VoiceCommand.goToSettings:
+            default:
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                    'This voice command is handled on the home page for now.',
-                  ),
+                  content: Text('This command is handled on the home page.'),
                 ),
               );
               break;

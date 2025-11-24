@@ -5,10 +5,7 @@ import '../../models/audio_item.dart';
 class AudioPlayerPage extends StatefulWidget {
   final AudioItem item;
 
-  const AudioPlayerPage({
-    super.key,
-    required this.item,
-  });
+  const AudioPlayerPage({super.key, required this.item});
 
   static const kPrimary = Color(0xFF1B3A52);
 
@@ -31,10 +28,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   Future<void> _initPlayer() async {
     try {
-      // نحمل الملف من assets/audio/<fileName>
+      // 1) حمل الملف من assets/audio/<fileName>
       await _player.setAsset('assets/audio/${widget.item.fileName}');
 
-      // نسمع لتغيّر الـ duration
+      // 2) اسمع لتغيّر الـ duration
       _player.durationStream.listen((d) {
         if (d != null && mounted) {
           setState(() {
@@ -43,7 +40,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         }
       });
 
-      // نسمع لتغيّر الـ position
+      // 3) اسمع لتغيّر الـ position
       _player.positionStream.listen((pos) {
         if (mounted) {
           setState(() {
@@ -52,9 +49,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         }
       });
 
+      // 4) اعتبر أن التحميل خلص → شيل علامة اللودينق
       setState(() {
         _isLoading = false;
       });
+
+      // 5) ابدأ التشغيل تلقائياً (بدون await عشان ما يوقف الـ UI)
+      _player.play();
     } catch (e) {
       debugPrint('Error loading audio: $e');
       setState(() {
@@ -93,13 +94,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   @override
   Widget build(BuildContext context) {
     // أقصى قيمة للـ Slider
-    final maxSeconds =
-        _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0;
+    final maxSeconds = _duration.inSeconds > 0
+        ? _duration.inSeconds.toDouble()
+        : 1.0;
 
     // القيمة الحالية للـ Slider
     final currentSeconds = _position.inSeconds.toDouble();
-    final sliderValue =
-        currentSeconds.clamp(0.0, maxSeconds); // double بين 0 و max
+    final sliderValue = currentSeconds.clamp(
+      0.0,
+      maxSeconds,
+    ); // double بين 0 و max
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -111,10 +115,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         // ✅ تعديل العنوان هنا: FittedBox عشان العنوان الطويل يصغر بدال ما ينقص
         title: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(
-            widget.item.title,
-            textAlign: TextAlign.center,
-          ),
+          child: Text(widget.item.title, textAlign: TextAlign.center),
         ),
 
         titleTextStyle: const TextStyle(
@@ -164,8 +165,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                             children: [
                               CircleAvatar(
                                 radius: 45,
-                                backgroundImage:
-                                    AssetImage(widget.item.imageAsset),
+                                backgroundImage: AssetImage(
+                                  widget.item.imageAsset,
+                                ),
                               ),
                               const SizedBox(width: 20),
 
@@ -200,10 +202,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                 SliderTheme(
                                   data: SliderTheme.of(context).copyWith(
                                     thumbShape: const RoundSliderThumbShape(
-                                        enabledThumbRadius: 10),
-                                    overlayShape:
-                                        const RoundSliderOverlayShape(
-                                            overlayRadius: 18),
+                                      enabledThumbRadius: 10,
+                                    ),
+                                    overlayShape: const RoundSliderOverlayShape(
+                                      overlayRadius: 18,
+                                    ),
                                     trackHeight: 4,
                                   ),
                                   child: Slider(
@@ -211,8 +214,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                     max: maxSeconds,
                                     value: sliderValue,
                                     onChanged: (value) {
-                                      final pos =
-                                          Duration(seconds: value.toInt());
+                                      final pos = Duration(
+                                        seconds: value.toInt(),
+                                      );
                                       _player.seek(pos);
                                     },
                                     activeColor: AudioPlayerPage.kPrimary,
@@ -284,8 +288,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                   return ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                       shape: const CircleBorder(),
-                                      backgroundColor:
-                                          AudioPlayerPage.kPrimary,
+                                      backgroundColor: AudioPlayerPage.kPrimary,
                                       padding: const EdgeInsets.all(22),
                                       elevation: 4,
                                     ),

@@ -10,10 +10,7 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// حطي الـ API KEY هنا
-const String _openAIApiKey = String.fromEnvironment(
-  'OPENAI_API_KEY',
-  defaultValue: '',
-);
+const String _openAIApiKey = 'key here';
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -162,20 +159,10 @@ class VoiceAssistantService {
     }
 
     if (_containsAny(lower, [
-      'medication',
-      'medications',
-      'medicine',
-      'pill',
-      'دواء',
-      'الأدوية',
-      'ادوية',
-      'دوائي',
-    ])) {
-      return VoiceCommand.goToMedication;
-    }
-
-    if (_containsAny(lower, [
       'media',
+      'media libarary',
+      'libarary',
+      'Media',
       'audio',
       'song',
       'قرآن',
@@ -184,6 +171,21 @@ class VoiceAssistantService {
       'video',
     ])) {
       return VoiceCommand.goToMedia;
+    }
+
+    if (_containsAny(lower, [
+      'medication',
+      'medications',
+      'medicine',
+      'med',
+      'meds',
+      'pill',
+      'دواء',
+      'الأدوية',
+      'ادوية',
+      'دوائي',
+    ])) {
+      return VoiceCommand.goToMedication;
     }
 
     if (_containsAny(lower, [
@@ -238,7 +240,13 @@ class VoiceAssistantService {
 
   bool _containsAny(String text, List<String> patterns) {
     for (final p in patterns) {
-      if (text.contains(p.toLowerCase())) return true;
+      // \b means "word boundary". It ensures "med" matches "med"
+      // but DOES NOT match "media", "medicine", or "immediate".
+      final pattern = r'\b' + RegExp.escape(p.toLowerCase()) + r'\b';
+
+      if (RegExp(pattern).hasMatch(text)) {
+        return true;
+      }
     }
     return false;
   }
@@ -332,13 +340,17 @@ class VoiceAssistantService {
         .doc(elderlyId);
 
     try {
+      // 1. Save to Database (Fast)
       await docRef.set({
         'medsList': FieldValue.arrayUnion([newMed.toMap()]),
       }, SetOptions(merge: true));
 
-      await MedicationScheduler().scheduleAllMedications(elderlyId);
-
+      // ✅ CHANGED: Speak FIRST so the user doesn't wait
       await speak('Got it. I added $name to your medications.');
+
+      // 2. Run Scheduler (Background / After speaking)
+      // We don't need to make the user wait for this to finish before speaking
+      await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error saving medication by voice: $e');
       await speak('Sorry, I could not save the medication due to an error.');
@@ -417,13 +429,16 @@ class VoiceAssistantService {
         .doc(elderlyId);
 
     try {
+      // 1. Update Database
       await docRef.update({
         'medsList': FieldValue.arrayRemove([target.toMap()]),
       });
 
-      await MedicationScheduler().scheduleAllMedications(elderlyId);
-
+      // ✅ CHANGED: Speak FIRST
       await speak('The medication ${target.name} has been deleted.');
+
+      // 2. Run Scheduler
+      await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error deleting medication: $e');
       await speak(
@@ -583,12 +598,16 @@ class VoiceAssistantService {
         return med as Map<String, dynamic>;
       }).toList();
 
+      // 1. Save to Database
       await docRef.update({'medsList': updatedMedsList});
-      await MedicationScheduler().scheduleAllMedications(elderlyId);
 
+      // ✅ CHANGED: Speak FIRST
       await speak(
         'Perfect! I have updated ${targetMed.name} for you. All changes are saved.',
       );
+
+      // 2. Run Scheduler
+      await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error saving edited medication: $e');
       await speak('Sorry, I could not save the changes due to an error.');

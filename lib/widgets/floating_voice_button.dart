@@ -14,12 +14,16 @@ class FloatingVoiceButton extends StatefulWidget {
   final Function(VoiceCommand) onCommand;
   final Function(String)? onAnswer;
   final bool isAnswerMode;
+  final String? customGreeting;
+  final String? customErrorResponse;
 
   const FloatingVoiceButton({
     super.key,
     required this.onCommand,
     this.onAnswer,
     this.isAnswerMode = false,
+    this.customGreeting,
+    this.customErrorResponse,
   });
 
   @override
@@ -94,13 +98,16 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         return;
       }
 
-      // ✅ Initialize Whisper service
       _isInitialized = await _voiceService.initialize();
 
       await _tts.setLanguage('en-US');
       await _tts.setSpeechRate(0.45);
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.1);
+
+      // ✅ NEW: This tells the phone to wait EXACTLY until speech finishes
+      // instead of us guessing the time with math.
+      await _tts.awaitSpeakCompletion(true);
 
       debugPrint('✅ Voice assistant initialized (Whisper): $_isInitialized');
     } catch (e) {
@@ -140,6 +147,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   }
 
   Future<void> _startConversation() async {
+    // 1. Answer Mode check (Keep as is)
     if (widget.isAnswerMode) {
       _startAnimations();
       HapticFeedback.mediumImpact();
@@ -157,30 +165,40 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     _startAnimations();
     HapticFeedback.mediumImpact();
 
-    final hour = DateTime.now().hour;
-    String greeting;
-
-    if (hour < 12) {
-      greeting = _userName != null
-          ? "Good morning, $_userName! How can I help you?"
-          : "Good morning! How can I help you?";
-    } else if (hour < 17) {
-      greeting = _userName != null
-          ? "Good afternoon, $_userName! What would you like?"
-          : "Good afternoon! What would you like?";
+    // 2. Logic: Custom Greeting OR Original Home Logic
+    if (widget.customGreeting != null) {
+      // Case A: We are in Medication Page (Use the custom greeting)
+      await _speak(widget.customGreeting!);
     } else {
-      greeting = _userName != null
-          ? "Good evening, $_userName! How can I assist you?"
-          : "Good evening! How can I assist you?";
+      // Case B: We are in Home Page (Use YOUR ORIGINAL logic)
+      final hour = DateTime.now().hour;
+      String greeting;
+
+      if (hour < 12) {
+        greeting = _userName != null
+            ? "Good morning, $_userName! How can I help you?"
+            : "Good morning! How can I help you?";
+      } else if (hour < 17) {
+        greeting = _userName != null
+            ? "Good afternoon, $_userName! What would you like?"
+            : "Good afternoon! What would you like?";
+      } else {
+        greeting = _userName != null
+            ? "Good evening, $_userName! How can I assist you?"
+            : "Good evening! How can I assist you?";
+      }
+
+      await _speak(greeting);
     }
 
-    await _speak(greeting);
+    // 3. Start Listening
     await _startListening();
   }
 
   Future<void> _speak(String text) async {
+    // ✅ NEW: No more Future.delayed!
+    // This line will now wait exactly as long as needed, then finish immediately.
     await _tts.speak(text);
-    await Future.delayed(Duration(milliseconds: text.length * 70));
   }
 
   Future<void> _startListening() async {
@@ -250,11 +268,18 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         });
 
         widget.onCommand(command);
+      } else {
+        await _speak(
+          "I'm not sure what you mean. Try saying: medications, media, or home.",
+        );
       }
     } else {
-      await _speak(
-        "I'm not sure what you mean. Try saying: medications, media, or home.",
-      );
+      // ✅ NEW LOGIC: Check for custom error message
+      final String errorMessage =
+          widget.customErrorResponse ??
+          "I'm not sure what you mean. Try saying: medications, media, or home.";
+
+      await _speak(errorMessage);
 
       setState(() {
         _isSpeaking = false;
@@ -282,19 +307,39 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   VoiceCommand? _analyzeCommand(String text) {
     final lower = text.toLowerCase().trim();
 
+    // 1. MEDIA (Check this BEFORE Medication)
+    if (_containsAny(lower, [
+      'media',
+      'video',
+      'music',
+      'watch',
+      'listen',
+      'ميديا',
+      'فيديو',
+      'audio',
+      'song',
+    ])) {
+      return VoiceCommand.goToMedia;
+    }
+
+    // 2. MEDICATION (Now safe to use 'med')
     if (_containsAny(lower, [
       'medication',
       'medicine',
       'med',
+      'meds',
       'pill',
       'drug',
+      'dose',
       'دواء',
       'أدوية',
       'حبوب',
+      'علاج',
     ])) {
       return VoiceCommand.goToMedication;
     }
 
+    // 3. Other Commands...
     if (_containsAny(lower, ['add', 'new', 'اضيف', 'اضافة', 'أضيف'])) {
       return VoiceCommand.addMedication;
     }
@@ -305,18 +350,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
 
     if (_containsAny(lower, ['delete', 'remove', 'احذف', 'حذف'])) {
       return VoiceCommand.deleteMedication;
-    }
-
-    if (_containsAny(lower, [
-      'media',
-      'video',
-      'music',
-      'watch',
-      'listen',
-      'ميديا',
-      'فيديو',
-    ])) {
-      return VoiceCommand.goToMedia;
     }
 
     if (_containsAny(lower, ['home', 'main', 'back', 'رئيسية', 'رجوع'])) {
@@ -356,7 +389,14 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   }
 
   bool _containsAny(String text, List<String> keywords) {
-    return keywords.any((keyword) => text.contains(keyword));
+    for (final keyword in keywords) {
+      // \b ensures we match the whole word only
+      final pattern = r'\b' + RegExp.escape(keyword) + r'\b';
+      if (RegExp(pattern).hasMatch(text)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
