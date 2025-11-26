@@ -204,9 +204,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   animation: _rippleController,
                   builder: (context, child) {
                     // ✅ Dynamic color based on state
-                    final rippleColor = _isListeningState
-                        ? Colors.green
-                        : Colors.red;
+                    final rippleColor =
+                        _isListeningState ? Colors.green : Colors.red;
 
                     return CustomPaint(
                       size: const Size(100, 100),
@@ -272,8 +271,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 _isListeningState
                     ? Icons.mic
                     : _isSpeakingState
-                    ? Icons.volume_up
-                    : Icons.mic_none,
+                        ? Icons.volume_up
+                        : Icons.mic_none,
                 color: Colors.white,
                 size: 40,
               ),
@@ -326,6 +325,107 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   }
 
   /// ==============================================
+  /// 🧠 ARABIC NORMALIZATION HELPERS
+  /// ==============================================
+
+  /// يشيل التشكيل ويوحّد بعض الحروف
+  String _normalizeArabic(String input) {
+    final diacritics =
+        RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]');
+    var out = input.replaceAll(diacritics, '');
+    out = out
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه');
+    return out;
+  }
+
+  bool _containsAnyNormalized(String text, List<String> patterns) {
+    final lower = text.toLowerCase();
+    final normText = _normalizeArabic(lower);
+
+    for (final p in patterns) {
+      final lowerP = p.toLowerCase();
+      final normP = _normalizeArabic(lowerP);
+      if (lower.contains(lowerP) || normText.contains(normP)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// يرجع كلمة مفتاحية من اسم السورة بالعربي نستخدمها للبحث في fileName
+  String? _quranFileKeywordFromUtterance(String normalizedUtter) {
+    // الفاتحة
+    if (_containsAnyNormalized(normalizedUtter, [
+      'الفاتحه',
+      'سوره الفاتحه',
+      'فاتحه',
+    ])) {
+      return 'faatiha';
+    }
+
+    // الفلق
+    if (_containsAnyNormalized(normalizedUtter, [
+      'الفلق',
+      'سوره الفلق',
+    ])) {
+      return 'falaq';
+    }
+
+    // الإخلاص
+    if (_containsAnyNormalized(normalizedUtter, [
+      'الاخلاص',
+      'الإخلاص',
+      'سوره الاخلاص',
+      'سورة الإخلاص',
+    ])) {
+      return 'ikhlaas';
+    }
+
+    // الملك
+    if (_containsAnyNormalized(normalizedUtter, [
+      'الملك',
+      'سوره الملك',
+    ])) {
+      return 'mulk';
+    }
+
+    // الناس
+    if (_containsAnyNormalized(normalizedUtter, [
+      'الناس',
+      'سوره الناس',
+    ])) {
+      return 'naas';
+    }
+
+    return null;
+  }
+
+  /// ✅ هل الكلام يعتبر إلغاء للجلسة؟
+  bool _isCancelUtterance(String? answer) {
+    if (answer == null) return false;
+    final lower = answer.toLowerCase();
+
+    // إنجليزي
+    if (lower.contains('stop') || lower.contains('cancel')) {
+      return true;
+    }
+
+    // عربي مع تطبيع
+    final norm = _normalizeArabic(lower);
+    return norm.contains('خلاص') ||
+        norm.contains('وقف') ||
+        norm.contains('ستوب') ||
+        norm.contains('بس') ||
+        norm.contains('لا تكمل') ||
+        norm.contains('الغاء') ||
+        norm.contains('الغ');
+  }
+
+  /// ==============================================
   /// 🧠 CONVERSATIONAL LOGIC
   /// ==============================================
 
@@ -355,6 +455,13 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       String? categoryAnswer = await _voiceService.listenWhisper(seconds: 5);
       debugPrint("User said category: $categoryAnswer");
 
+      // ✅ لو قال cancel / خلاص هنا نوقف الجلسة كاملة
+      if (_isCancelUtterance(categoryAnswer)) {
+        await _voiceService.speak("Okay, I will stop now.");
+        _resetVoiceState();
+        return;
+      }
+
       if (categoryAnswer == null || categoryAnswer.trim().isEmpty) {
         await _voiceService.speak("Sorry, I didn't catch that.");
         _resetVoiceState();
@@ -379,17 +486,33 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       String? modeAnswer = await _voiceService.listenWhisper(seconds: 5);
       debugPrint("User said mode: $modeAnswer");
 
+      // ✅ إلغاء في خطوة المود
+      if (_isCancelUtterance(modeAnswer)) {
+        await _voiceService.speak("Okay, I will stop now.");
+        _resetVoiceState();
+        return;
+      }
+
       final modeLower = (modeAnswer ?? "").toLowerCase();
 
       if (modeLower.contains("specific") ||
           modeLower.contains("choose") ||
-          modeLower.contains("search")) {
+          modeLower.contains("search") ||
+          _containsAnyNormalized(modeLower, ['معين', 'سوره', 'سورة'])) {
         // --- STEP 3A: Handle Specific ---
         await _voiceService.speak(
           "Please say the name of the audio you want to hear.",
         );
 
         String? titleQuery = await _voiceService.listenWhisper(seconds: 5);
+        debugPrint("User said title: $titleQuery");
+
+        // ✅ إلغاء في اسم السورة / الصوت
+        if (_isCancelUtterance(titleQuery)) {
+          await _voiceService.speak("Okay, I will stop now.");
+          _resetVoiceState();
+          return;
+        }
 
         if (titleQuery != null && titleQuery.isNotEmpty) {
           await _playSpecificAudio(matchedCategory, titleQuery);
@@ -425,24 +548,84 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   /// Helper to map voice input to exact Category strings
   String? _detectCategory(String text) {
     final lower = text.toLowerCase();
-    if (lower.contains("quran") ||
-        lower.contains("allah") ||
-        lower.contains("kur'an") ||
-        lower.contains("qur'an") ||
-        lower.contains("holy qur'an") ||
-        lower.contains("holy quran"))
+    final norm = _normalizeArabic(lower);
+
+    // ===== Quran =====
+    if (_containsAnyNormalized(norm, [
+      'quran',
+      'qur\'an',
+      'قران',
+      'القران',
+      'قرآن',
+      'القرآن',
+      'سوره القران',
+      'سور القران',
+      'شغل القران',
+      'شغل القرآن',
+      'ابي اسمع القران',
+      'ابي اسمع قرآن',
+    ])) {
       return "Quran";
-    if (lower.contains("story") || lower.contains("stories")) return "Story";
-    if (lower.contains("health") ||
-        lower.contains("exercise") ||
-        lower.contains("movement"))
+    }
+
+    // ===== Story =====
+    if (_containsAnyNormalized(norm, [
+      'story',
+      'stories',
+      'قصه',
+      'قصة',
+      'قصص',
+      'حكاية',
+    ])) {
+      return "Story";
+    }
+
+    // ===== Health =====
+    if (_containsAnyNormalized(norm, [
+      'health',
+      'exercise',
+      'movement',
+      'صحه',
+      'صحة',
+      'صحيه',
+      'رياضه',
+      'رياضة',
+      'اكل',
+      'طعام',
+    ])) {
       return "Health";
-    if (lower.contains("care") ||
-        lower.contains("gift") ||
-        lower.contains("family"))
+    }
+
+    // ===== Caregiver =====
+    if (_containsAnyNormalized(norm, [
+      'care',
+      'family',
+      'gift',
+      'caregiver',
+      'مقدم رعايه',
+      'مقدم الرعاية',
+      'ممرض',
+      'ممرضه',
+      'ممرضة',
+      'ابنتي',
+      'ابني',
+      'بنتي',
+    ])) {
       return "Caregiver";
-    if (lower.contains("favorite") || lower.contains("love"))
+    }
+
+    // ===== Favorites =====
+    if (_containsAnyNormalized(norm, [
+      'favorite',
+      'favorites',
+      'love',
+      'المفضله',
+      'المفضلة',
+      'مفضل',
+    ])) {
       return "Favorites";
+    }
+
     return null;
   }
 
@@ -507,23 +690,50 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             .get();
       }
 
-      // Filter client-side
+      // 🔎 نطبّع النص قبل المطابقة (عربي + إنجليزي)
       final searchLower = searchTitle.toLowerCase();
+      final searchNorm = _normalizeArabic(searchLower);
 
+      // ------ 1) نحاول بالمطابقة على العنوان ------
       final matchingDocs = qs.docs.where((doc) {
-        final title = (doc.data()['title'] ?? '').toString().toLowerCase();
-        return title.contains(searchLower);
+        final rawTitle = (doc.data()['title'] ?? '').toString();
+        final titleLower = rawTitle.toLowerCase();
+        final titleNorm = _normalizeArabic(titleLower);
+
+        return titleLower.contains(searchLower) ||
+            titleNorm.contains(searchNorm);
       }).toList();
 
       if (matchingDocs.isNotEmpty) {
         final item = AudioItem.fromDoc(matchingDocs.first);
         await _voiceService.speak("Playing ${item.title}");
         _navigateToPlayer(item);
-      } else {
-        await _voiceService.speak(
-          "I couldn't find any audio named $searchTitle in $category.",
-        );
+        return;
       }
+
+      // ------ 2) لو category = Quran نطيح على fileName بالكلمة المفتاحية ------
+      if (category == 'Quran') {
+        final keyword = _quranFileKeywordFromUtterance(searchNorm);
+        if (keyword != null) {
+          final quranDocs = qs.docs.where((doc) {
+            final fileName =
+                (doc.data()['fileName'] ?? '').toString().toLowerCase();
+            return fileName.contains(keyword); // مثال: contains 'falaq'
+          }).toList();
+
+          if (quranDocs.isNotEmpty) {
+            final item = AudioItem.fromDoc(quranDocs.first);
+            await _voiceService.speak("Playing ${item.title}");
+            _navigateToPlayer(item);
+            return;
+          }
+        }
+      }
+
+      // ------ 3) لو لا عنوان ولا ملف طابقوا ------
+      await _voiceService.speak(
+        "I couldn't find any audio named $searchTitle in $category.",
+      );
     } catch (e) {
       debugPrint("Error playing specific: $e");
       await _voiceService.speak("Something went wrong while searching.");

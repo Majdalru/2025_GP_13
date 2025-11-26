@@ -14,7 +14,8 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// حطي الـ API KEY حقك هنا
-const String _openAIApiKey = '';
+const String _openAIApiKey =
+    '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';
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -166,6 +167,12 @@ class VoiceAssistantService {
 
     await speak(getGreeting());
     final answer = await listenWhisper(seconds: 5);
+
+    // ✅ إلغاء عام بالصوت
+    if (_isCancelUtterance(answer)) {
+      await speak('Okay, I will stop now.');
+      return;
+    }
 
     if (answer == null || answer.trim().isEmpty) {
       await speak('Sorry, I did not hear anything. You can try again later.');
@@ -448,7 +455,7 @@ class VoiceAssistantService {
   // =========================
   //  MEDICATION FLOWS
   // =========================
-  // (كل فلوات الأدوية نفسها بالضبط من كودك، ما غيرتها)
+  // (كل فلوات الأدوية نفسها بالضبط من كودك، مع إضافة دعم الإلغاء بالصوت)
 
   Future<void> runAddMedicationFlow(String elderlyId) async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -469,6 +476,10 @@ class VoiceAssistantService {
       'First, what is the medication name? Please say it in English.',
       listenSeconds: 5,
     );
+    if (_isCancelUtterance(name)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
     if (name == null || name.isEmpty) {
       await speak('I did not catch the name. We will stop for now.');
       return;
@@ -478,6 +489,10 @@ class VoiceAssistantService {
       'You said "$name". Is that correct? Say yes or no.',
       listenSeconds: 3,
     );
+    if (_isCancelUtterance(confirmName)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
     if (_isNo(confirmName)) {
       await speak('Okay, we will cancel adding the medication.');
       return;
@@ -488,6 +503,10 @@ class VoiceAssistantService {
       'On which days do you take $name? You can say every day, or mention specific days like Sunday and Wednesday.',
       listenSeconds: 6,
     );
+    if (_isCancelUtterance(daysAnswer)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
     final days = parseDaysFromSpeech(daysAnswer ?? '');
 
     // 3) Frequency
@@ -495,6 +514,10 @@ class VoiceAssistantService {
       'How many times per day do you take $name? Say once, twice, three times, or four times.',
       listenSeconds: 4,
     );
+    if (_isCancelUtterance(freqAnswer)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
     final frequency = parseFrequencyFromSpeech(freqAnswer ?? '');
     final finalFrequency = frequency ?? 'Once daily';
 
@@ -503,6 +526,10 @@ class VoiceAssistantService {
       'At what time do you usually take the first dose? For example, eight a.m. or nine thirty p.m.',
       listenSeconds: 5,
     );
+    if (_isCancelUtterance(timeAnswer)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
     final firstTime = (timeAnswer == null || timeAnswer.isEmpty)
         ? _fallbackTime()
         : parseTimeFromSpeech(timeAnswer);
@@ -513,10 +540,14 @@ class VoiceAssistantService {
       'Do you want to add any notes, like before food or after food?',
       listenSeconds: 5,
     );
+    if (_isCancelUtterance(notesAnswer)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
     final notes =
         (notesAnswer != null && notesAnswer.toLowerCase().trim() != 'no')
-        ? notesAnswer
-        : null;
+            ? notesAnswer
+            : null;
 
     final newMed = Medication(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -571,6 +602,11 @@ class VoiceAssistantService {
       final answer = await listenWhisper(seconds: 4);
       debugPrint('🎧 delete utterance (try $attempt): "$answer"');
 
+      if (_isCancelUtterance(answer)) {
+        await speak('Okay, we will stop deleting for now.');
+        return;
+      }
+
       if (answer == null || answer.trim().isEmpty) {
         if (attempt < maxTries) {
           await speak(
@@ -609,6 +645,10 @@ class VoiceAssistantService {
       'I think you mean "${target.name}". Do you want to delete it? Say yes or no.',
       listenSeconds: 3,
     );
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, we will stop deleting for now.');
+      return;
+    }
     if (!_isYes(confirm)) {
       await speak('Okay, I will not delete it.');
       return;
@@ -656,6 +696,11 @@ class VoiceAssistantService {
       final answer = await listenWhisper(seconds: 4);
       debugPrint('🎧 Edit medication selection (try $attempt): "$answer"');
 
+      if (_isCancelUtterance(answer)) {
+        await speak('Okay, we will stop editing for now.');
+        return;
+      }
+
       if (answer == null || answer.trim().isEmpty) {
         if (attempt < maxTries) {
           await speak(
@@ -688,6 +733,11 @@ class VoiceAssistantService {
       listenSeconds: 3,
     );
 
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, we will stop editing for now.');
+      return;
+    }
+
     if (!_isYes(confirm)) {
       await speak('Okay, we will not edit it.');
       return;
@@ -705,6 +755,11 @@ class VoiceAssistantService {
       for (int attempt = 1; attempt <= 2; attempt++) {
         final fieldAnswer = await listenWhisper(seconds: 4);
         debugPrint('🎧 Field selection: "$fieldAnswer"');
+
+        if (_isCancelUtterance(fieldAnswer)) {
+          await speak('Okay, we will stop editing for now.');
+          return;
+        }
 
         if (fieldAnswer == null || fieldAnswer.isEmpty) {
           if (attempt < 2) {
@@ -748,7 +803,10 @@ class VoiceAssistantService {
         listenSeconds: 3,
       );
 
-      if (!_isYes(continueAnswer)) {
+      if (_isCancelUtterance(continueAnswer)) {
+        await speak('Okay, we will stop editing now.');
+        continueEditing = false;
+      } else if (!_isYes(continueAnswer)) {
         continueEditing = false;
       }
     }
@@ -858,6 +916,12 @@ class VoiceAssistantService {
     await speak('What is the new name for this medication?');
 
     final newName = await listenWhisper(seconds: 5);
+
+    if (_isCancelUtterance(newName)) {
+      await speak('Okay, we will keep the original name.');
+      return null;
+    }
+
     if (newName == null || newName.trim().isEmpty) {
       await speak('I did not hear a name. Keeping the old name.');
       return null;
@@ -867,6 +931,11 @@ class VoiceAssistantService {
       'Change the name to $newName. Is that correct? Say yes or no.',
       listenSeconds: 3,
     );
+
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, keeping the original name.');
+      return null;
+    }
 
     if (!_isYes(confirm)) {
       await speak('Okay, keeping the original name.');
@@ -893,6 +962,12 @@ class VoiceAssistantService {
     );
 
     final daysAnswer = await listenWhisper(seconds: 6);
+
+    if (_isCancelUtterance(daysAnswer)) {
+      await speak('Okay, keeping the original days.');
+      return null;
+    }
+
     if (daysAnswer == null || daysAnswer.isEmpty) {
       await speak('I did not hear any days. Keeping the old schedule.');
       return null;
@@ -905,6 +980,11 @@ class VoiceAssistantService {
       'Set the days to: $daysText. Is that correct? Say yes or no.',
       listenSeconds: 3,
     );
+
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, keeping the original days.');
+      return null;
+    }
 
     if (!_isYes(confirm)) {
       await speak('Okay, keeping the original days.');
@@ -931,6 +1011,12 @@ class VoiceAssistantService {
     );
 
     final freqAnswer = await listenWhisper(seconds: 4);
+
+    if (_isCancelUtterance(freqAnswer)) {
+      await speak('Okay, keeping the original frequency.');
+      return null;
+    }
+
     if (freqAnswer == null || freqAnswer.isEmpty) {
       await speak('I did not hear a frequency. Keeping the old frequency.');
       return null;
@@ -942,6 +1028,11 @@ class VoiceAssistantService {
       'Change frequency to $newFrequency. Is that correct? Say yes or no.',
       listenSeconds: 3,
     );
+
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, keeping the original frequency.');
+      return null;
+    }
 
     if (!_isYes(confirm)) {
       await speak('Okay, keeping the original frequency.');
@@ -974,6 +1065,12 @@ class VoiceAssistantService {
     );
 
     final timeAnswer = await listenWhisper(seconds: 5);
+
+    if (_isCancelUtterance(timeAnswer)) {
+      await speak('Okay, keeping the original times.');
+      return null;
+    }
+
     if (timeAnswer == null || timeAnswer.isEmpty) {
       await speak('I did not hear a time. Keeping the old times.');
       return null;
@@ -990,6 +1087,11 @@ class VoiceAssistantService {
       'Set the times to: $timesText. Is that correct? Say yes or no.',
       listenSeconds: 3,
     );
+
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, keeping the original times.');
+      return null;
+    }
 
     if (!_isYes(confirm)) {
       await speak('Okay, keeping the original times.');
@@ -1017,6 +1119,11 @@ class VoiceAssistantService {
 
     final notesAnswer = await listenWhisper(seconds: 6);
 
+    if (_isCancelUtterance(notesAnswer)) {
+      await speak('Okay, keeping the original notes.');
+      return null;
+    }
+
     String? newNotes;
     if (notesAnswer == null || notesAnswer.isEmpty || _isNo(notesAnswer)) {
       newNotes = null;
@@ -1030,6 +1137,11 @@ class VoiceAssistantService {
           : 'Remove all notes. Is that correct? Say yes or no.',
       listenSeconds: 3,
     );
+
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, keeping the original notes.');
+      return null;
+    }
 
     if (!_isYes(confirm)) {
       await speak('Okay, keeping the original notes.');
@@ -1183,6 +1295,13 @@ class VoiceAssistantService {
     await speak(prompt);
     final answer = await listenWhisper(seconds: listenSeconds);
     debugPrint('🧠 Answer to "$prompt": "$answer"');
+
+    // ✅ إلغاء عام داخل أي سؤال
+    if (_isCancelUtterance(answer)) {
+      debugPrint('🛑 Cancel utterance detected inside _askQuestion.');
+      return null;
+    }
+
     return answer;
   }
 
@@ -1206,6 +1325,46 @@ class VoiceAssistantService {
         lower.contains('لا') ||
         lower.contains('مو لازم') ||
         lower.contains('خلاص');
+  }
+
+  // ====== إلغاء عام للصوت ======
+
+  String _normalizeArabicForCancel(String input) {
+    // إزالة التشكيل
+    final diacritics =
+        RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]');
+    var out = input.replaceAll(diacritics, '');
+    out = out
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه');
+    return out;
+  }
+
+  bool _isCancelUtterance(String? answer) {
+    if (answer == null) return false;
+    final lower = answer.toLowerCase();
+
+    // إنجليزي
+    if (lower.contains('stop') ||
+        lower.contains('cancel') ||
+        lower.contains('enough')) {
+      return true;
+    }
+
+    // عربي مع/بدون تشكيل
+    final norm = _normalizeArabicForCancel(lower);
+
+    return norm.contains('خلاص') ||
+        norm.contains('وقف') ||
+        norm.contains('وقفي') ||
+        norm.contains('ستوب') ||
+        norm.contains('بس') ||
+        norm.contains('لا تكمل') ||
+        norm.contains('الغ') ||
+        norm.contains('الغاء');
   }
 
   TimeOfDay parseTimeFromSpeech(String speech) {
@@ -1232,8 +1391,8 @@ class VoiceAssistantService {
         lower.contains('pm') || lower.contains('مساء') || lower.contains('ليل');
     final isAm =
         lower.contains('am') ||
-        lower.contains('صباح') ||
-        lower.contains('صباحا');
+            lower.contains('صباح') ||
+            lower.contains('صباحا');
 
     if (isPm && hour < 12) hour += 12;
     if (isAm && hour == 12) hour = 0;
