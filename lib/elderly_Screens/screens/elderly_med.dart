@@ -77,17 +77,22 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   // Navigation to Add / Edit
   // ============================
 
-  void _navigateAndAddMedication(BuildContext context) {
-    Navigator.push(
+  void _navigateAndAddMedication(BuildContext context) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddMedScreen(elderlyId: widget.elderlyId),
       ),
     );
+
+    // ✅ Show success message when returning from add
+    if (result == true && mounted) {
+      _showSuccessMessage('Medication Added Successfully');
+    }
   }
 
-  void _navigateAndEditMedication(Medication medication) {
-    Navigator.push(
+  void _navigateAndEditMedication(Medication medication) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddMedScreen(
@@ -96,6 +101,11 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
         ),
       ),
     );
+
+    // ✅ Show success message when returning from edit
+    if (result == true && mounted) {
+      _showSuccessMessage('Medication Updated Successfully');
+    }
   }
 
   // ============================
@@ -103,6 +113,34 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   // ============================
 
   Future<void> _deleteMedication(Medication medicationToDelete) async {
+    // ✅ Show snackbar IMMEDIATELY (optimistic UI)
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Medication deleted',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom:
+                MediaQuery.of(context).size.height *
+                0.55, // ✅ Fixed distance from bottom
+            left: 20,
+            right: 20,
+          ),
+          duration: const Duration(seconds: 3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        ),
+      );
+    }
+
+    // ✅ Now do the database work in background
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyId);
@@ -112,39 +150,52 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
         'medsList': FieldValue.arrayRemove([medicationToDelete.toMap()]),
       });
 
-      // إعادة جدولة الريمايندر بعد الحذف
-      await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
+      MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Medication deleted',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height - 150,
-              left: 20,
-              right: 20,
-            ),
-            duration: const Duration(seconds: 3),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          ),
-        );
-      }
+      debugPrint('✅ Medication deleted successfully');
     } catch (e) {
+      debugPrint('❌ Error deleting medication: $e');
+
+      // ✅ Show error if something went wrong
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error deleting medication: $e')),
         );
       }
     }
+  }
+
+  void _showSuccessMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom:
+              MediaQuery.of(context).size.height *
+              0.55, // ✅ Fixed distance from bottom
+          left: 20,
+          right: 20,
+        ),
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      ),
+    );
   }
 
   // ============================
@@ -496,8 +547,8 @@ class MedicationCard extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop();
-                onDelete();
+                Navigator.of(dialogContext).pop(); // ✅ Close dialog first
+                onDelete(); // ✅ Then delete in background
               },
             ),
           ],
@@ -586,6 +637,15 @@ class MedicationCard extends StatelessWidget {
                       children: <TextSpan>[
                         TextSpan(text: 'Frequency: ', style: labelStyle),
                         TextSpan(text: medication.frequency ?? 'N/A'),
+                      ],
+                    ),
+                  ),
+                  RichText(
+                    text: TextSpan(
+                      style: valueStyle,
+                      children: <TextSpan>[
+                        TextSpan(text: 'Days: ', style: labelStyle),
+                        TextSpan(text: medication.days.join(', ')),
                       ],
                     ),
                   ),

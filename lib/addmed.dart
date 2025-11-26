@@ -63,7 +63,10 @@ class _AddMedScreenState extends State<AddMedScreen> {
       return;
     }
 
-    // The reference is to the elderly user's document, passed into this widget
+    // ✅ Close the page IMMEDIATELY (optimistic UI)
+    if (mounted) Navigator.of(context).pop();
+
+    // ✅ Now do the database work in background
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyId);
@@ -77,7 +80,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         frequency: _frequency,
         times: _selectedTimes.whereType<TimeOfDay>().toList(),
         notes: _notes,
-        addedBy: currentUser.uid, // The caregiver who last edited
+        addedBy: currentUser.uid,
         createdAt: widget.medicationToEdit!.createdAt,
         updatedAt: Timestamp.now(),
       );
@@ -96,15 +99,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
         }).toList();
 
         await docRef.update({'medsList': updatedMedsList});
-        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
+        MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        if (mounted) Navigator.of(context).pop();
+        debugPrint('✅ Medication updated successfully');
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating medication: $e')),
-          );
-        }
+        debugPrint('❌ Error updating medication: $e');
       }
     } else {
       // --- ADD NEW LOGIC ---
@@ -115,7 +114,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         frequency: _frequency,
         times: _selectedTimes.whereType<TimeOfDay>().toList(),
         notes: _notes,
-        addedBy: currentUser.uid, // The caregiver who added it
+        addedBy: currentUser.uid,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       );
@@ -124,15 +123,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
         await docRef.set({
           'medsList': FieldValue.arrayUnion([newMed.toMap()]),
         }, SetOptions(merge: true));
-        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
+        MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        if (mounted) Navigator.of(context).pop();
+        debugPrint('✅ Medication added successfully');
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error saving medication: $e')),
-          );
-        }
+        debugPrint('❌ Error saving medication: $e');
       }
     }
   }
@@ -666,10 +661,10 @@ class _Step3HowManyTimesPerDay extends StatefulWidget {
 class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
   String? _selectedFrequency;
   final List<String> _frequencyOptions = [
-    'Once daily',
-    'Twice daily',
-    'Three times daily',
-    'Four times daily',
+    'Once a day',
+    'Twice a day',
+    'Three times a day',
+    'Four times a day',
     'Custom',
   ];
 

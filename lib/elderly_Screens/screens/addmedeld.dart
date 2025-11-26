@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/medication.dart'; // Import the new model
 import '../../services/medication_scheduler.dart';
 
-
 // --- Main Stateful Widget for AddMedScreen ---
 class AddMedScreen extends StatefulWidget {
   final Medication? medicationToEdit;
@@ -64,27 +63,25 @@ class _AddMedScreenState extends State<AddMedScreen> {
       return;
     }
 
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(widget.elderlyId);
+
     if (_isEditing) {
       // --- UPDATE LOGIC ---
-      final docRef = FirebaseFirestore.instance
-          .collection('medications')
-          .doc(widget.elderlyId);
-
       final updatedMed = Medication(
-        id: widget.medicationToEdit!.id, // Keep the original ID
+        id: widget.medicationToEdit!.id,
         name: _medicationName ?? 'Unnamed',
         days: _selectedDays,
         frequency: _frequency,
         times: _selectedTimes.whereType<TimeOfDay>().toList(),
         notes: _notes,
-        addedBy: currentUser.uid, // The user who last edited
-        createdAt:
-            widget.medicationToEdit!.createdAt, // Keep original creation time
-        updatedAt: Timestamp.now(), // Set new update time
+        addedBy: currentUser.uid,
+        createdAt: widget.medicationToEdit!.createdAt,
+        updatedAt: Timestamp.now(),
       );
 
       try {
-        // To update an item in an array, we must read, modify, and write the whole array back
         final doc = await docRef.get();
         final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
 
@@ -92,19 +89,48 @@ class _AddMedScreenState extends State<AddMedScreen> {
           med,
         ) {
           if (med['id'] == updatedMed.id) {
-            return updatedMed.toMap(); // Replace with the updated medication
+            return updatedMed.toMap();
           }
           return med as Map<String, dynamic>;
         }).toList();
 
         await docRef.update({'medsList': updatedMedsList});
+        MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-
-         // ✅ جدول التنبيهات بعد التحديث
-        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
-
+        // ✅ Show success dialog
         if (mounted) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true); // Close add/edit screen
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 40),
+                  SizedBox(height: 12),
+                  Text(
+                    'Medication Updated Successfully',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade600,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom:
+                    MediaQuery.of(context).size.height *
+                    0.55, // ✅ Fixed distance from bottom
+                left: 20,
+                right: 20,
+              ),
+              duration: const Duration(seconds: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            ),
+          );
         }
       } catch (e) {
         if (mounted) {
@@ -116,7 +142,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
     } else {
       // --- ADD NEW LOGIC ---
       final newMed = Medication(
-        id: DateTime.now().millisecondsSinceEpoch.toString(), // Unique ID
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _medicationName ?? 'Unnamed',
         days: _selectedDays,
         frequency: _frequency,
@@ -127,23 +153,46 @@ class _AddMedScreenState extends State<AddMedScreen> {
         updatedAt: Timestamp.now(),
       );
 
-      final docRef = FirebaseFirestore.instance
-          .collection('medications')
-          .doc(widget.elderlyId);
-
       try {
-        // Use set with merge:true to create the doc if it doesn't exist
         await docRef.set({
           'medsList': FieldValue.arrayUnion([newMed.toMap()]),
         }, SetOptions(merge: true));
+        MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-
-        // ✅ جدول التنبيهات بعد الإضافة
-        await MedicationScheduler().scheduleAllMedications(widget.elderlyId);
-
-
+        // ✅ Show success dialog
         if (mounted) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(); // Close add screen
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 40),
+                  SizedBox(height: 12),
+                  Text(
+                    'Medication Added Successfully',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade600,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom:
+                    MediaQuery.of(context).size.height *
+                    0.55, // ✅ Fixed distance from bottom
+                left: 20,
+                right: 20,
+              ),
+              duration: const Duration(seconds: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            ),
+          );
         }
       } catch (e) {
         if (mounted) {
@@ -557,7 +606,8 @@ class _Step1MedNameState extends State<_Step1MedName> {
       ),
     );
   }
-}// --- Step 2: Select Days (Each day has its own colored box) ---
+} // --- Step 2: Select Days (Each day has its own colored box) ---
+
 class _Step2SelectDays extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<List<String>> onNext;
@@ -679,8 +729,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
     // أول بوكس ل every day
     final everyDayTile = _buildDayTile('Every day');
     // الباقي للأيام
-    final specificDayTiles =
-        _daysOfWeek.sublist(1).map(_buildDayTile).toList();
+    final specificDayTiles = _daysOfWeek.sublist(1).map(_buildDayTile).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -709,9 +758,10 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
               Text(
                 'Daily Schedule',
                 style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4B8681)),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4B8681),
+                ),
               ),
               const SizedBox(height: 8),
               everyDayTile,
@@ -720,9 +770,10 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
               Text(
                 'Specific Days',
                 style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4B8681)),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4B8681),
+                ),
               ),
               const SizedBox(height: 8),
               ...specificDayTiles,
@@ -742,7 +793,6 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
     );
   }
 }
-
 
 // --- Step 3: Frequency (Unchanged) ---
 class _Step3HowManyTimesPerDay extends StatefulWidget {
@@ -766,10 +816,10 @@ class _Step3HowManyTimesPerDay extends StatefulWidget {
 class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
   String? _selectedFrequency;
   final List<String> _frequencyOptions = [
-    'Once daily',
-    'Twice daily',
-    'Three times daily',
-    'Four times daily',
+    'Once a day',
+    'Twice a day',
+    'Three times a day',
+    'Four times a day',
     'Custom',
   ];
 

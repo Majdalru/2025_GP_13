@@ -66,7 +66,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     _voiceService.setOnListeningStateChange(_handleServiceStateChange);
 
     _loadUserInfo();
-    _initialize();
+    // _initialize();
   }
 
   void _handleServiceStateChange(bool isListening, bool isSpeaking) {
@@ -123,7 +123,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       await _tts.awaitSpeakCompletion(true);
 
       debugPrint(
-          '✅ Voice assistant initialized (Whisper + ChatGPT): $_isInitialized');
+        '✅ Voice assistant initialized (Whisper + ChatGPT): $_isInitialized',
+      );
     } catch (e) {
       debugPrint('❌ Initialize error: $e');
     }
@@ -163,10 +164,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   Future<void> _playBeep() async {
     try {
       await _beepPlayer.stop();
-      await _beepPlayer.play(
-        AssetSource('sounds/beep.mp3'),
-        volume: 1.0,
-      );
+      await _beepPlayer.play(AssetSource('sounds/beep.mp3'), volume: 1.0);
     } catch (e) {
       debugPrint('❌ Beep error: $e');
     }
@@ -305,7 +303,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     } else {
       final String errorMessage =
           widget.customErrorResponse ??
-              "I'm not sure what you mean. Try saying: medications, media, or home.";
+          "I'm not sure what you mean. Try saying: medications, media, or home.";
 
       await _speak(errorMessage);
 
@@ -423,10 +421,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
-                          colors: [
-                            micColor,
-                            micColor.withOpacity(0.8),
-                          ],
+                          colors: [micColor, micColor.withOpacity(0.8)],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -440,8 +435,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
                         _isListening
                             ? Icons.mic
                             : _isSpeaking
-                                ? Icons.volume_up
-                                : Icons.mic_none,
+                            ? Icons.volume_up
+                            : Icons.mic_none,
                         color: Colors.white,
                         size: 40,
                       ),

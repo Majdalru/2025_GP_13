@@ -33,17 +33,22 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
 
   // Navigation now passes the elderlyId to the AddMedScreen
   void _navigateAndAddMedication(BuildContext context) async {
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
             AddMedScreen(elderlyId: widget.elderlyProfile.uid),
       ),
     );
+
+    // ✅ Show success message when returning from add
+    if (result == true && mounted) {
+      _showSuccessMessage('Medication Added Successfully');
+    }
   }
 
   void _navigateAndEditMedication(Medication medication) async {
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddMedScreen(
@@ -52,6 +57,11 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
         ),
       ),
     );
+
+    // ✅ Show success message when returning from edit
+    if (result == true && mounted) {
+      _showSuccessMessage('Medication Updated Successfully');
+    }
   }
 
   // Firestore deletion logic
@@ -72,9 +82,31 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Medication deleted'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 40),
+                SizedBox(height: 12),
+                Text(
+                  'Medication Deleted Successfully',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.55,
+              left: 20,
+              right: 20,
+            ),
+            duration: const Duration(seconds: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
           ),
         );
       }
@@ -85,6 +117,37 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
         );
       }
     }
+  }
+
+  void _showSuccessMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.55,
+          left: 20,
+          right: 20,
+        ),
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      ),
+    );
   }
 
   @override
@@ -410,6 +473,15 @@ class MedicationCard extends StatelessWidget {
                 children: <TextSpan>[
                   TextSpan(text: 'Frequency: ', style: labelStyle),
                   TextSpan(text: medication.frequency ?? 'N/A'),
+                ],
+              ),
+            ),
+            RichText(
+              text: TextSpan(
+                style: valueStyle,
+                children: <TextSpan>[
+                  TextSpan(text: 'Days: ', style: labelStyle),
+                  TextSpan(text: medication.days.join(', ')),
                 ],
               ),
             ),
