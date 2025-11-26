@@ -14,8 +14,7 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// حطي الـ API KEY حقك هنا
-const String _openAIApiKey =
-    '';
+const String _openAIApiKey = '';
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -108,10 +107,7 @@ class VoiceAssistantService {
   Future<void> _playBeep() async {
     try {
       final player = AudioPlayer();
-      await player.play(
-        AssetSource('sounds/beep.mp3'),
-        volume: 1.0,
-      );
+      await player.play(AssetSource('sounds/beep.mp3'), volume: 1.0);
     } catch (e) {
       debugPrint('❌ Beep error: $e');
     }
@@ -232,29 +228,24 @@ class VoiceAssistantService {
               'role': 'system',
               'content':
                   'You are an intent classifier for an elderly medication app. '
-                      'User may speak English or Arabic. '
-                      'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                      'goToMedia, goToHome, sos, goToSettings, none. '
-                      'You MUST respond ONLY with pure JSON like {"intent":"addMedication"}.'
+                  'User may speak English or Arabic. '
+                  'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
+                  'goToMedia, goToHome, sos, goToSettings, none. '
+                  'You MUST respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
-            {
-              'role': 'user',
-              'content': text,
-            },
+            {'role': 'user', 'content': text},
           ],
         }),
       );
 
       if (response.statusCode != 200) {
-        debugPrint(
-          '❌ ChatGPT HTTP ${response.statusCode}: ${response.body}',
-        );
+        debugPrint('❌ ChatGPT HTTP ${response.statusCode}: ${response.body}');
         return null;
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final content =
-          (decoded['choices'][0]['message']['content'] as String).trim();
+      final content = (decoded['choices'][0]['message']['content'] as String)
+          .trim();
 
       debugPrint('📦 ChatGPT raw content: $content');
 
@@ -276,8 +267,8 @@ class VoiceAssistantService {
         return null;
       }
 
-      final intentString =
-          (jsonIntent['intent'] ?? jsonIntent['Intent'] ?? '').toString();
+      final intentString = (jsonIntent['intent'] ?? jsonIntent['Intent'] ?? '')
+          .toString();
 
       return _intentFromString(intentString);
     } catch (e) {
@@ -524,8 +515,8 @@ class VoiceAssistantService {
     );
     final notes =
         (notesAnswer != null && notesAnswer.toLowerCase().trim() != 'no')
-            ? notesAnswer
-            : null;
+        ? notesAnswer
+        : null;
 
     final newMed = Medication(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -539,8 +530,9 @@ class VoiceAssistantService {
       updatedAt: Timestamp.now(),
     );
 
-    final docRef =
-        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(elderlyId);
 
     try {
       await docRef.set({
@@ -622,8 +614,9 @@ class VoiceAssistantService {
       return;
     }
 
-    final docRef =
-        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(elderlyId);
 
     try {
       await docRef.update({
@@ -760,15 +753,17 @@ class VoiceAssistantService {
       }
     }
 
-    final docRef =
-        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(elderlyId);
 
     try {
       final doc = await docRef.get();
       final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
 
-      final List<Map<String, dynamic>> updatedMedsList =
-          currentMedsList.map((med) {
+      final List<Map<String, dynamic>> updatedMedsList = currentMedsList.map((
+        med,
+      ) {
         if (med['id'] == currentMed.id) {
           return currentMed.toMap();
         }
@@ -1236,7 +1231,9 @@ class VoiceAssistantService {
     final isPm =
         lower.contains('pm') || lower.contains('مساء') || lower.contains('ليل');
     final isAm =
-        lower.contains('am') || lower.contains('صباح') || lower.contains('صباحا');
+        lower.contains('am') ||
+        lower.contains('صباح') ||
+        lower.contains('صباحا');
 
     if (isPm && hour < 12) hour += 12;
     if (isAm && hour == 12) hour = 0;

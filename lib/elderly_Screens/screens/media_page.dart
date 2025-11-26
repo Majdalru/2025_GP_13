@@ -30,6 +30,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   late AnimationController _rotateController;
 
   bool _isListeningState = false;
+  bool _isSpeakingState = false;
 
   @override
   void initState() {
@@ -49,6 +50,24 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     );
+
+    // ✅ Listen to voice service state changes
+    _voiceService.setOnListeningStateChange(_handleVoiceStateChange);
+  }
+
+  void _handleVoiceStateChange(bool isListening, bool isSpeaking) {
+    if (!mounted) return;
+
+    setState(() {
+      _isListeningState = isListening;
+      _isSpeakingState = isSpeaking;
+    });
+
+    if (isListening || isSpeaking) {
+      _startAnimations();
+    } else {
+      _stopAnimations();
+    }
   }
 
   @override
@@ -56,6 +75,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     _rippleController.dispose();
     _pulseController.dispose();
     _rotateController.dispose();
+    _voiceService.setOnListeningStateChange(null); // ✅ Cleanup
     super.dispose();
   }
 
@@ -173,42 +193,56 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       floatingActionButton: GestureDetector(
         onTap: _startVoiceConversation,
         child: SizedBox(
-          width: 100, // Larger touch area
+          width: 100,
           height: 100,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Layer 1: Ripples (Only visible when listening)
-              if (_isListeningState)
+              // Layer 1: Ripples (show when listening OR speaking)
+              if (_isListeningState || _isSpeakingState)
                 AnimatedBuilder(
                   animation: _rippleController,
                   builder: (context, child) {
+                    // ✅ Dynamic color based on state
+                    final rippleColor = _isListeningState
+                        ? Colors.green
+                        : Colors.red;
+
                     return CustomPaint(
                       size: const Size(100, 100),
                       painter: RipplePainter(
                         animation: _rippleController.value,
-                        color: Colors.redAccent,
+                        color: rippleColor,
                       ),
                     );
                   },
                 ),
 
-              // Layer 2: The Button Background (Spins/Pulses)
+              // Layer 2: Button Background
               AnimatedBuilder(
                 animation: Listenable.merge([
                   _pulseController,
                   _rotateController,
                 ]),
                 builder: (context, child) {
-                  final scale = _isListeningState
+                  final scale = (_isListeningState || _isSpeakingState)
                       ? 1.0 + (_pulseController.value * 0.15)
                       : 1.0;
+
+                  // ✅ Determine button color
+                  Color buttonColor;
+                  if (_isListeningState) {
+                    buttonColor = Colors.green;
+                  } else if (_isSpeakingState) {
+                    buttonColor = Colors.red;
+                  } else {
+                    buttonColor = const Color(0xFF1B3A52);
+                  }
 
                   return Transform.scale(
                     scale: scale,
                     child: Transform.rotate(
-                      // Spin only if listening
-                      angle: _isListeningState
+                      angle: (_isListeningState || _isSpeakingState)
                           ? _rotateController.value * 2 * math.pi
                           : 0,
                       child: Container(
@@ -217,22 +251,11 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
-                            colors: [
-                              _isListeningState
-                                  ? Colors.red
-                                  : const Color(0xFF1B3A52),
-                              _isListeningState
-                                  ? Colors.red.shade900
-                                  : const Color(0xFF2C5F7D),
-                            ],
+                            colors: [buttonColor, buttonColor.withOpacity(0.8)],
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  (_isListeningState
-                                          ? Colors.red
-                                          : const Color(0xFF1B3A52))
-                                      .withOpacity(0.5),
+                              color: buttonColor.withOpacity(0.5),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),
@@ -244,9 +267,13 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 },
               ),
 
-              // Layer 3: The Icon (Static - does NOT spin)
+              // Layer 3: Icon (changes based on state)
               Icon(
-                _isListeningState ? Icons.mic : Icons.mic_none,
+                _isListeningState
+                    ? Icons.mic
+                    : _isSpeakingState
+                    ? Icons.volume_up
+                    : Icons.mic_none,
                 color: Colors.white,
                 size: 40,
               ),
