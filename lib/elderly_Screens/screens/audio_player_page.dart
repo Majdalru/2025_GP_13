@@ -257,7 +257,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               // ⏪ رجوع 10 ثواني
                               IconButton(
                                 icon: const Icon(Icons.replay_10),
-                                iconSize: 50,
+                                iconSize: 44,
                                 color: AudioPlayerPage.kPrimary,
                                 onPressed: () => _seekRelative(-10),
                                 splashRadius: 30,
@@ -306,7 +306,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               // ⏩ تقدّم 10 ثواني
                               IconButton(
                                 icon: const Icon(Icons.forward_10),
-                                iconSize: 50,
+                                iconSize: 44,
                                 color: AudioPlayerPage.kPrimary,
                                 onPressed: () => _seekRelative(10),
                                 splashRadius: 30,

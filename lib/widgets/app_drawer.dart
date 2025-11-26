@@ -40,16 +40,16 @@ class AppDrawer extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 1, 129, 116),
+              decoration: const BoxDecoration(
+                color: Color.fromARGB(255, 1, 129, 116),
               ),
               child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: (FirebaseAuth.instance.currentUser == null)
                     ? null
                     : FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(FirebaseAuth.instance.currentUser!.uid)
-                          .snapshots(),
+                        .collection('users')
+                        .doc(FirebaseAuth.instance.currentUser!.uid)
+                        .snapshots(),
                 builder: (context, snap) {
                   // القيم الافتراضية
                   String displayName = 'Guest';
@@ -62,17 +62,16 @@ class AppDrawer extends StatelessWidget {
                     final email = (data['email'] ?? '').toString().trim();
                     final role = (data['role'] ?? '').toString().toLowerCase();
 
-                    final name = [
-                      first,
-                      last,
-                    ].where((s) => s.isNotEmpty).join(' ');
+                    final name = [first, last]
+                        .where((s) => s.isNotEmpty)
+                        .join(' ');
                     displayName = name.isNotEmpty
                         ? name
                         : (email.isNotEmpty ? email : 'Guest');
                     roleLabel = (role == 'elderly') ? 'Elderly' : 'Caregiver';
                   }
 
-                  // ← أضفت زر الإعدادات هنا بدون حذف أي شيء
+                  // ← زر الإعدادات
                   return Row(
                     children: [
                       const CircleAvatar(
@@ -130,7 +129,8 @@ class AppDrawer extends StatelessWidget {
                   const SizedBox(width: 6),
                   const Text(
                     'Linked Profiles',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                   ),
                   const Spacer(),
                   FilledButton.tonalIcon(
@@ -151,9 +151,11 @@ class AppDrawer extends StatelessWidget {
                       children: linkedProfiles.map((profile) {
                         return _profileTile(
                           context,
-                          profile.name,
+                          profile,
                           selected: selectedProfile?.uid == profile.uid,
                           onTap: () => onProfileSelected(profile),
+                          onDelete: () =>
+                              _confirmUnlinkProfile(context, profile),
                         );
                       }).toList(),
                     ),
@@ -183,7 +185,8 @@ class AppDrawer extends StatelessWidget {
                   }
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 255, 193, 190),
+                  backgroundColor:
+                      const Color.fromARGB(255, 255, 193, 190),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 14,
@@ -200,11 +203,13 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
+  // ===== كرت لكل Elderly مع زر حذف =====
   Widget _profileTile(
     BuildContext context,
-    String name, {
+    ElderlyProfile profile, {
     required bool selected,
     required VoidCallback onTap,
+    required VoidCallback onDelete,
   }) {
     final cs = Theme.of(context).colorScheme;
     return Card(
@@ -222,15 +227,26 @@ class AppDrawer extends StatelessWidget {
           child: Icon(Icons.elderly, color: cs.primary),
         ),
         title: Text(
-          name,
+          profile.name,
           style: TextStyle(
             fontWeight: FontWeight.w700,
             color: selected ? cs.primary : null,
           ),
         ),
-        trailing: Icon(
-          selected ? Icons.check_circle : Icons.chevron_right,
-          color: selected ? cs.primary : Colors.black54,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              selected ? Icons.check_circle : Icons.chevron_right,
+              color: selected ? cs.primary : Colors.black54,
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              tooltip: 'Unlink',
+              onPressed: onDelete,
+            ),
+          ],
         ),
         onTap: onTap,
       ),
@@ -282,9 +298,8 @@ class AppDrawer extends StatelessWidget {
                     : () async {
                         if (formKey.currentState!.validate()) {
                           setStateInDialog(() => isLoading = true);
-                          final enteredCode = controller.text
-                              .trim()
-                              .toUpperCase();
+                          final enteredCode =
+                              controller.text.trim().toUpperCase();
                           final caregiverUid =
                               FirebaseAuth.instance.currentUser?.uid;
 
@@ -349,29 +364,28 @@ class AppDrawer extends StatelessWidget {
                                       .collection('users')
                                       .doc(caregiverUid);
 
-                                  await firestore.runTransaction((
-                                    transaction,
-                                  ) async {
-                                    transaction.update(caregiverDocRef, {
-                                      'elderlyIds': FieldValue.arrayUnion([
-                                        elderlyUid,
-                                      ]),
-                                    });
-                                    transaction.update(elderlyDoc.reference, {
-                                      'caregiverIds': FieldValue.arrayUnion([
-                                        caregiverUid,
-                                      ]),
-                                      'pairingCode': null,
-                                      'pairingCodeCreatedAt': null,
-                                    });
-                                  });
+                                  await firestore.runTransaction(
+                                    (transaction) async {
+                                      transaction.update(caregiverDocRef, {
+                                        'elderlyIds': FieldValue.arrayUnion(
+                                          [elderlyUid],
+                                        ),
+                                      });
+                                      transaction.update(elderlyDoc.reference, {
+                                        'caregiverIds': FieldValue.arrayUnion(
+                                          [caregiverUid],
+                                        ),
+                                        'pairingCode': null,
+                                        'pairingCodeCreatedAt': null,
+                                      });
+                                    },
+                                  );
 
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text(
-                                        'Profile linked successfully!',
-                                      ),
+                                      content:
+                                          Text('Profile linked successfully!'),
                                     ),
                                   );
                                   onProfileLinked();
@@ -380,7 +394,9 @@ class AppDrawer extends StatelessWidget {
                             }
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('An error occurred: $e')),
+                              SnackBar(
+                                content: Text('An error occurred: $e'),
+                              ),
                             );
                           } finally {
                             if (context.mounted) {
@@ -427,16 +443,81 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
+  // ===== تأكيد وفك الربط مع Elderly =====
+  Future<void> _confirmUnlinkProfile(
+    BuildContext context,
+    ElderlyProfile profile,
+  ) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete profile'),
+        content: Text(
+          'Do you want to Delete ${profile.name} from your account?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (yes == true) {
+      await _unlinkProfile(context, profile);
+    }
+  }
+
+  Future<void> _unlinkProfile(
+    BuildContext context,
+    ElderlyProfile profile,
+  ) async {
+    final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
+    if (caregiverUid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: You are not logged in.')),
+      );
+      return;
+    }
+
+    final firestore = FirebaseFirestore.instance;
+    final caregiverDocRef = firestore.collection('users').doc(caregiverUid);
+    final elderlyDocRef = firestore.collection('users').doc(profile.uid);
+
+    try {
+      await firestore.runTransaction((tx) async {
+        tx.update(caregiverDocRef, {
+          'elderlyIds': FieldValue.arrayRemove([profile.uid]),
+        });
+        tx.update(elderlyDocRef, {
+          'caregiverIds': FieldValue.arrayRemove([caregiverUid]),
+        });
+      });
+
+      onProfileLinked(); // تحديث القائمة في الأب
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profile ${profile.name} unlinked')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error unlinking profile: $e')),
+      );
+    }
+  }
+
   // ===== نافذة تعديل المعلومات (اسم / جنس / جوال) مع التحقق =====
   Future<void> _openEditDialog(BuildContext context) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
     // جلب القيم الحالية لتهيئة الحقول
-    final snap = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
+    final snap =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final data = snap.data() ?? {};
     final first = (data['firstName'] ?? '').toString().trim();
     final last = (data['lastName'] ?? '').toString().trim();
@@ -472,14 +553,13 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Name',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 ),
                 style: const TextStyle(fontSize: 16),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Name is required'
+                    : null,
               ),
               const SizedBox(height: 12),
 
@@ -489,10 +569,8 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Gender',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'male', child: Text('Male')),
@@ -515,10 +593,8 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Mobile (05XXXXXXXX)',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 ),
                 style: const TextStyle(fontSize: 16),
                 validator: (v) {
@@ -543,17 +619,18 @@ class AppDrawer extends StatelessWidget {
               final name = nameCtrl.text.trim();
               final parts = name.split(RegExp(r'\s+'));
               final first = parts.isNotEmpty ? parts.first : '';
-              final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+              final last =
+                  parts.length > 1 ? parts.sublist(1).join(' ') : '';
 
               await FirebaseFirestore.instance
                   .collection('users')
                   .doc(uid)
                   .update({
-                    'firstName': first,
-                    'lastName': last,
-                    'gender': genderCtrl.text,
-                    'phone': phoneCtrl.text.trim(),
-                  });
+                'firstName': first,
+                'lastName': last,
+                'gender': genderCtrl.text,
+                'phone': phoneCtrl.text.trim(),
+              });
 
               if (!context.mounted) return;
               Navigator.pop(ctx);

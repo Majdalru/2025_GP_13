@@ -79,11 +79,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   bool loading = true;
 
   final VoiceAssistantService _voice = VoiceAssistantService();
-
+    StreamSubscription<DocumentSnapshot>? _userSub;  
+     int _prevCaregiverCount = 0;
+  bool _initialCaregiverLoaded = false;
   @override
   void initState() {
     super.initState();
-    fetchUserData();
+    //fetchUserData();
+    _listenToUserDoc(); 
     favoritesManager.init();
   }
 
@@ -127,7 +130,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     return out;
   }
 
-  Future<void> fetchUserData() async {
+  /*Future<void> fetchUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() => loading = false);
@@ -190,7 +193,103 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
       }
     }
+  }*/
+  void _listenToUserDoc() {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    setState(() => loading = false);
+    return;
   }
+
+  _userSub = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .snapshots()
+      .listen((doc) async {
+    if (!doc.exists) {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+      return;
+    }
+
+    final data = doc.data() as Map<String, dynamic>;
+
+    final first = (data['firstName'] ?? '').toString().trim();
+    final last = (data['lastName'] ?? '').toString().trim();
+    final newFullName = [first, last].where((s) => s.isNotEmpty).join(' ');
+    final newGender = (data['gender'] ?? '').toString();
+    final newPhone = (data['phone'] ?? '').toString();
+
+    // caregiverIds[]
+    final ids = (data['caregiverIds'] is List)
+        ? List<String>.from(data['caregiverIds'])
+        : <String>[];
+
+    final names = <String>[];
+
+    if (ids.isNotEmpty) {
+      for (final batch in _chunk(ids, 10)) {
+        final qs = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: batch)
+            .get();
+
+        for (final d in qs.docs) {
+          final x = d.data();
+          final f = (x['firstName'] ?? '').toString().trim();
+          final l = (x['lastName'] ?? '').toString().trim();
+          final email = (x['email'] ?? '').toString().trim();
+          final n = [f, l].where((s) => s.isNotEmpty).join(' ');
+          names.add(n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'));
+        }
+      }
+    }
+           final newCount = names.length;
+
+    if (!_initialCaregiverLoaded) {
+      // أول مرة نحمل البيانات: لا نعرض أي رسالة
+      _prevCaregiverCount = newCount;
+      _initialCaregiverLoaded = true;
+    } else {
+      if (newCount > _prevCaregiverCount) {
+        _showTopBanner(
+          'A new caregiver has been linked to your profile.',
+          color: Colors.green.shade700,
+        );
+      } else if (newCount < _prevCaregiverCount) {
+        _showTopBanner(
+          'A caregiver has been unlinked from your profile.',
+          color: kAccentRed,
+        );
+      }
+      _prevCaregiverCount = newCount;
+    }
+    if (!mounted) return;
+
+    setState(() {
+      fullName = newFullName;
+      gender = newGender;
+      phone = newPhone;
+      caregiverNames = names;  
+      loading = false;
+    });
+  }, onError: (e) {
+    if (mounted) {
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading profile: $e')),
+      );
+    }
+  });
+
+}
+@override
+  void dispose() {
+    _userSub?.cancel();       // 👈 هذا مكانها بالضبط
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {

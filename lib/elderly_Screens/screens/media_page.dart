@@ -135,7 +135,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 crossAxisCount: 2,
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 25,
-                childAspectRatio: 0.8,
+                 childAspectRatio: MediaQuery.of(context).size.width < 380 ? 0.68 : 0.8,
                 children: [
                   _buildMediaCard(context, Icons.library_music, "Story"),
                   _buildMediaCard(context, Icons.menu_book, "Quran"),
