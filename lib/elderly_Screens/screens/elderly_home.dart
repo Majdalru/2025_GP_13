@@ -79,14 +79,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   bool loading = true;
 
   final VoiceAssistantService _voice = VoiceAssistantService();
-    StreamSubscription<DocumentSnapshot>? _userSub;  
-     int _prevCaregiverCount = 0;
+  StreamSubscription<DocumentSnapshot>? _userSub;
+  int _prevCaregiverCount = 0;
   bool _initialCaregiverLoaded = false;
   @override
   void initState() {
     super.initState();
     //fetchUserData();
-    _listenToUserDoc(); 
+    _listenToUserDoc();
     favoritesManager.init();
   }
 
@@ -195,101 +195,108 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     }
   }*/
   void _listenToUserDoc() {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    setState(() => loading = false);
-    return;
-  }
-
-  _userSub = FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .snapshots()
-      .listen((doc) async {
-    if (!doc.exists) {
-      if (mounted) {
-        setState(() => loading = false);
-      }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => loading = false);
       return;
     }
 
-    final data = doc.data() as Map<String, dynamic>;
+    _userSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen(
+          (doc) async {
+            if (!doc.exists) {
+              if (mounted) {
+                setState(() => loading = false);
+              }
+              return;
+            }
 
-    final first = (data['firstName'] ?? '').toString().trim();
-    final last = (data['lastName'] ?? '').toString().trim();
-    final newFullName = [first, last].where((s) => s.isNotEmpty).join(' ');
-    final newGender = (data['gender'] ?? '').toString();
-    final newPhone = (data['phone'] ?? '').toString();
+            final data = doc.data() as Map<String, dynamic>;
 
-    // caregiverIds[]
-    final ids = (data['caregiverIds'] is List)
-        ? List<String>.from(data['caregiverIds'])
-        : <String>[];
+            final first = (data['firstName'] ?? '').toString().trim();
+            final last = (data['lastName'] ?? '').toString().trim();
+            final newFullName = [
+              first,
+              last,
+            ].where((s) => s.isNotEmpty).join(' ');
+            final newGender = (data['gender'] ?? '').toString();
+            final newPhone = (data['phone'] ?? '').toString();
 
-    final names = <String>[];
+            // caregiverIds[]
+            final ids = (data['caregiverIds'] is List)
+                ? List<String>.from(data['caregiverIds'])
+                : <String>[];
 
-    if (ids.isNotEmpty) {
-      for (final batch in _chunk(ids, 10)) {
-        final qs = await FirebaseFirestore.instance
-            .collection('users')
-            .where(FieldPath.documentId, whereIn: batch)
-            .get();
+            final names = <String>[];
 
-        for (final d in qs.docs) {
-          final x = d.data();
-          final f = (x['firstName'] ?? '').toString().trim();
-          final l = (x['lastName'] ?? '').toString().trim();
-          final email = (x['email'] ?? '').toString().trim();
-          final n = [f, l].where((s) => s.isNotEmpty).join(' ');
-          names.add(n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'));
-        }
-      }
-    }
-           final newCount = names.length;
+            if (ids.isNotEmpty) {
+              for (final batch in _chunk(ids, 10)) {
+                final qs = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where(FieldPath.documentId, whereIn: batch)
+                    .get();
 
-    if (!_initialCaregiverLoaded) {
-      // أول مرة نحمل البيانات: لا نعرض أي رسالة
-      _prevCaregiverCount = newCount;
-      _initialCaregiverLoaded = true;
-    } else {
-      if (newCount > _prevCaregiverCount) {
-        _showTopBanner(
-          'A new caregiver has been linked to your profile.',
-          color: Colors.green.shade700,
+                for (final d in qs.docs) {
+                  final x = d.data();
+                  final f = (x['firstName'] ?? '').toString().trim();
+                  final l = (x['lastName'] ?? '').toString().trim();
+                  final email = (x['email'] ?? '').toString().trim();
+                  final n = [f, l].where((s) => s.isNotEmpty).join(' ');
+                  names.add(
+                    n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'),
+                  );
+                }
+              }
+            }
+            final newCount = names.length;
+
+            if (!_initialCaregiverLoaded) {
+              // أول مرة نحمل البيانات: لا نعرض أي رسالة
+              _prevCaregiverCount = newCount;
+              _initialCaregiverLoaded = true;
+            } else {
+              if (newCount > _prevCaregiverCount) {
+                _showTopBanner(
+                  'A new caregiver has been linked to your profile.',
+                  color: Colors.green.shade700,
+                );
+              } else if (newCount < _prevCaregiverCount) {
+                _showTopBanner(
+                  'A caregiver has been unlinked from your profile.',
+                  color: kAccentRed,
+                );
+              }
+              _prevCaregiverCount = newCount;
+            }
+            if (!mounted) return;
+
+            setState(() {
+              fullName = newFullName;
+              gender = newGender;
+              phone = newPhone;
+              caregiverNames = names;
+              loading = false;
+            });
+          },
+          onError: (e) {
+            if (mounted) {
+              setState(() => loading = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error loading profile: $e')),
+              );
+            }
+          },
         );
-      } else if (newCount < _prevCaregiverCount) {
-        _showTopBanner(
-          'A caregiver has been unlinked from your profile.',
-          color: kAccentRed,
-        );
-      }
-      _prevCaregiverCount = newCount;
-    }
-    if (!mounted) return;
-
-    setState(() {
-      fullName = newFullName;
-      gender = newGender;
-      phone = newPhone;
-      caregiverNames = names;  
-      loading = false;
-    });
-  }, onError: (e) {
-    if (mounted) {
-      setState(() => loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading profile: $e')),
-      );
-    }
-  });
-
-}
-@override
-  void dispose() {
-    _userSub?.cancel();       // 👈 هذا مكانها بالضبط
-    super.dispose();
   }
 
+  @override
+  void dispose() {
+    _userSub?.cancel(); // 👈 هذا مكانها بالضبط
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -348,280 +355,48 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                             showDialog(
                               context: context,
                               barrierDismissible: false,
-                              builder: (context) {
-                                final _formKey = GlobalKey<FormState>();
-                                final nameController = TextEditingController(
-                                  text: fullName ?? '',
-                                );
-                                final genderController = TextEditingController(
-                                  text: gender ?? '',
-                                );
-                                final phoneController = TextEditingController(
-                                  text: phone ?? '',
-                                );
+                              builder: (context) => _EditInfoDialog(
+                                initialName: fullName ?? '',
+                                initialGender: gender ?? '',
+                                initialPhone: phone ?? '',
+                                onSave: (newName, newGender, newPhone) async {
+                                  final user =
+                                      FirebaseAuth.instance.currentUser;
+                                  if (user != null) {
+                                    final parts = newName.split(RegExp(r'\s+'));
+                                    final first = parts.isNotEmpty
+                                        ? parts.first
+                                        : '';
+                                    final last = parts.length > 1
+                                        ? parts.sublist(1).join(' ')
+                                        : '';
 
-                                return AlertDialog(
-                                  backgroundColor: const Color(0xFFF9FAFB),
-                                  insetPadding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 24,
-                                  ),
-                                  contentPadding: const EdgeInsets.fromLTRB(
-                                    24,
-                                    20,
-                                    24,
-                                    12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(22),
-                                    side: BorderSide(
-                                      color: kPrimary.withOpacity(0.3),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  title: const Text(
-                                    "Edit Information",
-                                    style: TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: kPrimary,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  content: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width *
-                                          0.95,
-                                      maxHeight:
-                                          MediaQuery.of(context).size.height *
-                                          0.80,
-                                    ),
-                                    child: SingleChildScrollView(
-                                      child: Form(
-                                        key: _formKey,
-                                        autovalidateMode:
-                                            AutovalidateMode.onUserInteraction,
-                                        child: Column(
-                                          children: [
-                                            TextFormField(
-                                              controller: nameController,
-                                              textCapitalization:
-                                                  TextCapitalization.words,
-                                              style: kBodyText,
-                                              decoration: kInput("Name"),
-                                              validator: (v) =>
-                                                  (v == null ||
-                                                      v.trim().isEmpty)
-                                                  ? "Name is required"
-                                                  : null,
-                                            ),
-                                            const SizedBox(height: 18),
-                                            DropdownButtonFormField<String>(
-                                              value:
-                                                  genderController
-                                                      .text
-                                                      .isNotEmpty
-                                                  ? genderController.text
-                                                  : null,
-                                              decoration: kInput("Gender")
-                                                  .copyWith(
-                                                    filled: true,
-                                                    fillColor: Colors.white,
-                                                  ),
-                                              dropdownColor: Colors.white,
-                                              style: kBodyText,
-                                              items: const [
-                                                DropdownMenuItem(
-                                                  value: "male",
-                                                  child: Text(
-                                                    "Male",
-                                                    style: kBodyText,
-                                                  ),
-                                                ),
-                                                DropdownMenuItem(
-                                                  value: "female",
-                                                  child: Text(
-                                                    "Female",
-                                                    style: kBodyText,
-                                                  ),
-                                                ),
-                                              ],
-                                              onChanged: (val) =>
-                                                  genderController.text =
-                                                      val ?? '',
-                                              validator: (v) =>
-                                                  v == null || v.isEmpty
-                                                  ? "Select gender"
-                                                  : null,
-                                            ),
-                                            const SizedBox(height: 18),
-                                            TextFormField(
-                                              controller: phoneController,
-                                              keyboardType: TextInputType.phone,
-                                              style: kBodyText,
-                                              inputFormatters: [
-                                                FilteringTextInputFormatter
-                                                    .digitsOnly,
-                                                LengthLimitingTextInputFormatter(
-                                                  10,
-                                                ),
-                                              ],
-                                              decoration: kInput(
-                                                "Mobile (05XXXXXXXX)",
-                                              ),
-                                              validator: (v) {
-                                                final txt = (v ?? "").trim();
-                                                final reg = RegExp(
-                                                  r'^05\d{8}$',
-                                                );
-                                                return !reg.hasMatch(txt)
-                                                    ? "Mobile must start with 05 and have 10 digits"
-                                                    : null;
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  actionsPadding: const EdgeInsets.fromLTRB(
-                                    20,
-                                    0,
-                                    20,
-                                    16,
-                                  ),
-                                  actionsAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  actions: [
-                                    Row(
-                                      children: [
-                                        // Cancel
-                                        Expanded(
-                                          child: SizedBox(
-                                            height: 56,
-                                            child: TextButton(
-                                              style: TextButton.styleFrom(
-                                                backgroundColor: Colors.white,
-                                                side: const BorderSide(
-                                                  color: kPrimary,
-                                                  width: 2,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
-                                                ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 0,
-                                                    ),
-                                              ),
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: const Text(
-                                                "Cancel",
-                                                style: TextStyle(
-                                                  fontSize: 22,
-                                                  color: kPrimary,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
+                                    await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(user.uid)
+                                        .update({
+                                          'firstName': first,
+                                          'lastName': last,
+                                          'gender': newGender,
+                                          'phone': newPhone,
+                                        });
 
-                                        // Save
-                                        Expanded(
-                                          child: SizedBox(
-                                            height: 56,
-                                            child: ElevatedButton(
-                                              style:
-                                                  kBigButton(
-                                                    kPrimary,
-                                                    pad:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 16,
-                                                          vertical: 0,
-                                                        ),
-                                                  ).copyWith(
-                                                    elevation:
-                                                        const WidgetStatePropertyAll(
-                                                          2,
-                                                        ),
-                                                  ),
-                                              onPressed: () async {
-                                                if (!_formKey.currentState!
-                                                    .validate())
-                                                  return;
+                                    setState(() {
+                                      fullName = newName;
+                                      gender = newGender;
+                                      phone = newPhone;
+                                    });
 
-                                                final user = FirebaseAuth
-                                                    .instance
-                                                    .currentUser;
-                                                if (user != null) {
-                                                  final name = nameController
-                                                      .text
-                                                      .trim();
-                                                  final parts = name.split(
-                                                    RegExp(r'\s+'),
-                                                  );
-                                                  final first = parts.isNotEmpty
-                                                      ? parts.first
-                                                      : '';
-                                                  final last = parts.length > 1
-                                                      ? parts
-                                                            .sublist(1)
-                                                            .join(' ')
-                                                      : '';
-
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection('users')
-                                                      .doc(user.uid)
-                                                      .update({
-                                                        'firstName': first,
-                                                        'lastName': last,
-                                                        'gender':
-                                                            genderController
-                                                                .text,
-                                                        'phone': phoneController
-                                                            .text
-                                                            .trim(),
-                                                      });
-
-                                                  setState(() {
-                                                    fullName = nameController
-                                                        .text
-                                                        .trim();
-                                                    gender =
-                                                        genderController.text;
-                                                    phone = phoneController.text
-                                                        .trim();
-                                                  });
-
-                                                  if (context.mounted) {
-                                                    Navigator.pop(context);
-                                                    _showTopBanner(
-                                                      'Information updated successfully',
-                                                      color:
-                                                          Colors.green.shade700,
-                                                    );
-                                                  }
-                                                }
-                                              },
-                                              child: const Text(
-                                                "Save",
-                                                style: kButtonText,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                );
-                              },
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      _showTopBanner(
+                                        'Information updated successfully',
+                                        color: Colors.green.shade700,
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
                             );
                           },
                         ),
@@ -1297,6 +1072,206 @@ class _HomeCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _EditInfoDialog extends StatefulWidget {
+  final String initialName;
+  final String initialGender;
+  final String initialPhone;
+  final Function(String name, String gender, String phone) onSave;
+
+  const _EditInfoDialog({
+    required this.initialName,
+    required this.initialGender,
+    required this.initialPhone,
+    required this.onSave,
+  });
+
+  @override
+  State<_EditInfoDialog> createState() => _EditInfoDialogState();
+}
+
+class _EditInfoDialogState extends State<_EditInfoDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+  late String _selectedGender;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _phoneController = TextEditingController(text: widget.initialPhone);
+    _selectedGender = widget.initialGender.isNotEmpty
+        ? widget.initialGender
+        : 'male';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFFF9FAFB),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: kPrimary.withOpacity(0.3), width: 2),
+      ),
+      title: const Text(
+        "Edit Information",
+        style: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: kPrimary,
+        ),
+        textAlign: TextAlign.center,
+      ),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.95,
+          maxHeight: MediaQuery.of(context).size.height * 0.80,
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              children: [
+                // Name Field
+                TextFormField(
+                  controller: _nameController,
+                  textCapitalization: TextCapitalization.words,
+                  style: kBodyText,
+                  decoration: kInput("Name"),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? "Name is required"
+                      : null,
+                ),
+                const SizedBox(height: 18),
+
+                // Gender Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedGender,
+                  decoration: kInput(
+                    "Gender",
+                  ).copyWith(filled: true, fillColor: Colors.white),
+                  dropdownColor: Colors.white,
+                  style: kBodyText,
+                  items: const [
+                    DropdownMenuItem(
+                      value: "male",
+                      child: Text("Male", style: kBodyText),
+                    ),
+                    DropdownMenuItem(
+                      value: "female",
+                      child: Text("Female", style: kBodyText),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedGender = val ?? 'male';
+                    });
+                  },
+                  validator: (v) =>
+                      v == null || v.isEmpty ? "Select gender" : null,
+                ),
+                const SizedBox(height: 18),
+
+                // Phone Field
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  style: kBodyText,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  decoration: kInput("Mobile (05XXXXXXXX)"),
+                  validator: (v) {
+                    final txt = (v ?? "").trim();
+                    final reg = RegExp(r'^05\d{8}$');
+                    return !reg.hasMatch(txt)
+                        ? "Mobile must start with 05 and have 10 digits"
+                        : null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      actionsAlignment: MainAxisAlignment.spaceEvenly,
+      actions: [
+        Row(
+          children: [
+            // Cancel Button
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: kPrimary, width: 2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 0,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: kPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Save Button
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: ElevatedButton(
+                  style: kBigButton(
+                    kPrimary,
+                    pad: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 0,
+                    ),
+                  ).copyWith(elevation: const WidgetStatePropertyAll(2)),
+                  onPressed: () {
+                    if (!_formKey.currentState!.validate()) return;
+
+                    widget.onSave(
+                      _nameController.text.trim(),
+                      _selectedGender,
+                      _phoneController.text.trim(),
+                    );
+                  },
+                  child: const Text("Save", style: kButtonText),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

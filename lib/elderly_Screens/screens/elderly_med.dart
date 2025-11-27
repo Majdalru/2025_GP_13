@@ -86,9 +86,9 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
     );
 
     // ✅ Show success message when returning from add
-    if (result == true && mounted) {
-      _showSuccessMessage('Medication Added Successfully');
-    }
+    // if (result == true && mounted) {
+    //   _showSuccessMessage('Medication Added Successfully');
+    // }
   }
 
   void _navigateAndEditMedication(Medication medication) async {
@@ -102,10 +102,10 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       ),
     );
 
-    // ✅ Show success message when returning from edit
-    if (result == true && mounted) {
-      _showSuccessMessage('Medication Updated Successfully');
-    }
+    // // ✅ Show success message when returning from edit
+    // if (result == true && mounted) {
+    //   _showSuccessMessage('Medication Updated Successfully');
+    // }
   }
 
   // ============================

@@ -63,10 +63,6 @@ class _AddMedScreenState extends State<AddMedScreen> {
       return;
     }
 
-    // ✅ Close the page IMMEDIATELY (optimistic UI)
-    if (mounted) Navigator.of(context).pop();
-
-    // ✅ Now do the database work in background
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyId);
@@ -101,9 +97,39 @@ class _AddMedScreenState extends State<AddMedScreen> {
         await docRef.update({'medsList': updatedMedsList});
         MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        debugPrint('✅ Medication updated successfully');
+        // ✅ Show success dialog AFTER database operation completes
+        if (mounted) {
+          Navigator.of(context).pop(true); // Close add/edit screen with result
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Medication updated successfully',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade700,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              duration: const Duration(seconds: 2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+        }
       } catch (e) {
         debugPrint('❌ Error updating medication: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error updating medication: $e')),
+          );
+        }
       }
     } else {
       // --- ADD NEW LOGIC ---
@@ -125,9 +151,39 @@ class _AddMedScreenState extends State<AddMedScreen> {
         }, SetOptions(merge: true));
         MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        debugPrint('✅ Medication added successfully');
+        // ✅ Show success dialog AFTER database operation completes
+        if (mounted) {
+          Navigator.of(context).pop(true); // Close add screen with result
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Medication added successfully',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade700,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              duration: const Duration(seconds: 2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+        }
       } catch (e) {
         debugPrint('❌ Error saving medication: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error saving medication: $e')),
+          );
+        }
       }
     }
   }
@@ -156,13 +212,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
   void _initializeTimesForFrequency(String selectedFrequency) {
     setState(() {
       _frequency = selectedFrequency;
-      if (selectedFrequency == 'Once daily') {
+      if (selectedFrequency == 'Once a day') {
         _selectedTimes = [null];
-      } else if (selectedFrequency == 'Twice daily') {
+      } else if (selectedFrequency == 'Twice a day') {
         _selectedTimes = [null, null];
-      } else if (selectedFrequency == 'Three times daily') {
+      } else if (selectedFrequency == 'Three times a day') {
         _selectedTimes = [null, null, null];
-      } else if (selectedFrequency == 'Four times daily') {
+      } else if (selectedFrequency == 'Four times a day') {
         _selectedTimes = [null, null, null, null];
       } else {
         _selectedTimes = [null];
@@ -174,12 +230,12 @@ class _AddMedScreenState extends State<AddMedScreen> {
     setState(() {
       _selectedTimes[index] = newTime;
       if (index == 0) {
-        if (_frequency == 'Twice daily' && _selectedTimes.length == 2) {
+        if (_frequency == 'Twice a day' && _selectedTimes.length == 2) {
           _selectedTimes[1] = TimeOfDay(
             hour: (newTime.hour + 12) % 24,
             minute: newTime.minute,
           );
-        } else if (_frequency == 'Three times daily' &&
+        } else if (_frequency == 'Three times a day' &&
             _selectedTimes.length == 3) {
           _selectedTimes[1] = TimeOfDay(
             hour: (newTime.hour + 8) % 24,
@@ -189,7 +245,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
             hour: (newTime.hour + 16) % 24,
             minute: newTime.minute,
           );
-        } else if (_frequency == 'Four times daily' &&
+        } else if (_frequency == 'Four times a day' &&
             _selectedTimes.length == 4) {
           _selectedTimes[1] = TimeOfDay(
             hour: (newTime.hour + 6) % 24,

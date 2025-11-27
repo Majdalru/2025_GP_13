@@ -42,9 +42,9 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
     );
 
     // ✅ Show success message when returning from add
-    if (result == true && mounted) {
-      _showSuccessMessage('Medication Added Successfully');
-    }
+    // if (result == true && mounted) {
+    //   _showSuccessMessage('Medication Added Successfully');
+    // }
   }
 
   void _navigateAndEditMedication(Medication medication) async {
@@ -58,59 +58,57 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
       ),
     );
 
-    // ✅ Show success message when returning from edit
-    if (result == true && mounted) {
-      _showSuccessMessage('Medication Updated Successfully');
-    }
+    // // ✅ Show success message when returning from edit
+    // if (result == true && mounted) {
+    //   _showSuccessMessage('Medication Updated Successfully');
+    // }
   }
 
   // Firestore deletion logic
-  void _deleteMedication(Medication medicationToDelete) async {
+  // ✅ OPTIMIZED DELETE - Replace _deleteMedication in lib/medmain.dart with this:
+
+  Future<void> _deleteMedication(Medication medicationToDelete) async {
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyProfile.uid);
 
     try {
+      // ✅ Do the database delete
       await docRef.update({
         'medsList': FieldValue.arrayRemove([medicationToDelete.toMap()]),
       });
 
-      // ✅ حدث جدولة التنبيهات بعد الحذف
-      await MedicationScheduler().scheduleAllMedications(
-        widget.elderlyProfile.uid, // أو widget.elderlyProfile.uid
-      );
-
+      // ✅ Show success message IMMEDIATELY after delete (don't wait for scheduler)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Column(
-              mainAxisSize: MainAxisSize.min,
+            content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 40),
-                SizedBox(height: 12),
-                Text(
-                  'Medication Deleted Successfully',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                const Text(
+                  'Medication deleted successfully',
+                  style: TextStyle(fontSize: 14),
                 ),
               ],
             ),
-            backgroundColor: Colors.red.shade600,
+            backgroundColor: Colors.red.shade700,
             behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.55,
-              left: 20,
-              right: 20,
-            ),
-            duration: const Duration(seconds: 3),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            duration: const Duration(seconds: 2),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(8),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
           ),
         );
       }
+
+      // ✅ Update scheduler in background (don't wait for it)
+      MedicationScheduler().scheduleAllMedications(widget.elderlyProfile.uid);
+
+      debugPrint('✅ Medication deleted successfully');
     } catch (e) {
+      debugPrint('❌ Error deleting medication: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error deleting medication: $e')),

@@ -14,8 +14,7 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// حطي الـ API KEY حقك هنا
-const String _openAIApiKey =
-    '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';
+const String _openAIApiKey = '';
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -546,8 +545,8 @@ class VoiceAssistantService {
     }
     final notes =
         (notesAnswer != null && notesAnswer.toLowerCase().trim() != 'no')
-            ? notesAnswer
-            : null;
+        ? notesAnswer
+        : null;
 
     final newMed = Medication(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -1331,8 +1330,9 @@ class VoiceAssistantService {
 
   String _normalizeArabicForCancel(String input) {
     // إزالة التشكيل
-    final diacritics =
-        RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]');
+    final diacritics = RegExp(
+      r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]',
+    );
     var out = input.replaceAll(diacritics, '');
     out = out
         .replaceAll('أ', 'ا')
@@ -1391,8 +1391,8 @@ class VoiceAssistantService {
         lower.contains('pm') || lower.contains('مساء') || lower.contains('ليل');
     final isAm =
         lower.contains('am') ||
-            lower.contains('صباح') ||
-            lower.contains('صباحا');
+        lower.contains('صباح') ||
+        lower.contains('صباحا');
 
     if (isPm && hour < 12) hour += 12;
     if (isAm && hour == 12) hour = 0;
