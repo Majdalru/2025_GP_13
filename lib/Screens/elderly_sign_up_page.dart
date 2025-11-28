@@ -16,26 +16,33 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
   int _step = 0;
   bool _loading = false;
   bool _ob = true;
+  bool _obConfirm = true;
 
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
 
   final _email = TextEditingController();
   final _pass = TextEditingController();
+  final _passConfirm = TextEditingController();
   final _first = TextEditingController();
   final _last = TextEditingController();
   final _phone = TextEditingController();
 
   String _gender = 'Male';
 
-  final _form0 = GlobalKey<FormState>(); // Email/Password
+  final _form0 = GlobalKey<FormState>(); // Email
   final _form1 = GlobalKey<FormState>(); // Name/Gender
   final _form2 = GlobalKey<FormState>(); // Phone
+  final _form3 = GlobalKey<FormState>(); // Password
+
+  String? _emailError;
+  String? _phoneError;
 
   @override
   void dispose() {
     _email.dispose();
     _pass.dispose();
+    _passConfirm.dispose();
     _first.dispose();
     _last.dispose();
     _phone.dispose();
@@ -44,8 +51,6 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
 
   String _prettyAuthError(FirebaseAuthException e) {
     switch (e.code) {
-      case 'email-already-in-use':
-        return 'Email already in use.';
       case 'invalid-email':
         return 'Invalid email.';
       case 'weak-password':
@@ -62,49 +67,150 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     m.clearSnackBars();
     m.showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(
+          msg,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(12),
       ),
     );
   }
 
+  // ================= async checks =================
+
+  Future<bool> _emailIsUsed(String email) async {
+    try {
+      final methods = await _auth.fetchSignInMethodsForEmail(email);
+      final snap = await _db
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      return methods.isNotEmpty || snap.docs.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _phoneIsUsed(String phone) async {
+    try {
+      final snap = await _db
+          .collection('users')
+          .where('phone', isEqualTo: phone)
+          .limit(1)
+          .get();
+      return snap.docs.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   bool _validateAllAndJumpToError() {
     final mail = _email.text.trim();
+    final fname = _first.text.trim();
+    final lname = _last.text.trim();
+    final phone = _phone.text.trim();
     final pass = _pass.text;
-    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(mail) || pass.length < 6) {
+    final pass2 = _passConfirm.text;
+
+    final emailValid = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(mail);
+    if (!emailValid || _emailError != null) {
       setState(() => _step = 0);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _form0.currentState?.validate();
       });
       return false;
     }
-    if (_first.text.trim().isEmpty || _last.text.trim().isEmpty) {
+
+    if (fname.isEmpty || lname.isEmpty) {
       setState(() => _step = 1);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _form1.currentState?.validate();
       });
       return false;
     }
-    if (!RegExp(r'^05\d{8}$').hasMatch(_phone.text.trim())) {
+
+    final phoneValid = RegExp(r'^05\d{8}$').hasMatch(phone);
+    if (!phoneValid || _phoneError != null) {
       setState(() => _step = 2);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _form2.currentState?.validate();
       });
       return false;
     }
+
+    if (pass.length < 6 || pass2 != pass) {
+      setState(() => _step = 3);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _form3.currentState?.validate();
+      });
+      return false;
+    }
+
     return true;
   }
 
-  void _nextStep() {
+  // =============== steps navigation (مع انتظار الفحص) ===============
+
+  Future<void> _nextStep() async {
     FocusScope.of(context).unfocus();
-    final ok = switch (_step) {
-      0 => _form0.currentState?.validate() ?? false,
-      1 => _form1.currentState?.validate() ?? false,
-      2 => _form2.currentState?.validate() ?? false,
-      _ => true,
-    };
-    if (ok) setState(() => _step++);
+    bool ok = false;
+
+    switch (_step) {
+      case 0:
+        ok = _form0.currentState?.validate() ?? false;
+        if (!ok) break;
+
+        setState(() => _emailError = null);
+
+        final email = _email.text.trim();
+        if (email.isNotEmpty) {
+          final used = await _emailIsUsed(email);
+          if (used) {
+            setState(() {
+              _emailError = 'Email already in use';
+            });
+            _form0.currentState?.validate();
+            ok = false;
+          }
+        }
+        break;
+
+      case 1:
+        ok = _form1.currentState?.validate() ?? false;
+        break;
+
+      case 2:
+        ok = _form2.currentState?.validate() ?? false;
+        if (!ok) break;
+
+        setState(() => _phoneError = null);
+
+        final phone = _phone.text.trim();
+        if (phone.isNotEmpty) {
+          final used = await _phoneIsUsed(phone);
+          if (used) {
+            setState(() {
+              _phoneError = 'Phone number already used';
+            });
+            _form2.currentState?.validate();
+            ok = false;
+          }
+        }
+        break;
+
+      case 3:
+        ok = _form3.currentState?.validate() ?? false;
+        break;
+
+      default:
+        ok = true;
+    }
+
+    if (ok) {
+      setState(() => _step++);
+    }
   }
 
   void _prevStep() {
@@ -113,12 +219,40 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
   }
 
   Future<void> _createAccount() async {
+    final email = _email.text.trim();
+    final phone = _phone.text.trim();
+
+    _emailError = null;
+    _phoneError = null;
+
+    if (email.isNotEmpty && await _emailIsUsed(email)) {
+      setState(() {
+        _emailError = 'Email already in use';
+        _step = 0;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _form0.currentState?.validate();
+      });
+      return;
+    }
+
+    if (phone.isNotEmpty && await _phoneIsUsed(phone)) {
+      setState(() {
+        _phoneError = 'Phone number already used';
+        _step = 2;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _form2.currentState?.validate();
+      });
+      return;
+    }
+
     if (!_validateAllAndJumpToError()) return;
 
     setState(() => _loading = true);
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
-        email: _email.text.trim(),
+        email: email,
         password: _pass.text.trim(),
       );
 
@@ -127,14 +261,10 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
         'firstName': _first.text.trim(),
         'lastName': _last.text.trim(),
         'gender': _gender.toLowerCase(),
-        'phone': _phone.text.trim(),
-        'email': _email.text.trim(),
+        'phone': phone,
+        'email': email,
         'createdAt': FieldValue.serverTimestamp(),
-
-        // ✅ مهم ليتوافق مع الـrules عندك (قائمة وليس caregiverId)
         'caregiverIds': <String>[],
-
-        // ممكن تخلينهم null أو ما تحفظينهم الآن — براحتك
         'pairingCode': null,
         'pairingCodeCreatedAt': null,
       });
@@ -146,6 +276,16 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
         (_) => false,
       );
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use' && mounted) {
+        setState(() {
+          _emailError = 'Email already in use';
+          _step = 0;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _form0.currentState?.validate();
+        });
+        return;
+      }
       _showInlineTopError(context, _prettyAuthError(e));
     } catch (e) {
       _showInlineTopError(context, 'Error: $e');
@@ -164,6 +304,18 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
       textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
     );
 
+    final baseTheme = Theme.of(context);
+    final bigErrorTheme = baseTheme.copyWith(
+      inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
+        errorStyle: const TextStyle(
+          fontSize: 18,
+          color: Colors.red,
+          fontWeight: FontWeight.w700,
+          height: 1.2,
+        ),
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(title: const Text('Elderly Sign Up')),
       body: Center(
@@ -171,34 +323,38 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
           constraints: const BoxConstraints(maxWidth: 520),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Card(
-              elevation: 6,
-              surfaceTintColor: cs.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(22),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: Column(
-                    key: ValueKey(_step),
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _header(),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: switch (_step) {
-                          0 => _stepEmail(cs),
-                          1 => _stepNameGender(cs),
-                          2 => _stepPhone(cs),
-                          3 => _stepConfirm(cs),
-                          _ => const SizedBox(),
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _footerButtons(buttonStyle),
-                    ],
+            child: Theme(
+              data: bigErrorTheme,
+              child: Card(
+                elevation: 6,
+                surfaceTintColor: cs.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Column(
+                      key: ValueKey(_step),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _header(),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: switch (_step) {
+                            0 => _stepEmail(cs),
+                            1 => _stepNameGender(cs),
+                            2 => _stepPhone(cs),
+                            3 => _stepPassword(cs),
+                            4 => _stepConfirm(cs),
+                            _ => const SizedBox(),
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _footerButtons(buttonStyle),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -210,7 +366,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
   }
 
   Widget _header() {
-    final stepsText = 'Step ${_step + 1} of 4';
+    final stepsText = 'Step ${_step + 1} of 5';
     return Row(
       children: [
         const Icon(Icons.assignment_turned_in_outlined),
@@ -221,7 +377,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
         ),
         const Spacer(),
         Row(
-          children: List.generate(4, (i) {
+          children: List.generate(5, (i) {
             final active = i <= _step;
             return Container(
               width: 10,
@@ -239,18 +395,20 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
   }
 
   Widget _footerButtons(ButtonStyle buttonStyle) {
-    if (_step < 3) {
+    if (_step < 4) {
       return Row(
         children: [
           if (_step > 0)
             Expanded(
-              child: OutlinedButton(
+              child: FilledButton(
                 onPressed: _prevStep,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(56),
-                  textStyle: const TextStyle(fontSize: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                style: buttonStyle.copyWith(
+                  backgroundColor:
+                      WidgetStateProperty.all<Color>(Colors.white),
+                  foregroundColor:
+                      WidgetStateProperty.all<Color>(Colors.black87),
+                  side: WidgetStateProperty.all<BorderSide>(
+                    const BorderSide(color: Colors.black54),
                   ),
                 ),
                 child: const Text('Back'),
@@ -270,13 +428,15 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
       return Row(
         children: [
           Expanded(
-            child: OutlinedButton(
+            child: FilledButton(
               onPressed: _prevStep,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(56),
-                textStyle: const TextStyle(fontSize: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+              style: buttonStyle.copyWith(
+                backgroundColor:
+                    WidgetStateProperty.all<Color>(Colors.white),
+                foregroundColor:
+                    WidgetStateProperty.all<Color>(Colors.black87),
+                side: WidgetStateProperty.all<BorderSide>(
+                  const BorderSide(color: Colors.black54),
                 ),
               ),
               child: const Text('Back'),
@@ -293,7 +453,11 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
                       height: 22,
                       child: CircularProgressIndicator(),
                     )
-                  : const Text('Create account'),
+                  : const Text(
+                      'Sign up',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
             ),
           ),
         ],
@@ -301,176 +465,232 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     }
   }
 
+  // ====== step 0: Email ======
   Widget _stepEmail(ColorScheme cs) => Form(
-    key: _form0,
-    autovalidateMode: AutovalidateMode.onUserInteraction,
-    child: ListView(
-      children: [
-        const Text(
-          'Account Info',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        key: _form0,
+        child: ListView(
+          children: [
+            const Text(
+              'Account Email',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Email',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(fontSize: 20),
+              onChanged: (_) {
+                if (_emailError != null) {
+                  setState(() => _emailError = null);
+                }
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.email_outlined),
+                errorText: _emailError,
+              ),
+              validator: (v) {
+                final s = (v ?? '').trim();
+                if (s.isEmpty) return 'Required';
+                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
+                  return 'Enter a valid email';
+                }
+                return _emailError;
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        const Text(
-          'Email',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+      );
+
+  // ====== step 1: Name & Gender ======
+  Widget _stepNameGender(ColorScheme cs) => Form(
+        key: _form1,
+        child: ListView(
+          children: [
+            const Text(
+              'Personal Info',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'First name',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _first,
+              style: const TextStyle(fontSize: 20),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Last name',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _last,
+              style: const TextStyle(fontSize: 20),
+              decoration:
+                  const InputDecoration(prefixIcon: Icon(Icons.person)),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Gender',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              value: _gender,
+              items: const [
+                DropdownMenuItem(value: 'Male', child: Text('Male')),
+                DropdownMenuItem(value: 'Female', child: Text('Female')),
+              ],
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.wc_outlined),
+              ),
+              onChanged: (v) => setState(() => _gender = v ?? 'Male'),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(fontSize: 20),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.email_outlined),
+      );
+
+  // ====== step 2: Phone ======
+  Widget _stepPhone(ColorScheme cs) => Form(
+        key: _form2,
+        child: ListView(
+          children: [
+            const Text(
+              'Contact Info',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Phone number',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _phone,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(fontSize: 20),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              onChanged: (_) {
+                if (_phoneError != null) {
+                  setState(() => _phoneError = null);
+                }
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.phone_outlined),
+                errorMaxLines: 2,
+                errorText: _phoneError,
+              ),
+              validator: (v) {
+                final s = (v ?? '').trim();
+                if (s.isEmpty) return 'Required';
+                if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
+                  return 'Phone number must start with 05';
+                }
+                return _phoneError;
+              },
+            ),
+          ],
+        ),
+      );
+
+  // ====== step 3: Password ======
+  Widget _stepPassword(ColorScheme cs) => Form(
+        key: _form3,
+        child: ListView(
+          children: [
+            const Text(
+              'Account Security',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Password',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _pass,
+              obscureText: _ob,
+              style: const TextStyle(fontSize: 20),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _ob = !_ob),
+                  icon:
+                      Icon(_ob ? Icons.visibility_off : Icons.visibility),
+                ),
+              ),
+              validator: (v) =>
+                  (v == null || v.length < 6) ? 'Min 6 characters' : null,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Confirm password',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _passConfirm,
+              obscureText: _obConfirm,
+              style: const TextStyle(fontSize: 20),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  onPressed: () =>
+                      setState(() => _obConfirm = !_obConfirm),
+                  icon: Icon(
+                      _obConfirm ? Icons.visibility_off : Icons.visibility),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Required';
+                if (v != _pass.text) return 'Passwords do not match';
+                return null;
+              },
+            ),
+          ],
+        ),
+      );
+
+  // ====== step 4: Confirm ======
+  Widget _stepConfirm(ColorScheme cs) => ListView(
+        children: [
+          const Text(
+            'Confirm',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          validator: (v) {
-            final s = (v ?? '').trim();
-            if (s.isEmpty) return 'Required';
-            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
-              return 'Enter a valid email';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Password',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _pass,
-          obscureText: _ob,
-          style: const TextStyle(fontSize: 20),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock_outline),
-            suffixIcon: IconButton(
-              onPressed: () => setState(() => _ob = !_ob),
-              icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
+          const SizedBox(height: 12),
+          Card(
+            color: cs.surfaceVariant,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '📧 Email: ${_email.text}\n'
+                '👤 Name: ${_first.text} ${_last.text}\n'
+                '🚻 Gender: $_gender\n'
+                '📞 Phone: ${_phone.text}',
+                style: const TextStyle(fontSize: 18, height: 1.6),
+              ),
             ),
           ),
-          validator: (v) =>
-              (v == null || v.length < 6) ? 'Min 6 characters' : null,
-        ),
-      ],
-    ),
-  );
-
-  Widget _stepNameGender(ColorScheme cs) => Form(
-    key: _form1,
-    autovalidateMode: AutovalidateMode.onUserInteraction,
-    child: ListView(
-      children: [
-        const Text(
-          'Personal Info',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'First name',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _first,
-          style: const TextStyle(fontSize: 20),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.person_outline),
-          ),
-          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Last name',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _last,
-          style: const TextStyle(fontSize: 20),
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.person)),
-          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Gender',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: _gender,
-          items: const [
-            DropdownMenuItem(value: 'Male', child: Text('Male')),
-            DropdownMenuItem(value: 'Female', child: Text('Female')),
-          ],
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.wc_outlined),
-          ),
-          onChanged: (v) => setState(() => _gender = v ?? 'Male'),
-        ),
-      ],
-    ),
-  );
-
-  Widget _stepPhone(ColorScheme cs) => Form(
-    key: _form2,
-    autovalidateMode: AutovalidateMode.onUserInteraction,
-    child: ListView(
-      children: [
-        const Text(
-          'Contact Info',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Phone number',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _phone,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 20),
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-          ],
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.phone_outlined),
-          ),
-          validator: (v) {
-            final s = (v ?? '').trim();
-            if (s.isEmpty) return 'Required';
-            if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
-              return 'Enter a valid Saudi number (05XXXXXXXX)';
-            }
-            return null;
-          },
-        ),
-      ],
-    ),
-  );
-
-  Widget _stepConfirm(ColorScheme cs) => ListView(
-    children: [
-      const Text(
-        'Confirm',
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 12),
-      Card(
-        color: cs.surfaceVariant,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            '📧 Email: ${_email.text}\n'
-            '👤 Name: ${_first.text} ${_last.text}\n'
-            '🚻 Gender: $_gender\n'
-            '📞 Phone: ${_phone.text}',
-            style: const TextStyle(fontSize: 18, height: 1.6),
-          ),
-        ),
-      ),
-    ],
-  );
+        ],
+      );
 }

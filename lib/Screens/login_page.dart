@@ -152,13 +152,12 @@ class _LoginPageState extends State<LoginPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
 
-    // نحقن errorStyle في الـ decoration مباشرة
     InputDecoration _dec({required IconData icon}) => InputDecoration(
       prefixIcon: Icon(icon),
       contentPadding: fieldPadding,
       labelText: null,
       hintText: null,
-      errorStyle: helperErrStyle, // 👈 يكبّر نص الخطأ عند Elderly
+      errorStyle: helperErrStyle,
       errorMaxLines: 2,
     );
 
@@ -210,7 +209,7 @@ class _LoginPageState extends State<LoginPage> {
                 // ===== Form =====
                 Form(
                   key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  // 👈 شلنا autovalidateMode عشان ما يحمر كل شيء من أول لمسة
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -252,7 +251,7 @@ class _LoginPageState extends State<LoginPage> {
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => ForgotPasswordPage(
-                                isElderly: _role == UserRole.elderly, // 👈 يورّث وضع Elderly
+                                isElderly: _role == UserRole.elderly,
                               ),
                             ),
                           ),
@@ -267,7 +266,11 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: _loading ? null : _login,
                   style: buttonStyle,
                   child: _loading
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
                       : const Text('Next'),
                 ),
 

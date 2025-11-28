@@ -382,12 +382,8 @@ class AppDrawer extends StatelessWidget {
                                   );
 
                                   Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content:
-                                          Text('Profile linked successfully!'),
-                                    ),
-                                  );
+                                  // ✅ هنا استبدلنا SnackBar بـ Dialog أنيق
+                                  await _showProfileLinkedDialog(context);
                                   onProfileLinked();
                                 }
                               }
@@ -642,6 +638,73 @@ class AppDrawer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // ✅ Dialog مخصص ومضبوط على ستايل التطبيق لنجاح ربط البروفايل
+  Future<void> _showProfileLinkedDialog(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // دائرة ملونة
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.primary.withOpacity(0.12),
+                  ),
+                  child: Icon(
+                    Icons.check_circle,
+                    color: cs.primary,
+                    size: 60,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Profile linked!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Profile linked successfully. You can now manage this elderly user from your dashboard.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

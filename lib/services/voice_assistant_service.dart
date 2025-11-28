@@ -14,7 +14,8 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// حطي الـ API KEY حقك هنا
-const String _openAIApiKey = '';
+const String _openAIApiKey =
+    '';
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -117,15 +118,15 @@ class VoiceAssistantService {
   //  LISTEN (Whisper)
   // =========================
 
-  /// يسجل صوت ويرسله لـ Whisper ويرجع النص
-  Future<String?> listenWhisper({int seconds = 4}) async {
+  Future<String?> listenWhisper({
+    int seconds = 4,
+    bool englishOnly = false,
+  }) async {
     final ok = await initialize();
     if (!ok) return null;
 
-    // ✅ نعلم الفلوتينق إن الدور للـ elderly (لستنينق = أخضر)
     _notifyState(listening: true, speaking: false);
 
-    // 🔔 بيب
     await _playBeep();
 
     final whisper = WhisperService();
@@ -137,7 +138,11 @@ class VoiceAssistantService {
       return null;
     }
 
-    final text = await whisper.transcribeAudio(file, _openAIApiKey);
+    final text = await whisper.transcribeAudio(
+      file,
+      _openAIApiKey,
+      englishOnly: englishOnly,
+    );
 
     if (text == null || text.trim().isEmpty) {
       debugPrint('❌ Whisper returned empty text');
@@ -454,7 +459,7 @@ class VoiceAssistantService {
   // =========================
   //  MEDICATION FLOWS
   // =========================
-  // (كل فلوات الأدوية نفسها بالضبط من كودك، مع إضافة دعم الإلغاء بالصوت)
+  // (كل فلوات الأدوية نفسها بالضبط من كودك، مع إضافة englishOnly في اسم الدواء)
 
   Future<void> runAddMedicationFlow(String elderlyId) async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -470,10 +475,11 @@ class VoiceAssistantService {
       'Okay, let\'s add a new medication. I will ask you a few questions.',
     );
 
-    // 1) Name
+    // 1) Name  ✅ ENGLISH ONLY
     final name = await _askQuestion(
       'First, what is the medication name? Please say it in English.',
       listenSeconds: 5,
+      englishOnly: true,
     );
     if (_isCancelUtterance(name)) {
       await speak('Okay, we will stop adding the medication.');
@@ -545,8 +551,8 @@ class VoiceAssistantService {
     }
     final notes =
         (notesAnswer != null && notesAnswer.toLowerCase().trim() != 'no')
-        ? notesAnswer
-        : null;
+            ? notesAnswer
+            : null;
 
     final newMed = Medication(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -560,9 +566,8 @@ class VoiceAssistantService {
       updatedAt: Timestamp.now(),
     );
 
-    final docRef = FirebaseFirestore.instance
-        .collection('medications')
-        .doc(elderlyId);
+    final docRef =
+        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
 
     try {
       await docRef.set({
@@ -598,7 +603,8 @@ class VoiceAssistantService {
     const maxTries = 3;
 
     for (int attempt = 1; attempt <= maxTries; attempt++) {
-      final answer = await listenWhisper(seconds: 4);
+      // ✅ ENGLISH ONLY هنا
+      final answer = await listenWhisper(seconds: 4, englishOnly: true);
       debugPrint('🎧 delete utterance (try $attempt): "$answer"');
 
       if (_isCancelUtterance(answer)) {
@@ -653,9 +659,8 @@ class VoiceAssistantService {
       return;
     }
 
-    final docRef = FirebaseFirestore.instance
-        .collection('medications')
-        .doc(elderlyId);
+    final docRef =
+        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
 
     try {
       await docRef.update({
@@ -692,7 +697,8 @@ class VoiceAssistantService {
     const maxTries = 3;
 
     for (int attempt = 1; attempt <= maxTries; attempt++) {
-      final answer = await listenWhisper(seconds: 4);
+      // ✅ ENGLISH ONLY هنا
+      final answer = await listenWhisper(seconds: 4, englishOnly: true);
       debugPrint('🎧 Edit medication selection (try $attempt): "$answer"');
 
       if (_isCancelUtterance(answer)) {
@@ -810,17 +816,15 @@ class VoiceAssistantService {
       }
     }
 
-    final docRef = FirebaseFirestore.instance
-        .collection('medications')
-        .doc(elderlyId);
+    final docRef =
+        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
 
     try {
       final doc = await docRef.get();
       final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
 
-      final List<Map<String, dynamic>> updatedMedsList = currentMedsList.map((
-        med,
-      ) {
+      final List<Map<String, dynamic>> updatedMedsList =
+          currentMedsList.map((med) {
         if (med['id'] == currentMed.id) {
           return currentMed.toMap();
         }
@@ -841,7 +845,6 @@ class VoiceAssistantService {
   }
 
   // ===== Helpers for Edit Flow =====
-  // (الباقي كما هو من كودك بدون تغيير جوهري)
 
   String? _parseEditField(String utterance) {
     final lower = utterance.toLowerCase().trim();
@@ -914,7 +917,8 @@ class VoiceAssistantService {
   Future<Medication?> _editName(Medication original) async {
     await speak('What is the new name for this medication?');
 
-    final newName = await listenWhisper(seconds: 5);
+    // ✅ ENGLISH ONLY هنا
+    final newName = await listenWhisper(seconds: 5, englishOnly: true);
 
     if (_isCancelUtterance(newName)) {
       await speak('Okay, we will keep the original name.');
@@ -1290,17 +1294,18 @@ class VoiceAssistantService {
   //  Generic helpers
   // =========================
 
-  Future<String?> _askQuestion(String prompt, {int listenSeconds = 4}) async {
+  Future<String?> _askQuestion(
+    String prompt, {
+    int listenSeconds = 4,
+    bool englishOnly = false,
+  }) async {
     await speak(prompt);
-    final answer = await listenWhisper(seconds: listenSeconds);
+    final answer = await listenWhisper(
+      seconds: listenSeconds,
+      englishOnly: englishOnly,
+    );
     debugPrint('🧠 Answer to "$prompt": "$answer"');
-
-    // ✅ إلغاء عام داخل أي سؤال
-    if (_isCancelUtterance(answer)) {
-      debugPrint('🛑 Cancel utterance detected inside _askQuestion.');
-      return null;
-    }
-
+    // الكولر هو اللي يشيّك إذا فيه cancel
     return answer;
   }
 
@@ -1367,37 +1372,119 @@ class VoiceAssistantService {
         norm.contains('الغاء');
   }
 
+  // ========  دالة الوقت (معدّلة)  ========
+
   TimeOfDay parseTimeFromSpeech(String speech) {
     final now = TimeOfDay.now();
     final lower = speech.toLowerCase();
 
-    int hour = now.hour;
+    int? hour;
     int minute = 0;
 
+    // 1) أرقام صريحة مثل 6 أو 6:30
     final regex = RegExp(r'(\d{1,2})(:(\d{1,2}))?');
     final match = regex.firstMatch(lower);
     if (match != null) {
       final hStr = match.group(1);
       final mStr = match.group(3);
       if (hStr != null) {
-        hour = int.tryParse(hStr) ?? now.hour;
+        hour = int.tryParse(hStr);
       }
       if (mStr != null) {
         minute = int.tryParse(mStr) ?? 0;
       }
     }
 
-    final isPm =
-        lower.contains('pm') || lower.contains('مساء') || lower.contains('ليل');
-    final isAm =
-        lower.contains('am') ||
+    // 2) لو ما فيه أرقام نحاول نفهمها من الكلمات
+    if (hour == null) {
+      var text = lower;
+
+      // أهم ترقعة: Sex a.m. ➜ six a.m.
+      text = text.replaceAll('sex', 'six');
+
+      // نشيل الرموز ونخلي حروف/أرقام/مسافات
+      text = text.replaceAll(RegExp(r'[^a-z\u0600-\u06FF\s]'), ' ');
+
+      final words = text
+          .split(RegExp(r'\s+'))
+          .where((w) => w.trim().isNotEmpty)
+          .toList();
+
+      const enMap = <String, int>{
+        'one': 1,
+        'two': 2,
+        'three': 3,
+        'four': 4,
+        'five': 5,
+        'six': 6,
+        'seven': 7,
+        'eight': 8,
+        'nine': 9,
+        'ten': 10,
+        'eleven': 11,
+        'twelve': 12,
+      };
+
+      const arMap = <String, int>{
+        'واحد': 1,
+        'واحدة': 1,
+        'اثنين': 2,
+        'ثلاثة': 3,
+        'ثلاث': 3,
+        'اربعة': 4,
+        'أربعة': 4,
+        'خمسة': 5,
+        'ستة': 6,
+        'سته': 6,
+        'سبعة': 7,
+        'ثمانية': 8,
+        'ثمانيه': 8,
+        'تسعة': 9,
+        'تسعه': 9,
+        'عشرة': 10,
+        'عشره': 10,
+        'احدعش': 11,
+        'احدى عشر': 11,
+        'اثنعش': 12,
+        'اثنا عشر': 12,
+      };
+
+      for (final w in words) {
+        if (enMap.containsKey(w)) {
+          hour = enMap[w];
+          break;
+        }
+        if (arMap.containsKey(w)) {
+          hour = arMap[w];
+          break;
+        }
+      }
+    }
+
+    // لو ما لقينا ساعة أبداً استخدم ساعة الآن عشان ما تكون null
+    hour ??= now.hour;
+
+    // 3) نحدّد AM / PM
+    final isPm = lower.contains('pm') ||
+        lower.contains('p.m') ||
+        lower.contains('evening') ||
+        lower.contains('night') ||
+        lower.contains('مساء') ||
+        lower.contains('ليل');
+
+    final isAm = lower.contains('am') ||
+        lower.contains('a.m') ||
+        lower.contains('morning') ||
         lower.contains('صباح') ||
         lower.contains('صباحا');
 
-    if (isPm && hour < 12) hour += 12;
+    if (isPm && hour! < 12) hour = hour! + 12;
     if (isAm && hour == 12) hour = 0;
 
-    return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
+    final finalHour = hour!.clamp(0, 23);
+    final finalMinute = minute.clamp(0, 59);
+
+    return TimeOfDay(hour: finalHour, minute: finalMinute);
   }
 
   List<String> parseDaysFromSpeech(String speech) {

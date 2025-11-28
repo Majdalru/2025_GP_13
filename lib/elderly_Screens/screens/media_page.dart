@@ -10,6 +10,7 @@ import 'audio_player_page.dart';
 
 import '../../models/audio_item.dart';
 import '../../services/voice_assistant_service.dart';
+import 'package:flutter_application_1/models/voice_command.dart'; // ✅ NEW
 
 class MediaPage extends StatefulWidget {
   const MediaPage({super.key});
@@ -135,7 +136,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 crossAxisCount: 2,
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 25,
-                 childAspectRatio: MediaQuery.of(context).size.width < 380 ? 0.68 : 0.8,
+                childAspectRatio:
+                    MediaQuery.of(context).size.width < 380 ? 0.68 : 0.8,
                 children: [
                   _buildMediaCard(context, Icons.library_music, "Story"),
                   _buildMediaCard(context, Icons.menu_book, "Quran"),
@@ -426,9 +428,48 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   }
 
   /// ==============================================
+  /// 🧠 GLOBAL INTENTS HANDLER (go to home / medications .. )
+  /// ==============================================
+  Future<void> _handleGlobalCommand(VoiceCommand cmd) async {
+    switch (cmd) {
+      case VoiceCommand.goToMedia:
+        await _voiceService.speak('You are already on the media page.');
+        break;
+
+      case VoiceCommand.goToHome:
+        await _voiceService.speak('Going back to the home page.');
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        break;
+
+      case VoiceCommand.goToMedication:
+      case VoiceCommand.addMedication:
+      case VoiceCommand.editMedication:
+      case VoiceCommand.deleteMedication:
+        await _voiceService.speak(
+          'To manage your medications, please go back to the home page and open the medications section.',
+        );
+        break;
+
+      case VoiceCommand.sos:
+        await _voiceService.speak(
+          'Here we will start the SOS emergency flow.',
+        );
+        // TODO: استدعاء منطق الـ SOS الحقيقي
+        break;
+
+      case VoiceCommand.goToSettings:
+        await _voiceService.speak(
+          'Settings are not available from the media page yet.',
+        );
+        break;
+    }
+  }
+
+  /// ==============================================
   /// 🧠 CONVERSATIONAL LOGIC
   /// ==============================================
-
   Future<void> _startVoiceConversation() async {
     // Check if already running to avoid double taps
     if (_isListeningState) return;
@@ -460,6 +501,17 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         await _voiceService.speak("Okay, I will stop now.");
         _resetVoiceState();
         return;
+      }
+
+      // ✅ أولاً: جرّبي نفهمها كـ global intent (go to medication, home, media ...)
+      if (categoryAnswer != null && categoryAnswer.trim().isNotEmpty) {
+        final globalCmd =
+            await _voiceService.analyzeSmartCommand(categoryAnswer);
+        if (globalCmd != null) {
+          await _handleGlobalCommand(globalCmd);
+          _resetVoiceState();
+          return;
+        }
       }
 
       if (categoryAnswer == null || categoryAnswer.trim().isEmpty) {

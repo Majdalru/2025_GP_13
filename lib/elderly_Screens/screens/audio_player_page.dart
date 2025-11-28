@@ -54,7 +54,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         _isLoading = false;
       });
 
-      // 5) ابدأ التشغيل تلقائياً (بدون await عشان ما يوقف الـ UI)
+      // 5) ابدأ التشغيل تلقائياً
       _player.play();
     } catch (e) {
       debugPrint('Error loading audio: $e');
@@ -94,16 +94,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   @override
   Widget build(BuildContext context) {
     // أقصى قيمة للـ Slider
-    final maxSeconds = _duration.inSeconds > 0
-        ? _duration.inSeconds.toDouble()
-        : 1.0;
+    final maxSeconds =
+        _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0;
 
     // القيمة الحالية للـ Slider
     final currentSeconds = _position.inSeconds.toDouble();
-    final sliderValue = currentSeconds.clamp(
-      0.0,
-      maxSeconds,
-    ); // double بين 0 و max
+    final sliderValue = currentSeconds.clamp(0.0, maxSeconds);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -112,12 +108,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         toolbarHeight: 110,
         backgroundColor: AudioPlayerPage.kPrimary,
 
-        // ✅ تعديل العنوان هنا: FittedBox عشان العنوان الطويل يصغر بدال ما ينقص
+        // ✅ العنوان في الـ AppBar (يقلّ الخط لو العنوان طويل)
         title: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(widget.item.title, textAlign: TextAlign.center),
         ),
-
         titleTextStyle: const TextStyle(
           fontSize: 28,
           color: Colors.white,
@@ -136,7 +131,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
+          // 🔹 قللنا البادينق الأفقي عشان نعطي مساحة أكبر للأزرار
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Column(
             children: [
               const SizedBox(height: 10),
@@ -147,7 +143,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                     color: Colors.white,
                     elevation: 4,
                     shadowColor: AudioPlayerPage.kPrimary.withOpacity(0.15),
-                    margin: const EdgeInsets.all(10),
+                    // 🔹 قللنا الـ margin شوي
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                       side: BorderSide(
@@ -156,27 +154,29 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(30.0),
+                      // 🔹 قللنا البادينق الأفقي داخل الكرت
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 26,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // العنوان + صورة
+                          // ===== العنوان + صورة =====
                           Row(
                             children: [
                               CircleAvatar(
                                 radius: 45,
-                                backgroundImage: AssetImage(
-                                  widget.item.imageAsset,
-                                ),
+                                backgroundImage:
+                                    AssetImage(widget.item.imageAsset),
                               ),
-                              const SizedBox(width: 20),
+                              const SizedBox(width: 16),
 
-                              // ✅ تعديل العنوان داخل الكرت: بدون ellipsis ويلتف على عدة أسطر
                               Expanded(
                                 child: Text(
                                   widget.item.title,
                                   softWrap: true,
-                                  maxLines: 3, // زيديه لو تبين أكثر
+                                  maxLines: 3,
                                   style: const TextStyle(
                                     fontFamily: 'NotoSansArabic',
                                     fontSize: 28,
@@ -188,9 +188,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                             ],
                           ),
 
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 32),
 
-                          // المؤشر (Slider)
+                          // ===== الـ Slider =====
                           if (_isLoading)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 20),
@@ -201,10 +201,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               children: [
                                 SliderTheme(
                                   data: SliderTheme.of(context).copyWith(
-                                    thumbShape: const RoundSliderThumbShape(
+                                    thumbShape:
+                                        const RoundSliderThumbShape(
                                       enabledThumbRadius: 10,
                                     ),
-                                    overlayShape: const RoundSliderOverlayShape(
+                                    overlayShape:
+                                        const RoundSliderOverlayShape(
                                       overlayRadius: 18,
                                     ),
                                     trackHeight: 4,
@@ -214,9 +216,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                     max: maxSeconds,
                                     value: sliderValue,
                                     onChanged: (value) {
-                                      final pos = Duration(
-                                        seconds: value.toInt(),
-                                      );
+                                      final pos =
+                                          Duration(seconds: value.toInt());
                                       _player.seek(pos);
                                     },
                                     activeColor: AudioPlayerPage.kPrimary,
@@ -248,21 +249,22 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               ],
                             ),
 
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 26),
 
-                          // أزرار التحكم
+                          // ===== أزرار التحكم (نفس المقاسات السابقة) =====
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               // ⏪ رجوع 10 ثواني
                               IconButton(
                                 icon: const Icon(Icons.replay_10),
-                                iconSize: 44,
+                                iconSize: 44, // 👈 نفس اللي كان
                                 color: AudioPlayerPage.kPrimary,
                                 onPressed: () => _seekRelative(-10),
                                 splashRadius: 30,
                               ),
-                              const SizedBox(width: 20),
+                              const SizedBox(width: 16),
 
                               // Play / Pause
                               StreamBuilder<PlayerState>(
@@ -288,25 +290,27 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                   return ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                       shape: const CircleBorder(),
-                                      backgroundColor: AudioPlayerPage.kPrimary,
-                                      padding: const EdgeInsets.all(22),
+                                      backgroundColor:
+                                          AudioPlayerPage.kPrimary,
+                                      padding: const EdgeInsets.all(
+                                          22), // 👈 نفس اللي كان
                                       elevation: 4,
                                     ),
                                     onPressed: onPressed,
                                     child: Icon(
                                       icon,
                                       color: Colors.white,
-                                      size: 60,
+                                      size: 60, // 👈 نفس اللي كان
                                     ),
                                   );
                                 },
                               ),
-                              const SizedBox(width: 20),
+                              const SizedBox(width: 16),
 
                               // ⏩ تقدّم 10 ثواني
                               IconButton(
                                 icon: const Icon(Icons.forward_10),
-                                iconSize: 44,
+                                iconSize: 44, // 👈 نفس اللي كان
                                 color: AudioPlayerPage.kPrimary,
                                 onPressed: () => _seekRelative(10),
                                 splashRadius: 30,
@@ -314,10 +318,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                             ],
                           ),
 
-                          const SizedBox(height: 25),
+                          const SizedBox(height: 22),
 
                           const Text(
                             "Tap play to start listening",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontFamily: 'NotoSansArabic',
                               fontSize: 22,

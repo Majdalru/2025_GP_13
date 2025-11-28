@@ -46,8 +46,13 @@ class WhisperService {
     }
   }
 
-  /// يرسل الملف إلى OpenAI gpt-4o-transcribe ويترجم الصوت إلى نص
-  Future<String?> transcribeAudio(File audioFile, String apiKey) async {
+  /// يرسل الملف إلى OpenAI gpt-4o-transcribe
+  /// الآن يدعم englishOnly → يرجّع الناتج إنجليزي فقط حتى لو المستخدم قالها بالعربي
+  Future<String?> transcribeAudio(
+    File audioFile,
+    String apiKey, {
+    bool englishOnly = false,
+  }) async {
     try {
       final uri = Uri.parse('https://api.openai.com/v1/audio/transcriptions');
 
@@ -62,7 +67,13 @@ class WhisperService {
         )
         ..fields['model'] = 'gpt-4o-transcribe'
         ..fields['response_format'] = 'json';
-      // لاحظ: ما حددنا language عشان الموديل يكتشف تلقائي
+
+      // 👇 أهم تعديل:
+      if (englishOnly) {
+        // لو ويسبر يسمع "بنادول" → يرجّع لك "Panadol"
+        request.fields['translate'] = 'true';
+        request.fields['language'] = 'en';
+      }
 
       print('📤 Sending audio to OpenAI...');
 
