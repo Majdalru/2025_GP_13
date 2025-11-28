@@ -628,18 +628,18 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                             ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => MedChartPage(
-        elderlyId: widget.elderlyId,
-        medId: medId,
-        medName: medName,
-        initialMonth: _current, // نفس الشهر اللي أنتِ فيه في السمّري
-      ),
-    ),
-  );
-},
+                              Navigator.push(
+                                        context,
+                                      MaterialPageRoute(
+                                       builder: (_) => MedChartPage(
+                                        elderlyId: widget.elderlyId,
+                                        medId: medId,
+                                        medName: medName,
+                                       initialMonth: _current, // نفس الشهر اللي أنتِ فيه في السمّري
+                                          ),
+                                        ),
+                                      );
+                              },
 
                           ),
                         );

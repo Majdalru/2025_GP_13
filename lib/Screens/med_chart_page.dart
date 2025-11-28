@@ -24,7 +24,7 @@ class MedChartPage extends StatefulWidget {
 enum ChartViewMode { pie, bar, weekly }
 
 class _MedChartPageState extends State<MedChartPage> {
-  late DateTime _currentMonth; // دايم نخزن اليوم الأول من الشهر
+  late DateTime _currentMonth; // نخزن أول يوم في الشهر
   ChartViewMode _chartMode = ChartViewMode.pie;
 
   @override
@@ -41,13 +41,15 @@ class _MedChartPageState extends State<MedChartPage> {
 
   void _goPrevMonth() {
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+      _currentMonth =
+          DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
     });
   }
 
   void _goNextMonth() {
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+      _currentMonth =
+          DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
     });
   }
 
@@ -63,6 +65,39 @@ class _MedChartPageState extends State<MedChartPage> {
     return null;
   }
 
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  String _weekdayName(DateTime d) => DateFormat('EEEE').format(d);
+
+  DateTime? _scheduledOnDay(String schedStr, DateTime dayDate) {
+    if (schedStr.isEmpty) return null;
+    try {
+      final p = schedStr.split(':');
+      return DateTime(
+        dayDate.year,
+        dayDate.month,
+        dayDate.day,
+        int.parse(p[0]),
+        int.parse(p[1]),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _isOverdueMissedByClock(String schedHHmm, DateTime dayDate) {
+    final schedDT = _scheduledOnDay(schedHHmm, dayDate);
+    if (schedDT == null) return false;
+    final now = DateTime.now();
+    final dayOnly = _dateOnly(dayDate);
+    final todayOnly = _dateOnly(now);
+    if (dayOnly.isBefore(todayOnly)) return true;
+    if (dayOnly.isAtSameMomentAs(todayOnly)) {
+      return now.isAfter(schedDT.add(const Duration(minutes: 10)));
+    }
+    return false;
+  }
+
   bool _looksLikeDose(Map v) {
     return v.containsKey('scheduledTime') ||
         v.containsKey('medicationName') ||
@@ -72,11 +107,19 @@ class _MedChartPageState extends State<MedChartPage> {
         v.containsKey('medicationId');
   }
 
-  // ====== Firestore stream (logs فقط لهذا الشهر) ======
+  DateTime _medStartDate(Map<String, dynamic> med) {
+    final raw = med['createdAt'];
+    final dt = _toDateTime(raw);
+    if (dt != null) return _dateOnly(dt);
+    return _dateOnly(DateTime.now());
+  }
+
+  // =========== Streams ===========
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _monthLogsStream() {
     final first = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final last = DateTime(_currentMonth.year, _currentMonth.month, _daysInMonth);
+    final last =
+        DateTime(_currentMonth.year, _currentMonth.month, _daysInMonth);
     final startId = DateFormat('yyyy-MM-dd').format(first);
     final endId = DateFormat('yyyy-MM-dd').format(last);
 
@@ -90,6 +133,16 @@ class _MedChartPageState extends State<MedChartPage> {
         .snapshots();
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _medsStream() {
+    return FirebaseFirestore.instance
+        .collection('medications')
+        .doc(widget.elderlyId)
+        .snapshots();
+  }
+
+  // =========== منطق تجميع اللوقز ===========
+
+  /// نفس اللي في MedsSummaryPage
   Map<String, List<Map<String, dynamic>>> _collectMonthFromLogs(
       QuerySnapshot<Map<String, dynamic>> snap) {
     final res = <String, List<Map<String, dynamic>>>{};
@@ -102,7 +155,7 @@ class _MedChartPageState extends State<MedChartPage> {
       if (dosesField is List) {
         for (final item in dosesField) {
           if (item is Map<String, dynamic> && _looksLikeDose(item)) {
-            list.add(item);
+            list.add(Map<String, dynamic>.from(item));
           }
         }
       }
@@ -111,12 +164,14 @@ class _MedChartPageState extends State<MedChartPage> {
       data.forEach((k, v) {
         if (k == 'doses') return;
         if (v is Map<String, dynamic>) {
-          if (_looksLikeDose(v)) list.add(v);
+          if (_looksLikeDose(v)) {
+            list.add(Map<String, dynamic>.from(v));
+          }
           final nested = v['doses'];
           if (nested is List) {
             for (final it in nested) {
               if (it is Map<String, dynamic> && _looksLikeDose(it)) {
-                list.add(it);
+                list.add(Map<String, dynamic>.from(it));
               }
             }
           }
@@ -128,7 +183,125 @@ class _MedChartPageState extends State<MedChartPage> {
     return res;
   }
 
-  /// 🔹 dailyStats لهذا الدواء فقط: { 'yyyy-MM-dd': {onTime, late, missed} }
+  /// نفس _enrichWithSchedule في MedsSummaryPage
+  Map<String, List<Map<String, dynamic>>> _enrichWithSchedule({
+    required Map<String, List<Map<String, dynamic>>> monthLogs,
+    required Map<String, dynamic>? medsDocData,
+  }) {
+    final res = <String, List<Map<String, dynamic>>>{};
+    monthLogs.forEach((k, v) => res[k] = [...v]);
+
+    if (medsDocData == null) return res;
+
+    final medsList = medsDocData['medsList'];
+    if (medsList is! List) return res;
+
+    final todayOnly = _dateOnly(DateTime.now());
+
+    for (int day = 1; day <= _daysInMonth; day++) {
+      final date = DateTime(_currentMonth.year, _currentMonth.month, day);
+      final dayOnly = _dateOnly(date);
+      final key = DateFormat('yyyy-MM-dd').format(date);
+      final weekday = _weekdayName(date);
+
+      final logsForDay = res[key] ?? <Map<String, dynamic>>[];
+
+      // build indices
+      final byPair = <String, Map<String, dynamic>>{};
+      final byTime = <String, Map<String, dynamic>>{};
+      for (final m in logsForDay) {
+        final mid = (m['medicationId'] ?? '').toString();
+        final ti = (m['timeIndex'] is int)
+            ? m['timeIndex'] as int
+            : int.tryParse('${m['timeIndex']}') ?? -1;
+        final sk = (m['scheduledTime'] ?? '').toString();
+        if (mid.isNotEmpty && ti >= 0) byPair['$mid#$ti'] = m;
+        if (sk.isNotEmpty) byTime[sk] = m;
+      }
+
+      for (final raw in medsList) {
+        if (raw is! Map) continue;
+        final med = Map<String, dynamic>.from(raw as Map);
+        final medId = (med['id'] ?? '').toString();
+        final medName = (med['name'] ?? 'Med').toString();
+
+        final start = _medStartDate(med);
+        if (dayOnly.isBefore(start)) continue;
+
+        final end = _toDateTime(med['endDate']);
+        if (end != null && dayOnly.isAfter(_dateOnly(end))) continue;
+        if (med['archived'] == true) continue;
+
+        final days = (med['days'] is List)
+            ? (med['days'] as List).map((e) => e.toString()).toList()
+            : <String>[];
+        final runsToday = days.contains('Every day') || days.contains(weekday);
+        if (!runsToday) continue;
+
+        final timesRaw = med['times'];
+        final times = <String>[];
+        if (timesRaw is List) {
+          for (final t in timesRaw) {
+            if (t is String && t.contains(':')) {
+              times.add(t);
+            } else if (t is Map) {
+              final hh = int.tryParse('${t['hour'] ?? t['h'] ?? t['HH'] ?? ''}');
+              final mm = int.tryParse(
+                  '${t['minute'] ?? t['m'] ?? t['MM'] ?? ''}');
+              if (hh != null && mm != null) {
+                times.add(
+                    '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}');
+              }
+            }
+          }
+        }
+
+        for (int i = 0; i < times.length; i++) {
+          final sched = times[i];
+
+          Map<String, dynamic>? log =
+              (medId.isNotEmpty) ? byPair['$medId#$i'] : null;
+          log ??= byTime[sched];
+          if (log != null) continue;
+
+          final isPast = dayOnly.isBefore(todayOnly);
+          final isOverdueToday = _isOverdueMissedByClock(sched, date);
+
+          if (isPast || isOverdueToday) {
+            logsForDay.add({
+              'medicationId': medId,
+              'medicationName': medName,
+              'timeIndex': i,
+              'scheduledTime': sched,
+              'status': 'missed',
+              '_injected': true,
+            });
+          }
+        }
+      }
+
+      if (logsForDay.isNotEmpty) {
+        logsForDay.sort((a, b) {
+          final ai = (a['timeIndex'] is int)
+              ? a['timeIndex'] as int
+              : int.tryParse('${a['timeIndex']}') ?? 0;
+          final bi = (b['timeIndex'] is int)
+              ? b['timeIndex'] as int
+              : int.tryParse('${b['timeIndex']}') ?? 0;
+          if (ai != bi) return ai.compareTo(bi);
+          final at = (a['scheduledTime'] ?? '').toString();
+          final bt = (b['scheduledTime'] ?? '').toString();
+          return at.compareTo(bt);
+        });
+        res[key] = logsForDay;
+      }
+    }
+
+    return res;
+  }
+
+  /// 🔹 dailyStats لهذا الدواء:
+  /// { 'yyyy-MM-dd': {onTime, late, missed} }
   Map<String, Map<String, int>> _buildDailyStatsForMed(
     String medId,
     Map<String, List<Map<String, dynamic>>> monthData,
@@ -163,33 +336,6 @@ class _MedChartPageState extends State<MedChartPage> {
     });
 
     return result;
-  }
-
-  List<_DayStat> _buildDayList(Map<String, Map<String, int>> dailyStats) {
-    final entries = dailyStats.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-
-    return entries.map((entry) {
-      final dt = DateTime.parse(entry.key);
-      final m = entry.value;
-
-      final int onTime = m['onTime'] ?? 0;
-      final int late = m['late'] ?? 0;
-      final int missed = m['missed'] ?? 0;
-      final int total = onTime + late + missed;
-
-      final double adherence =
-          total == 0 ? 0.0 : ((onTime + late) / total * 100.0);
-
-      return _DayStat(
-        date: dt,
-        onTime: onTime,
-        late: late,
-        missed: missed,
-        total: total,
-        adherence: adherence,
-      );
-    }).toList();
   }
 
   // ===================== HELP DIALOG =====================
@@ -267,63 +413,77 @@ class _MedChartPageState extends State<MedChartPage> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final monthLogs = _collectMonthFromLogs(snap.data!);
-          final dailyStats = _buildDailyStatsForMed(widget.medId, monthLogs);
+          final rawMonthLogs = _collectMonthFromLogs(snap.data!);
 
-          int onTime = 0;
-          int late = 0;
-          int missed = 0;
-          dailyStats.values.forEach((m) {
-            onTime += m['onTime'] ?? 0;
-            late += m['late'] ?? 0;
-            missed += m['missed'] ?? 0;
-          });
-          final total = onTime + late + missed;
-          final monthlyStats = {
-            'onTime': onTime,
-            'late': late,
-            'missed': missed,
-          };
-          final adherencePercent =
-              total == 0 ? 0.0 : ((onTime + late) / total) * 100.0;
+          return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: _medsStream(),
+            builder: (context, medsSnap) {
+              final medsData = medsSnap.data?.data();
+              final monthData = _enrichWithSchedule(
+                monthLogs: rawMonthLogs,
+                medsDocData: medsData,
+              );
 
-          final monthName = DateFormat('MMMM yyyy').format(_currentMonth);
+              // إحصائيات هذا الدواء فقط
+              final dailyStats =
+                  _buildDailyStatsForMed(widget.medId, monthData);
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildMonthHeader(monthName, cs),
-                const SizedBox(height: 12),
-                if (total == 0) ...[
-                  _buildModeToggle(cs),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No doses for this month yet.',
-                    style: TextStyle(color: Colors.grey.shade700),
-                  ),
-                ] else ...[
-                  _buildModeToggle(cs),
-                  const SizedBox(height: 16),
-                  _buildAdherenceCard(
-                      cs, monthlyStats, total, adherencePercent),
-                  const SizedBox(height: 24),
-                  _buildSelectedChart(
-                    context,
-                    monthlyStats,
-                    dailyStats,
-                    adherencePercent,
-                  ),
-                ],
-              ],
-            ),
+              int onTime = 0;
+              int late = 0;
+              int missed = 0;
+              dailyStats.values.forEach((m) {
+                onTime += m['onTime'] ?? 0;
+                late += m['late'] ?? 0;
+                missed += m['missed'] ?? 0;
+              });
+
+              final total = onTime + late + missed;
+              final monthlyStats = {
+                'onTime': onTime,
+                'late': late,
+                'missed': missed,
+              };
+              final adherencePercent =
+                  total == 0 ? 0.0 : ((onTime + late) / total) * 100.0;
+
+              final monthName =
+                  DateFormat('MMMM yyyy').format(_currentMonth);
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildMonthHeader(monthName, cs),
+                    const SizedBox(height: 12),
+                    _buildModeToggle(cs),
+                    const SizedBox(height: 16),
+                    if (total == 0) ...[
+                      Text(
+                        'No doses for this month yet.',
+                        style: TextStyle(color: Colors.grey.shade700),
+                      ),
+                    ] else ...[
+                      _buildAdherenceCard(
+                          cs, monthlyStats, total, adherencePercent),
+                      const SizedBox(height: 24),
+                      _buildSelectedChart(
+                        context,
+                        monthlyStats,
+                        dailyStats,
+                        adherencePercent,
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  // =============== MONTH HEADER (A) ===============
+  // =============== MONTH HEADER ===============
 
   Widget _buildMonthHeader(String monthName, ColorScheme cs) {
     return Row(
@@ -723,6 +883,33 @@ class _MedChartPageState extends State<MedChartPage> {
         ),
       ],
     );
+  }
+
+  List<_DayStat> _buildDayList(Map<String, Map<String, int>> dailyStats) {
+    final entries = dailyStats.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return entries.map((entry) {
+      final dt = DateTime.parse(entry.key);
+      final m = entry.value;
+
+      final int onTime = m['onTime'] ?? 0;
+      final int late = m['late'] ?? 0;
+      final int missed = m['missed'] ?? 0;
+      final int total = onTime + late + missed;
+
+      final double adherence =
+          total == 0 ? 0.0 : ((onTime + late) / total * 100.0);
+
+      return _DayStat(
+        date: dt,
+        onTime: onTime,
+        late: late,
+        missed: missed,
+        total: total,
+        adherence: adherence,
+      );
+    }).toList();
   }
 
   BarChartData _buildBarChartData(List<_DayStat> days) {
