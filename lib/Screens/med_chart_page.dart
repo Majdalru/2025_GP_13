@@ -1,25 +1,20 @@
-// lib/Screens/med_chart_page.dart
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class MedChartPage extends StatefulWidget {
-  /// اسم الدواء
+  final String elderlyId;
+  final String medId;
   final String medName;
-
-  /// إحصائيات شهرية إجمالية للدواء الواحد: { "onTime": x, "late": y, "missed": z }
-  final Map<String, int> monthlyStats;
-
-  /// إحصائيات يومية للدواء الواحد:
-  /// key: "yyyy-MM-dd"
-  /// value: { "onTime": x, "late": y, "missed": z }
-  final Map<String, Map<String, int>> dailyStats;
+  final DateTime initialMonth;
 
   const MedChartPage({
     super.key,
+    required this.elderlyId,
+    required this.medId,
     required this.medName,
-    required this.monthlyStats,
-    required this.dailyStats,
+    required this.initialMonth,
   });
 
   @override
@@ -29,17 +24,149 @@ class MedChartPage extends StatefulWidget {
 enum ChartViewMode { pie, bar, weekly }
 
 class _MedChartPageState extends State<MedChartPage> {
-  late final int _onTime;
-  late final int _late;
-  late final int _missed;
-  late final int _total;
-  late final double _adherencePercent;
-
+  late DateTime _currentMonth; // دايم نخزن اليوم الأول من الشهر
   ChartViewMode _chartMode = ChartViewMode.pie;
 
-  /// نحول dailyStats إلى List مرتبة حسب التاريخ
-  List<_DayStat> get _dayList {
-    final entries = widget.dailyStats.entries.toList()
+  @override
+  void initState() {
+    super.initState();
+    _currentMonth =
+        DateTime(widget.initialMonth.year, widget.initialMonth.month, 1);
+  }
+
+  int get _daysInMonth {
+    final firstNext = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+    return firstNext.subtract(const Duration(days: 1)).day;
+  }
+
+  void _goPrevMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+    });
+  }
+
+  void _goNextMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+    });
+  }
+
+  DateTime? _toDateTime(dynamic v) {
+    if (v == null) return null;
+    if (v is Timestamp) return v.toDate();
+    if (v is String) return DateTime.tryParse(v);
+    if (v is int) {
+      try {
+        return DateTime.fromMillisecondsSinceEpoch(v);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  bool _looksLikeDose(Map v) {
+    return v.containsKey('scheduledTime') ||
+        v.containsKey('medicationName') ||
+        v.containsKey('timeIndex') ||
+        v.containsKey('status') ||
+        v.containsKey('takenAt') ||
+        v.containsKey('medicationId');
+  }
+
+  // ====== Firestore stream (logs فقط لهذا الشهر) ======
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _monthLogsStream() {
+    final first = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final last = DateTime(_currentMonth.year, _currentMonth.month, _daysInMonth);
+    final startId = DateFormat('yyyy-MM-dd').format(first);
+    final endId = DateFormat('yyyy-MM-dd').format(last);
+
+    return FirebaseFirestore.instance
+        .collection('medication_log')
+        .doc(widget.elderlyId)
+        .collection('daily_log')
+        .orderBy(FieldPath.documentId)
+        .startAt([startId])
+        .endAt([endId])
+        .snapshots();
+  }
+
+  Map<String, List<Map<String, dynamic>>> _collectMonthFromLogs(
+      QuerySnapshot<Map<String, dynamic>> snap) {
+    final res = <String, List<Map<String, dynamic>>>{};
+    for (final doc in snap.docs) {
+      final list = <Map<String, dynamic>>[];
+      final data = doc.data();
+
+      // top-level array 'doses'
+      final dosesField = data['doses'];
+      if (dosesField is List) {
+        for (final item in dosesField) {
+          if (item is Map<String, dynamic> && _looksLikeDose(item)) {
+            list.add(item);
+          }
+        }
+      }
+
+      // top-level maps + nested 'doses'
+      data.forEach((k, v) {
+        if (k == 'doses') return;
+        if (v is Map<String, dynamic>) {
+          if (_looksLikeDose(v)) list.add(v);
+          final nested = v['doses'];
+          if (nested is List) {
+            for (final it in nested) {
+              if (it is Map<String, dynamic> && _looksLikeDose(it)) {
+                list.add(it);
+              }
+            }
+          }
+        }
+      });
+
+      res[doc.id] = list;
+    }
+    return res;
+  }
+
+  /// 🔹 dailyStats لهذا الدواء فقط: { 'yyyy-MM-dd': {onTime, late, missed} }
+  Map<String, Map<String, int>> _buildDailyStatsForMed(
+    String medId,
+    Map<String, List<Map<String, dynamic>>> monthData,
+  ) {
+    final result = <String, Map<String, int>>{};
+
+    monthData.forEach((dayId, doses) {
+      int onTime = 0;
+      int late = 0;
+      int missed = 0;
+
+      for (final dose in doses) {
+        if ((dose['medicationId'] ?? '').toString() != medId) continue;
+        final status = (dose['status'] ?? '').toString().toLowerCase();
+
+        if (status == 'missed') {
+          missed++;
+        } else if (status == 'taken_late') {
+          late++;
+        } else if (status == 'taken_on_time') {
+          onTime++;
+        }
+      }
+
+      if (onTime > 0 || late > 0 || missed > 0) {
+        result[dayId] = {
+          'onTime': onTime,
+          'late': late,
+          'missed': missed,
+        };
+      }
+    });
+
+    return result;
+  }
+
+  List<_DayStat> _buildDayList(Map<String, Map<String, int>> dailyStats) {
+    final entries = dailyStats.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
     return entries.map((entry) {
@@ -47,9 +174,9 @@ class _MedChartPageState extends State<MedChartPage> {
       final m = entry.value;
 
       final int onTime = m['onTime'] ?? 0;
-      final int late   = m['late'] ?? 0;
+      final int late = m['late'] ?? 0;
       final int missed = m['missed'] ?? 0;
-      final int total  = onTime + late + missed;
+      final int total = onTime + late + missed;
 
       final double adherence =
           total == 0 ? 0.0 : ((onTime + late) / total * 100.0);
@@ -65,50 +192,170 @@ class _MedChartPageState extends State<MedChartPage> {
     }).toList();
   }
 
-  @override
-  void initState() {
-    super.initState();
+  // ===================== HELP DIALOG =====================
 
-    _onTime = widget.monthlyStats['onTime'] ?? 0;
-    _late   = widget.monthlyStats['late'] ?? 0;
-    _missed = widget.monthlyStats['missed'] ?? 0;
-    _total  = _onTime + _late + _missed;
+  void _showChartHelp(BuildContext context, ChartViewMode mode) {
+    String title;
+    String body;
 
-    _adherencePercent =
-        _total == 0 ? 0.0 : ((_onTime + _late) / _total) * 100.0;
+    switch (mode) {
+      case ChartViewMode.pie:
+        title = 'How to read this pie chart?';
+        body =
+            '• Each slice = group of doses this month\n'
+            '• Green: doses taken on time\n'
+            '• Yellow: doses taken late\n'
+            '• Red: doses that were missed completely\n\n'
+            'The size of each slice shows its percentage from ALL doses.';
+        break;
+      case ChartViewMode.bar:
+        title = 'How to read this daily bar chart?';
+        body =
+            '• Each bar = one day of this month\n'
+            '• Bar height = total number of doses that day\n'
+            '• Green part = doses taken on time\n'
+            '• Yellow part = doses taken late\n'
+            '• Red part = missed doses\n\n'
+            'This helps you see which days had more missed or late doses.';
+        break;
+      case ChartViewMode.weekly:
+        title = 'How to read weekly trend?';
+        body =
+            '• Each card = one week in this month\n'
+            '• It shows how many doses were on time, late, or missed\n'
+            '• The percentage on the right is overall adherence for that week.\n\n'
+            'Green weeks = very good adherence, red weeks = need attention.';
+        break;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
   }
+
+  // ===================== BUILD =====================
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    if (_total == 0) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Summary • ${widget.medName}'),
-        ),
-        body: const Center(
-          child: Text('No doses for this month yet'),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Summary • ${widget.medName}'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildModeToggle(cs),
-            const SizedBox(height: 16),
-            _buildAdherenceCard(cs),
-            const SizedBox(height: 24),
-            _buildSelectedChart(context),
-          ],
-        ),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _monthLogsStream(),
+        builder: (context, snap) {
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}'));
+          }
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final monthLogs = _collectMonthFromLogs(snap.data!);
+          final dailyStats = _buildDailyStatsForMed(widget.medId, monthLogs);
+
+          int onTime = 0;
+          int late = 0;
+          int missed = 0;
+          dailyStats.values.forEach((m) {
+            onTime += m['onTime'] ?? 0;
+            late += m['late'] ?? 0;
+            missed += m['missed'] ?? 0;
+          });
+          final total = onTime + late + missed;
+          final monthlyStats = {
+            'onTime': onTime,
+            'late': late,
+            'missed': missed,
+          };
+          final adherencePercent =
+              total == 0 ? 0.0 : ((onTime + late) / total) * 100.0;
+
+          final monthName = DateFormat('MMMM yyyy').format(_currentMonth);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildMonthHeader(monthName, cs),
+                const SizedBox(height: 12),
+                if (total == 0) ...[
+                  _buildModeToggle(cs),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No doses for this month yet.',
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
+                ] else ...[
+                  _buildModeToggle(cs),
+                  const SizedBox(height: 16),
+                  _buildAdherenceCard(
+                      cs, monthlyStats, total, adherencePercent),
+                  const SizedBox(height: 24),
+                  _buildSelectedChart(
+                    context,
+                    monthlyStats,
+                    dailyStats,
+                    adherencePercent,
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  // =============== MONTH HEADER (A) ===============
+
+  Widget _buildMonthHeader(String monthName, ColorScheme cs) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: _goPrevMonth,
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Expanded(
+          child: Center(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                monthName,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: cs.primary,
+                ),
+              ),
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: _goNextMonth,
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
     );
   }
 
@@ -145,7 +392,16 @@ class _MedChartPageState extends State<MedChartPage> {
 
   // ================= ADHERENCE CARD ===================
 
-  Widget _buildAdherenceCard(ColorScheme cs) {
+  Widget _buildAdherenceCard(
+    ColorScheme cs,
+    Map<String, int> monthlyStats,
+    int total,
+    double adherencePercent,
+  ) {
+    final onTime = monthlyStats['onTime'] ?? 0;
+    final late = monthlyStats['late'] ?? 0;
+    final missed = monthlyStats['missed'] ?? 0;
+
     return Card(
       elevation: 1,
       child: Padding(
@@ -159,13 +415,15 @@ class _MedChartPageState extends State<MedChartPage> {
                 alignment: Alignment.center,
                 children: [
                   CircularProgressIndicator(
-                    value: _adherencePercent / 100.0,
+                    value: adherencePercent / 100.0,
                     strokeWidth: 8,
                     backgroundColor: cs.surfaceVariant,
-                    valueColor: AlwaysStoppedAnimation(_adherenceColor),
+                    valueColor: AlwaysStoppedAnimation(
+                      _adherenceColor(adherencePercent).withOpacity(0.65),
+                    ),
                   ),
                   Text(
-                    '${_adherencePercent.toStringAsFixed(0)}%',
+                    '${adherencePercent.toStringAsFixed(0)}%',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -188,7 +446,7 @@ class _MedChartPageState extends State<MedChartPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'On time: $_onTime   •   Late: $_late   •   Missed: $_missed',
+                    'On time: $onTime   •   Late: $late   •   Missed: $missed',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey.shade700,
@@ -196,7 +454,7 @@ class _MedChartPageState extends State<MedChartPage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _adherenceMessage,
+                    _adherenceMessage(total, adherencePercent),
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey.shade800,
@@ -213,28 +471,65 @@ class _MedChartPageState extends State<MedChartPage> {
 
   // ================== SELECTED CHART ==================
 
-  Widget _buildSelectedChart(BuildContext context) {
+  Widget _buildSelectedChart(
+    BuildContext context,
+    Map<String, int> monthlyStats,
+    Map<String, Map<String, int>> dailyStats,
+    double adherencePercent,
+  ) {
     switch (_chartMode) {
       case ChartViewMode.pie:
-        return _buildPieChart(context);
+        return _buildPieChart(context, monthlyStats);
       case ChartViewMode.bar:
-        return _buildBarChart(context);
+        return _buildBarChart(context, dailyStats);
       case ChartViewMode.weekly:
-        return _buildWeeklyTrend(context);
+        return _buildWeeklyTrend(context, dailyStats);
     }
   }
 
   // ====================== PIE CHART ===================
 
-  Widget _buildPieChart(BuildContext context) {
-    final total = _total.toDouble();
+  Widget _buildPieChart(BuildContext context, Map<String, int> monthlyStats) {
+    final onTime = monthlyStats['onTime'] ?? 0;
+    final late = monthlyStats['late'] ?? 0;
+    final missed = monthlyStats['missed'] ?? 0;
+    final total = (onTime + late + missed).toDouble();
+
+    final theme = Theme.of(context);
+    final cs = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Dose status (this month)',
-          style: Theme.of(context).textTheme.titleMedium,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Dose status (this month)',
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(.08),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                icon: Icon(
+                  Icons.help_outline,
+                  size: 18,
+                  color: cs.primary,
+                ),
+                tooltip: 'How to understand this chart?',
+                onPressed: () => _showChartHelp(context, ChartViewMode.pie),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Card(
@@ -248,46 +543,40 @@ class _MedChartPageState extends State<MedChartPage> {
                   sectionsSpace: 4,
                   centerSpaceRadius: 40,
                   startDegreeOffset: -90,
-                  sections: _buildPieSections(),
+                  sections: _buildPieSections(onTime, late, missed),
                 ),
               ),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Each slice shows percentage of all doses this month.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-        ),
+        if (total > 0)
+          Text(
+            'On time: $onTime (${(onTime / total * 100).toStringAsFixed(0)}%)   •   '
+            'Late: $late (${(late / total * 100).toStringAsFixed(0)}%)   •   '
+            'Missed: $missed (${(missed / total * 100).toStringAsFixed(0)}%)',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13),
+          ),
         const SizedBox(height: 12),
-        Text(
-          'On time: $_onTime (${(_onTime / total * 100).toStringAsFixed(0)}%)   •   '
-          'Late: $_late (${(_late / total * 100).toStringAsFixed(0)}%)   •   '
-          'Missed: $_missed (${(_missed / total * 100).toStringAsFixed(0)}%)',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13),
-        ),
-        const SizedBox(height: 12),
-
         _buildPieLegend(),
       ],
     );
   }
 
-  List<PieChartSectionData> _buildPieSections() {
-    final total = _total.toDouble();
+  List<PieChartSectionData> _buildPieSections(int onTime, int late, int missed) {
+    final total = (onTime + late + missed).toDouble();
     if (total == 0) return [];
 
-    const double radius = 60; // نفس الحجم لكل القطع
+    const double radius = 60;
 
     final sections = <PieChartSectionData>[];
 
-    if (_onTime > 0) {
+    if (onTime > 0) {
       sections.add(
         PieChartSectionData(
-          value: _onTime.toDouble(),
-          title: '${(_onTime / total * 100).toStringAsFixed(0)}%',
+          value: onTime.toDouble(),
+          title: '${(onTime / total * 100).toStringAsFixed(0)}%',
           color: const Color(0xFF2E7D32),
           radius: radius,
           titleStyle: const TextStyle(
@@ -298,11 +587,11 @@ class _MedChartPageState extends State<MedChartPage> {
         ),
       );
     }
-    if (_late > 0) {
+    if (late > 0) {
       sections.add(
         PieChartSectionData(
-          value: _late.toDouble(),
-          title: '${(_late / total * 100).toStringAsFixed(0)}%',
+          value: late.toDouble(),
+          title: '${(late / total * 100).toStringAsFixed(0)}%',
           color: const Color(0xFFF9A825),
           radius: radius,
           titleStyle: const TextStyle(
@@ -313,11 +602,11 @@ class _MedChartPageState extends State<MedChartPage> {
         ),
       );
     }
-    if (_missed > 0) {
+    if (missed > 0) {
       sections.add(
         PieChartSectionData(
-          value: _missed.toDouble(),
-          title: '${(_missed / total * 100).toStringAsFixed(0)}%',
+          value: missed.toDouble(),
+          title: '${(missed / total * 100).toStringAsFixed(0)}%',
           color: const Color(0xFFD32F2F),
           radius: radius,
           titleStyle: const TextStyle(
@@ -356,18 +645,50 @@ class _MedChartPageState extends State<MedChartPage> {
 
   // ====================== BAR CHART ===================
 
-  Widget _buildBarChart(BuildContext context) {
-    final days = _dayList;
+  Widget _buildBarChart(
+    BuildContext context,
+    Map<String, Map<String, int>> dailyStats,
+  ) {
+    final days = _buildDayList(dailyStats);
     if (days.isEmpty) {
       return const Text('No daily data available for this month.');
     }
 
+    final theme = Theme.of(context);
+    final cs = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Daily doses by status (stacked bar)',
-          style: Theme.of(context).textTheme.titleMedium,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Daily doses by status (stacked bar)',
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(.08),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                icon: Icon(
+                  Icons.help_outline,
+                  size: 18,
+                  color: cs.primary,
+                ),
+                tooltip: 'How to understand this chart?',
+                onPressed: () => _showChartHelp(context, ChartViewMode.bar),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Card(
@@ -376,15 +697,9 @@ class _MedChartPageState extends State<MedChartPage> {
             height: 260,
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: BarChart(_buildBarChartData()),
+              child: BarChart(_buildBarChartData(days)),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Each bar = 1 day. Height = number of doses. Colors = status.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -410,8 +725,7 @@ class _MedChartPageState extends State<MedChartPage> {
     );
   }
 
-  BarChartData _buildBarChartData() {
-    final days = _dayList;
+  BarChartData _buildBarChartData(List<_DayStat> days) {
     if (days.isEmpty) {
       return BarChartData(barGroups: []);
     }
@@ -419,10 +733,12 @@ class _MedChartPageState extends State<MedChartPage> {
     final int maxTotal =
         days.map((d) => d.total).fold<int>(0, (a, b) => a > b ? a : b);
 
+    final daysLocal = days;
+
     return BarChartData(
       maxY: (maxTotal == 0 ? 1 : maxTotal).toDouble(),
-      barGroups: List.generate(days.length, (i) {
-        final d = days[i];
+      barGroups: List.generate(daysLocal.length, (i) {
+        final d = daysLocal[i];
         final double total = d.total.toDouble();
         double current = 0;
 
@@ -475,7 +791,7 @@ class _MedChartPageState extends State<MedChartPage> {
         enabled: true,
         touchTooltipData: BarTouchTooltipData(
           getTooltipItem: (group, groupIndex, rod, rodIndex) {
-            final d = _dayList[group.x.toInt()];
+            final d = daysLocal[group.x.toInt()];
             return BarTooltipItem(
               'Day ${d.date.day}\n'
               'On time: ${d.onTime}\n'
@@ -529,11 +845,10 @@ class _MedChartPageState extends State<MedChartPage> {
             reservedSize: 22,
             getTitlesWidget: (value, meta) {
               final i = value.toInt();
-              final days = _dayList;
-              if (i < 0 || i >= days.length) {
+              if (i < 0 || i >= daysLocal.length) {
                 return const SizedBox.shrink();
               }
-              final d = days[i];
+              final d = daysLocal[i];
               return Text(
                 '${d.date.day}',
                 style: const TextStyle(fontSize: 10),
@@ -549,14 +864,16 @@ class _MedChartPageState extends State<MedChartPage> {
 
   // ==================== WEEKLY TREND =================
 
-  Widget _buildWeeklyTrend(BuildContext context) {
-    final days = _dayList;
+  Widget _buildWeeklyTrend(
+    BuildContext context,
+    Map<String, Map<String, int>> dailyStats,
+  ) {
+    final days = _buildDayList(dailyStats);
 
     if (days.isEmpty) {
       return const Text('No data available for weekly trend.');
     }
 
-    // تقسيم الأيام على أسابيع (1–7, 8–14, 15–21, 22–28, 29–31)
     final Map<int, List<_DayStat>> weeklyMap = {
       1: [],
       2: [],
@@ -578,12 +895,12 @@ class _MedChartPageState extends State<MedChartPage> {
       if (list.isEmpty) return;
 
       int onTime = 0;
-      int late   = 0;
+      int late = 0;
       int missed = 0;
 
       for (final d in list) {
         onTime += d.onTime;
-        late   += d.late;
+        late += d.late;
         missed += d.missed;
       }
 
@@ -591,13 +908,10 @@ class _MedChartPageState extends State<MedChartPage> {
       final double adherence =
           total == 0 ? 0.0 : ((onTime + late) / total * 100.0);
 
-      // أقل وأعلى يوم داخل هذا الأسبوع
-      final startDay = list
-          .map((d) => d.date.day)
-          .reduce((a, b) => a < b ? a : b);
-      final endDay = list
-          .map((d) => d.date.day)
-          .reduce((a, b) => a > b ? a : b);
+      final startDay =
+          list.map((d) => d.date.day).reduce((a, b) => a < b ? a : b);
+      final endDay =
+          list.map((d) => d.date.day).reduce((a, b) => a > b ? a : b);
 
       weeklyStats.add(
         _WeeklyStat(
@@ -682,17 +996,17 @@ class _MedChartPageState extends State<MedChartPage> {
 
   // ================ Helper getters ===================
 
-  Color get _adherenceColor {
-    if (_adherencePercent >= 80) return const Color(0xFF2E7D32);
-    if (_adherencePercent >= 50) return const Color(0xFFF9A825);
+  Color _adherenceColor(double pct) {
+    if (pct >= 80) return const Color(0xFF2E7D32);
+    if (pct >= 50) return const Color(0xFFF9A825);
     return const Color(0xFFD32F2F);
   }
 
-  String get _adherenceMessage {
-    if (_total == 0) return 'No data yet for this month.';
-    if (_adherencePercent >= 80) {
+  String _adherenceMessage(int total, double pct) {
+    if (total == 0) return 'No data yet for this month.';
+    if (pct >= 80) {
       return 'Great adherence 👏';
-    } else if (_adherencePercent >= 50) {
+    } else if (pct >= 50) {
       return 'Moderate adherence – can be improved 🙂';
     } else {
       return 'Low adherence – needs attention ⚠️';

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'med_chart_page.dart'; // TODO: عدّلي المسار حسب مكان الملف
+import 'med_chart_page.dart'; // عدّلي المسار حسب مشروعك
 
 class MedsSummaryPage extends StatefulWidget {
-  final String elderlyId; // same ID under medication_log/{elderlyId}
+  final String elderlyId; // نفس الـ ID في medication_log/{elderlyId}
   const MedsSummaryPage({super.key, required this.elderlyId});
 
   @override
@@ -71,7 +71,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     }
   }
 
-  String _weekdayName(DateTime d) => DateFormat('EEEE').format(d); // Monday..
+  String _weekdayName(DateTime d) => DateFormat('EEEE').format(d);
 
   bool _looksLikeDose(Map v) {
     return v.containsKey('scheduledTime') ||
@@ -325,16 +325,17 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     };
   }
 
-  /// 🔹 يبني إحصائيات يومية لميد معيّن من monthData
-  /// dailyStats: key = 'yyyy-MM-dd', value = { onTime, late, missed }
+  /// 🔹 dailyStats لكل دواء: { 'yyyy-MM-dd' : {onTime, late, missed} }
   Map<String, Map<String, int>> _buildDailyStatsForMed(
     String medId,
     Map<String, List<Map<String, dynamic>>> monthData,
   ) {
-    final res = <String, Map<String, int>>{};
+    final result = <String, Map<String, int>>{};
 
-    monthData.forEach((dayKey, doses) {
-      int onTime = 0, late = 0, missed = 0;
+    monthData.forEach((dayId, doses) {
+      int onTime = 0;
+      int late = 0;
+      int missed = 0;
 
       for (final dose in doses) {
         if ((dose['medicationId'] ?? '').toString() != medId) continue;
@@ -349,8 +350,8 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
         }
       }
 
-      if (onTime + late + missed > 0) {
-        res[dayKey] = {
+      if (onTime > 0 || late > 0 || missed > 0) {
+        result[dayId] = {
           'onTime': onTime,
           'late': late,
           'missed': missed,
@@ -358,7 +359,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
       }
     });
 
-    return res;
+    return result;
   }
 
   // ---------- UI ----------
@@ -535,6 +536,42 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                   children: [
                     _buildModeToggle(cs),
                     const SizedBox(height: 16),
+
+                    // ✅ Month header هنا أيضاً
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _goPrevMonth,
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: cs.primary.withOpacity(.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                monthName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: cs.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _goNextMonth,
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
                     Text(
                       'Medications for this elderly',
                       style: Theme.of(context).textTheme.titleMedium,
@@ -557,8 +594,6 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                         final agg = _aggregateForMed(medId, monthData);
                         final totalTaken =
                             agg['onTime']! + agg['late']! + agg['missed']!;
-                        final dailyStats =
-                            _buildDailyStatsForMed(medId, monthData);
 
                         return Card(
                           child: ListTile(
@@ -593,17 +628,19 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                             ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => MedChartPage(
-                                    medName: medName,
-                                    monthlyStats: agg,
-                                    dailyStats: dailyStats,
-                                  ),
-                                ),
-                              );
-                            },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => MedChartPage(
+        elderlyId: widget.elderlyId,
+        medId: medId,
+        medName: medName,
+        initialMonth: _current, // نفس الشهر اللي أنتِ فيه في السمّري
+      ),
+    ),
+  );
+},
+
                           ),
                         );
                       }).toList()),
@@ -825,7 +862,7 @@ class _SummaryDayCell extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final Color borderColor = selected
         ? primary
-        : (isToday ? primary : Colors.grey.shade300); // 👈 اليوم بنفس primary
+        : (isToday ? primary : Colors.grey.shade300);
 
     return Expanded(
       child: GestureDetector(
@@ -936,10 +973,10 @@ class _LegendRow extends StatelessWidget {
       spacing: 16,
       runSpacing: 8,
       children: const [
-        _LegendItem(color: Color(0xFFD32F2F), label: 'Missed'), // red
-        _LegendItem(color: Color(0xFFF9A825), label: 'Late'), // yellow
-        _LegendItem(color: Color(0xFF2E7D32), label: 'On time'), // green
-        _LegendItem(color: Color(0xFFEEEEEE), label: 'Upcoming'), // light grey
+        _LegendItem(color: Color(0xFFD32F2F), label: 'Missed'),
+        _LegendItem(color: Color(0xFFF9A825), label: 'Late'),
+        _LegendItem(color: Color(0xFF2E7D32), label: 'On time'),
+        _LegendItem(color: Color(0xFFEEEEEE), label: 'Upcoming'),
       ],
     );
   }
