@@ -495,17 +495,16 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         return;
       }
 
-      // ✅ أولاً: جرّبي نفهمها كـ global intent (go to medication, home, media ...)
-      if (categoryAnswer != null && categoryAnswer.trim().isNotEmpty) {
-        final globalCmd = await _voiceService.analyzeSmartCommand(
-          categoryAnswer,
-        );
-        if (globalCmd != null) {
-          await _handleGlobalCommand(globalCmd);
-          _resetVoiceState();
-          return;
-        }
-      }
+      // if (categoryAnswer != null && categoryAnswer.trim().isNotEmpty) {
+      //   final globalCmd = await _voiceService.analyzeSmartCommand(
+      //     categoryAnswer,
+      //   );
+      //   if (globalCmd != null) {
+      //     await _handleGlobalCommand(globalCmd);
+      //     _resetVoiceState();
+      //     return;
+      //   }
+      // }
 
       if (categoryAnswer == null || categoryAnswer.trim().isEmpty) {
         await _voiceService.speak("Sorry, I didn't catch that.");
