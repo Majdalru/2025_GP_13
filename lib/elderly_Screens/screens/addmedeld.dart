@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/medication.dart'; // Import the new model
+import '../../models/medication.dart'; 
 import '../../services/medication_scheduler.dart';
 
 // --- Main Stateful Widget for AddMedScreen ---
@@ -97,7 +97,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         await docRef.update({'medsList': updatedMedsList});
         MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        // ✅ Show success dialog
+        
         if (mounted) {
           Navigator.of(context).pop(true); // Close add/edit screen
 
@@ -120,7 +120,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
               margin: EdgeInsets.only(
                 bottom:
                     MediaQuery.of(context).size.height *
-                    0.55, // ✅ Fixed distance from bottom
+                    0.55, 
                 left: 20,
                 right: 20,
               ),
@@ -159,7 +159,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         }, SetOptions(merge: true));
         MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        // ✅ Show success dialog
+        
         if (mounted) {
           Navigator.of(context).pop(); // Close add screen
 
@@ -182,7 +182,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
               margin: EdgeInsets.only(
                 bottom:
                     MediaQuery.of(context).size.height *
-                    0.55, // ✅ Fixed distance from bottom
+                    0.55, 
                 left: 20,
                 right: 20,
               ),
@@ -305,8 +305,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // UI code remains largely the same, but the final save action is different.
-    // ...
+    
     final ButtonStyle tealButtonStyle = ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFF5FA5A0),
       foregroundColor: Colors.white,
@@ -409,7 +408,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                       ? _removeCustomTimeField
                       : null,
                   onNext: () {
-                    // This is just for UI validation, no need to change
+                    
                     _goToNextPage();
                   },
                 ),
@@ -431,7 +430,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   isEditing: _isEditing,
                   buttonStyle: tealButtonStyle,
                   onSave:
-                      _saveMedication, // This now calls the Firestore function
+                      _saveMedication, // calls the Firestore function
                 ),
               ],
             ),
@@ -442,7 +441,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 }
 
-// --- Stepper and Header Widgets (Unchanged) ---
+// --- Stepper and Header Widgets ---
 class _Stepper extends StatelessWidget {
   final int currentIndex;
   final int stepCount;
@@ -522,7 +521,7 @@ class _StepHeader extends StatelessWidget {
   }
 }
 
-// --- Step 1: Medicine Name (Unchanged) ---
+// --- Step 1: Medicine Name ---
 class _Step1MedName extends StatefulWidget {
   final ValueChanged<String> onNext;
   final String? initialValue;
@@ -733,9 +732,9 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
 
   @override
   Widget build(BuildContext context) {
-    // أول بوكس ل every day
+    
     final everyDayTile = _buildDayTile('Every day');
-    // الباقي للأيام
+    
     final specificDayTiles = _daysOfWeek.sublist(1).map(_buildDayTile).toList();
 
     return SingleChildScrollView(
@@ -801,7 +800,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
   }
 }
 
-// --- Step 3: Frequency (Unchanged) ---
+// --- Step 3: Frequency---
 class _Step3HowManyTimesPerDay extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String> onNext;
@@ -938,7 +937,7 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
   }
 }
 
-// --- Step 4: Set Times (Unchanged) ---
+// --- Step 4: Set Times ---
 class _Step4SetTimes extends StatefulWidget {
   final String? medicationName;
   final String? frequency;
@@ -1109,7 +1108,7 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
   }
 }
 
-// --- Step 5: Add Notes (Unchanged) ---
+// --- Step 5: Add Notes---
 class _Step5AddNotes extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String?> onNext;
@@ -1194,7 +1193,7 @@ class _Step5AddNotesState extends State<_Step5AddNotes> {
   }
 }
 
-// --- Step 6: Summary (Unchanged) ---
+// --- Step 6: Summary  ---
 class _Step6Summary extends StatelessWidget {
   final String? medicationName;
   final List<String> selectedDays;
