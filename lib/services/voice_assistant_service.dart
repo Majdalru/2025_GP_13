@@ -13,7 +13,7 @@ import '../models/medication.dart';
 import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
-/// حطي الـ API KEY حقك هنا
+/// API KEY 
 const String _openAIApiKey = '';
 
 class VoiceAssistantService {
@@ -1183,7 +1183,7 @@ class VoiceAssistantService {
     final lowerUtterance = utterance.toLowerCase().trim();
     if (lowerUtterance.isEmpty) return null;
 
-    // ✅ أسماء الأدوية يُفضَّل تكون إنجليزي
+    
     for (final m in meds) {
       final nameLower = m.name.toLowerCase();
       if (lowerUtterance.contains(nameLower)) {
@@ -1237,7 +1237,7 @@ class VoiceAssistantService {
     return bestMed;
   }
 
-  // ✅ نخلي النورمل تنشيل الحروف العربية عشان الأسماء تعتمد على الإنجليزي
+  
   String _normalizeText(String input) {
     final lower = input.toLowerCase();
     return lower.replaceAll(RegExp(r'[^a-z0-9]+'), '');
@@ -1288,7 +1288,7 @@ class VoiceAssistantService {
     final answer = await listenWhisper(seconds: listenSeconds);
     debugPrint('🧠 Answer to "$prompt": "$answer"');
 
-    // ✅ إلغاء عام داخل أي سؤال
+    
     if (_isCancelUtterance(answer)) {
       debugPrint('🛑 Cancel utterance detected inside _askQuestion.');
       return null;
@@ -1319,10 +1319,9 @@ class VoiceAssistantService {
         lower.contains('خلاص');
   }
 
-  // ====== إلغاء عام للصوت ======
-
+// ====== Global Voice Cancellation ======
   String _normalizeArabicForCancel(String input) {
-    // إزالة التشكيل
+    // Remove diacritics
     final diacritics = RegExp(
       r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]',
     );
@@ -1340,14 +1339,14 @@ class VoiceAssistantService {
     if (answer == null) return false;
     final lower = answer.toLowerCase();
 
-    // إنجليزي
+    
     if (lower.contains('stop') ||
         lower.contains('cancel') ||
         lower.contains('enough')) {
       return true;
     }
 
-    // عربي مع/بدون تشكيل
+    // Arabic with/without diacritics
     final norm = _normalizeArabicForCancel(lower);
 
     return norm.contains('خلاص') ||

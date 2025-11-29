@@ -94,7 +94,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
 
     _waveController?.repeat();
 
-    // ✅ نستخدم Whisper بدل STT القديم
+    // Whisper 
     final result = await _assistant.listenWhisper(seconds: 4);
 
     _waveController?.stop();
@@ -158,7 +158,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     _waveController?.dispose();
     _pulseController?.dispose();
     _assistant.stopSpeaking();
-    // ما عاد فيه stopListening في السيرفس بعد Whisper
+    
     super.dispose();
   }
 

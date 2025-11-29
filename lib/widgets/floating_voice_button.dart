@@ -62,7 +62,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       duration: const Duration(milliseconds: 3000),
     );
 
-    // ✅ خلي السيرفس يقول لنا متى listening / speaking (كل فلوات الأدوية)
+    
     _voiceService.setOnListeningStateChange(_handleServiceStateChange);
 
     _loadUserInfo();
@@ -361,7 +361,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     _rotateController.dispose();
     _tts.stop();
     _beepPlayer.dispose();
-    _voiceService.setOnListeningStateChange(null); // نفصل الكول باك
+    _voiceService.setOnListeningStateChange(null); 
     super.dispose();
   }
 
