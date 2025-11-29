@@ -682,18 +682,25 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDCF2EF) : Colors.white,
+          color: isSelected
+              ? const Color.fromARGB(255, 239, 246, 253)
+              : Colors.white,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF5FA5A0)
+                ? const Color(0xFF0D2D5D)
                 : const Color(0xFF5FA5A0).withOpacity(0.2),
             width: 2,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFF5FA5A0).withOpacity(0.2),
+                color: const Color.fromARGB(
+                  255,
+                  214,
+                  225,
+                  224,
+                ).withOpacity(0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -704,7 +711,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
             Checkbox(
               value: isSelected,
               onChanged: (value) => _onDaySelected(value, day),
-              activeColor: const Color(0xFF5FA5A0),
+              activeColor: const Color.fromARGB(255, 34, 79, 133),
             ),
             Expanded(
               child: Text(
@@ -713,8 +720,8 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
                   fontSize: 18,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected
-                      ? const Color(0xFF4B8681)
-                      : Colors.grey.shade800,
+                      ? const Color.fromARGB(255, 26, 48, 95)
+                      : const Color.fromARGB(255, 52, 52, 52),
                 ),
               ),
             ),
@@ -760,7 +767,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF4B8681),
+                  color: Color.fromARGB(255, 21, 31, 79),
                 ),
               ),
               const SizedBox(height: 8),
@@ -772,7 +779,7 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF4B8681),
+                  color: Color.fromARGB(255, 17, 23, 50),
                 ),
               ),
               const SizedBox(height: 8),
@@ -829,6 +836,66 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
     _selectedFrequency = widget.initialFrequency;
   }
 
+  Widget _buildFrequencyTile(String option) {
+    final bool isSelected = _selectedFrequency == option;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFrequency = option),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color.fromARGB(255, 239, 246, 253)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF0D2D5D)
+                : const Color(0xFF5FA5A0).withOpacity(0.2),
+            width: 2,
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: const Color.fromARGB(
+                  255,
+                  255,
+                  255,
+                  255,
+                ).withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Radio<String>(
+              value: option,
+              groupValue: _selectedFrequency,
+              onChanged: (value) => setState(() => _selectedFrequency = value),
+              activeColor: const Color.fromARGB(255, 34, 79, 133),
+            ),
+            Expanded(
+              child: Text(
+                option,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? const Color.fromARGB(255, 26, 48, 95)
+                      : const Color.fromARGB(255, 52, 52, 52),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -853,20 +920,8 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
                 title: 'Step 3: Frequency',
                 subtitle: 'Select how often you take this medication',
               ),
-              ..._frequencyOptions.map(
-                (option) => RadioListTile<String>(
-                  title: Text(option, style: const TextStyle(fontSize: 22)),
-                  value: option,
-                  groupValue: _selectedFrequency,
-                  onChanged: (String? value) =>
-                      setState(() => _selectedFrequency = value),
-                  activeColor: const Color(0xFF5FA5A0),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                ),
-              ),
+              const SizedBox(height: 16),
+              ..._frequencyOptions.map(_buildFrequencyTile),
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: _selectedFrequency != null

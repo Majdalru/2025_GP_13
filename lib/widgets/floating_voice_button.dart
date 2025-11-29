@@ -211,6 +211,9 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       }
 
       await _speak(greeting);
+      await _speak(
+        "I can help you navigate through the app. Where do you want to go?",
+      );
     }
 
     await _startListening();

@@ -49,12 +49,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         }
       });
 
-      // 4) اعتبر أن التحميل خلص → شيل علامة اللودينق
       setState(() {
         _isLoading = false;
       });
 
-      // 5) ابدأ التشغيل تلقائياً
       _player.play();
     } catch (e) {
       debugPrint('Error loading audio: $e');
@@ -77,7 +75,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     return '$m:$s';
   }
 
-  /// ⏪ / ⏩ قفزة نسبية بعدد ثواني (سالب يرجع، موجب يتقدّم)
   Future<void> _seekRelative(int seconds) async {
     if (_duration == Duration.zero) return;
 
@@ -93,11 +90,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    // أقصى قيمة للـ Slider
-    final maxSeconds =
-        _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0;
+    final maxSeconds = _duration.inSeconds > 0
+        ? _duration.inSeconds.toDouble()
+        : 1.0;
 
-    // القيمة الحالية للـ Slider
     final currentSeconds = _position.inSeconds.toDouble();
     final sliderValue = currentSeconds.clamp(0.0, maxSeconds);
 
@@ -108,7 +104,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         toolbarHeight: 110,
         backgroundColor: AudioPlayerPage.kPrimary,
 
-        // ✅ العنوان في الـ AppBar (يقلّ الخط لو العنوان طويل)
         title: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(widget.item.title, textAlign: TextAlign.center),
@@ -131,7 +126,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
       body: SafeArea(
         child: Padding(
-          // 🔹 قللنا البادينق الأفقي عشان نعطي مساحة أكبر للأزرار
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Column(
             children: [
@@ -143,9 +137,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                     color: Colors.white,
                     elevation: 4,
                     shadowColor: AudioPlayerPage.kPrimary.withOpacity(0.15),
-                    // 🔹 قللنا الـ margin شوي
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                       side: BorderSide(
@@ -154,7 +149,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                       ),
                     ),
                     child: Padding(
-                      // 🔹 قللنا البادينق الأفقي داخل الكرت
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
                         vertical: 26,
@@ -162,13 +156,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // ===== العنوان + صورة =====
                           Row(
                             children: [
                               CircleAvatar(
                                 radius: 45,
-                                backgroundImage:
-                                    AssetImage(widget.item.imageAsset),
+                                backgroundImage: AssetImage(
+                                  widget.item.imageAsset,
+                                ),
                               ),
                               const SizedBox(width: 16),
 
@@ -190,7 +184,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
                           const SizedBox(height: 32),
 
-                          // ===== الـ Slider =====
                           if (_isLoading)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 20),
@@ -201,12 +194,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               children: [
                                 SliderTheme(
                                   data: SliderTheme.of(context).copyWith(
-                                    thumbShape:
-                                        const RoundSliderThumbShape(
+                                    thumbShape: const RoundSliderThumbShape(
                                       enabledThumbRadius: 10,
                                     ),
-                                    overlayShape:
-                                        const RoundSliderOverlayShape(
+                                    overlayShape: const RoundSliderOverlayShape(
                                       overlayRadius: 18,
                                     ),
                                     trackHeight: 4,
@@ -216,8 +207,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                     max: maxSeconds,
                                     value: sliderValue,
                                     onChanged: (value) {
-                                      final pos =
-                                          Duration(seconds: value.toInt());
+                                      final pos = Duration(
+                                        seconds: value.toInt(),
+                                      );
                                       _player.seek(pos);
                                     },
                                     activeColor: AudioPlayerPage.kPrimary,
@@ -251,15 +243,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
                           const SizedBox(height: 26),
 
-                          // ===== أزرار التحكم (نفس المقاسات السابقة) =====
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // ⏪ رجوع 10 ثواني
                               IconButton(
                                 icon: const Icon(Icons.replay_10),
-                                iconSize: 44, // 👈 نفس اللي كان
+                                iconSize: 44,
                                 color: AudioPlayerPage.kPrimary,
                                 onPressed: () => _seekRelative(-10),
                                 splashRadius: 30,
@@ -290,10 +280,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                   return ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                       shape: const CircleBorder(),
-                                      backgroundColor:
-                                          AudioPlayerPage.kPrimary,
-                                      padding: const EdgeInsets.all(
-                                          22), // 👈 نفس اللي كان
+                                      backgroundColor: AudioPlayerPage.kPrimary,
+                                      padding: const EdgeInsets.all(22),
                                       elevation: 4,
                                     ),
                                     onPressed: onPressed,

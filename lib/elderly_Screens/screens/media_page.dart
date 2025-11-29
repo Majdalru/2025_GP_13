@@ -136,8 +136,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 crossAxisCount: 2,
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 25,
-                childAspectRatio:
-                    MediaQuery.of(context).size.width < 380 ? 0.68 : 0.8,
+                childAspectRatio: MediaQuery.of(context).size.width < 380
+                    ? 0.68
+                    : 0.8,
                 children: [
                   _buildMediaCard(context, Icons.library_music, "Story"),
                   _buildMediaCard(context, Icons.menu_book, "Quran"),
@@ -206,8 +207,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   animation: _rippleController,
                   builder: (context, child) {
                     // ✅ Dynamic color based on state
-                    final rippleColor =
-                        _isListeningState ? Colors.green : Colors.red;
+                    final rippleColor = _isListeningState
+                        ? Colors.green
+                        : Colors.red;
 
                     return CustomPaint(
                       size: const Size(100, 100),
@@ -273,8 +275,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 _isListeningState
                     ? Icons.mic
                     : _isSpeakingState
-                        ? Icons.volume_up
-                        : Icons.mic_none,
+                    ? Icons.volume_up
+                    : Icons.mic_none,
                 color: Colors.white,
                 size: 40,
               ),
@@ -332,8 +334,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
   /// يشيل التشكيل ويوحّد بعض الحروف
   String _normalizeArabic(String input) {
-    final diacritics =
-        RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]');
+    final diacritics = RegExp(
+      r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]',
+    );
     var out = input.replaceAll(diacritics, '');
     out = out
         .replaceAll('أ', 'ا')
@@ -370,10 +373,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     }
 
     // الفلق
-    if (_containsAnyNormalized(normalizedUtter, [
-      'الفلق',
-      'سوره الفلق',
-    ])) {
+    if (_containsAnyNormalized(normalizedUtter, ['الفلق', 'سوره الفلق'])) {
       return 'falaq';
     }
 
@@ -388,18 +388,12 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     }
 
     // الملك
-    if (_containsAnyNormalized(normalizedUtter, [
-      'الملك',
-      'سوره الملك',
-    ])) {
+    if (_containsAnyNormalized(normalizedUtter, ['الملك', 'سوره الملك'])) {
       return 'mulk';
     }
 
     // الناس
-    if (_containsAnyNormalized(normalizedUtter, [
-      'الناس',
-      'سوره الناس',
-    ])) {
+    if (_containsAnyNormalized(normalizedUtter, ['الناس', 'سوره الناس'])) {
       return 'naas';
     }
 
@@ -453,9 +447,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         break;
 
       case VoiceCommand.sos:
-        await _voiceService.speak(
-          'Here we will start the SOS emergency flow.',
-        );
+        await _voiceService.speak('Here we will start the SOS emergency flow.');
         // TODO: استدعاء منطق الـ SOS الحقيقي
         break;
 
@@ -490,7 +482,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     try {
       // --- STEP 1: Ask Category ---
       await _voiceService.speak(
-        "You are on your media page. What category do you want me to play something from?",
+        "You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story , Caregiver or favorites",
       );
 
       String? categoryAnswer = await _voiceService.listenWhisper(seconds: 5);
@@ -505,8 +497,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       // ✅ أولاً: جرّبي نفهمها كـ global intent (go to medication, home, media ...)
       if (categoryAnswer != null && categoryAnswer.trim().isNotEmpty) {
-        final globalCmd =
-            await _voiceService.analyzeSmartCommand(categoryAnswer);
+        final globalCmd = await _voiceService.analyzeSmartCommand(
+          categoryAnswer,
+        );
         if (globalCmd != null) {
           await _handleGlobalCommand(globalCmd);
           _resetVoiceState();
@@ -768,8 +761,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         final keyword = _quranFileKeywordFromUtterance(searchNorm);
         if (keyword != null) {
           final quranDocs = qs.docs.where((doc) {
-            final fileName =
-                (doc.data()['fileName'] ?? '').toString().toLowerCase();
+            final fileName = (doc.data()['fileName'] ?? '')
+                .toString()
+                .toLowerCase();
             return fileName.contains(keyword); // مثال: contains 'falaq'
           }).toList();
 

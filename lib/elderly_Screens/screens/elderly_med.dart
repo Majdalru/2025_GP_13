@@ -102,7 +102,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       ),
     );
 
-    // // ✅ لو حابة ترجعين التوست بعدين:
     // if (result == true && mounted) {
     //   _showSuccessMessage('Medication Updated Successfully');
     // }
@@ -274,39 +273,42 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                       ),
                       const SizedBox(height: 24),
                       Expanded(
-                        child: StreamBuilder<
-                            DocumentSnapshot<Map<String, dynamic>>>(
-                          stream: FirebaseFirestore.instance
-                              .collection('medications')
-                              .doc(widget.elderlyId)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              _currentMeds = [];
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-                            if (!snapshot.hasData || !snapshot.data!.exists) {
-                              _currentMeds = [];
-                              return const Center(
-                                child: Text(
-                                  "No medications added yet.",
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                              );
-                            }
-                            if (snapshot.hasError) {
-                              _currentMeds = [];
-                              return const Center(
-                                child: Text("Error loading medications."),
-                              );
-                            }
+                        child:
+                            StreamBuilder<
+                              DocumentSnapshot<Map<String, dynamic>>
+                            >(
+                              stream: FirebaseFirestore.instance
+                                  .collection('medications')
+                                  .doc(widget.elderlyId)
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  _currentMeds = [];
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                                if (!snapshot.hasData ||
+                                    !snapshot.data!.exists) {
+                                  _currentMeds = [];
+                                  return const Center(
+                                    child: Text(
+                                      "No medications added yet.",
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                }
+                                if (snapshot.hasError) {
+                                  _currentMeds = [];
+                                  return const Center(
+                                    child: Text("Error loading medications."),
+                                  );
+                                }
 
-                            final data = snapshot.data!.data();
-                            final medsList =
-                                (data?['medsList'] as List?)
+                                final data = snapshot.data!.data();
+                                final medsList =
+                                    (data?['medsList'] as List?)
                                         ?.map(
                                           (medMap) => Medication.fromMap(
                                             medMap as Map<String, dynamic>,
@@ -315,31 +317,33 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                                         .toList() ??
                                     [];
 
-                            _currentMeds = medsList;
+                                _currentMeds = medsList;
 
-                            if (medsList.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  "No medications added yet.",
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                              );
-                            }
+                                if (medsList.isEmpty) {
+                                  return const Center(
+                                    child: Text(
+                                      "No medications added yet.",
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                }
 
-                            return ListView.builder(
-                              itemCount: medsList.length,
-                              itemBuilder: (context, index) {
-                                final medication = medsList[index];
-                                return MedicationCard(
-                                  medication: medication,
-                                  onEdit: () =>
-                                      _navigateAndEditMedication(medication),
-                                  onDelete: () => _deleteMedication(medication),
+                                return ListView.builder(
+                                  itemCount: medsList.length,
+                                  itemBuilder: (context, index) {
+                                    final medication = medsList[index];
+                                    return MedicationCard(
+                                      medication: medication,
+                                      onEdit: () => _navigateAndEditMedication(
+                                        medication,
+                                      ),
+                                      onDelete: () =>
+                                          _deleteMedication(medication),
+                                    );
+                                  },
                                 );
                               },
-                            );
-                          },
-                        ),
+                            ),
                       ),
                     ],
                   ),
@@ -352,9 +356,8 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
 
       // ✅ Voice button in medications page
       floatingActionButton: FloatingVoiceButton(
-        // ✅ الرسالة الترحيبية في صفحة الأدوية
         customGreeting:
-            "You are in the medication page. I can help you with adding, editing, or deleting some meds. What would you like to do?",
+            "You are in the medication page. I can help you with adding, editing, or deleting some meds. What would you like to do? , You can say add medicine, edit medicine, or delete medicine. ",
 
         customErrorResponse:
             "I didn't understand. You can say add medication, edit medication, or delete medication.",
@@ -383,19 +386,14 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
 
             case VoiceCommand.goToHome:
               if (Navigator.canPop(context)) {
-                await _voiceService.speak(
-                  "Going back to the home page.",
-                );
+                await _voiceService.speak("Going back to the home page.");
                 Navigator.pop(context);
               } else {
-                await _voiceService.speak(
-                  "You are already on the home page.",
-                );
+                await _voiceService.speak("You are already on the home page.");
               }
               break;
 
             default:
-              // 🔊 أوامر ثانية (media, SOS, settings..) تنبهه إنها من الهوم
               await _voiceService.speak(
                 "This voice command works from the home page. "
                 "Please go back to home first.",
@@ -559,18 +557,18 @@ class MedicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeString = medication.times.map((t) => t.format(context)).join(', ');
+    final timeString = medication.times
+        .map((t) => t.format(context))
+        .join(', ');
     final labelStyle = DefaultTextStyle.of(context).style.copyWith(
       fontSize: 22,
       fontWeight: FontWeight.bold,
       color: const Color(0xFF1B3A52),
       letterSpacing: 0.3,
     );
-    final valueStyle = DefaultTextStyle.of(context).style.copyWith(
-      fontSize: 22,
-      color: const Color(0xFF212121),
-      height: 1.4,
-    );
+    final valueStyle = DefaultTextStyle.of(
+      context,
+    ).style.copyWith(fontSize: 22, color: const Color(0xFF212121), height: 1.4);
 
     return Card(
       elevation: 6,
@@ -660,8 +658,7 @@ class MedicationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  if (medication.notes != null &&
-                      medication.notes!.isNotEmpty)
+                  if (medication.notes != null && medication.notes!.isNotEmpty)
                     RichText(
                       text: TextSpan(
                         style: valueStyle,

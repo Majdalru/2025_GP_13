@@ -14,8 +14,7 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// حطي الـ API KEY حقك هنا
-const String _openAIApiKey =
-    '';
+const String _openAIApiKey = '';
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -31,10 +30,8 @@ class VoiceAssistantService {
 
   bool get isInitialized => _isInitialized;
 
-  // ✅ callback عشان نخبر الفلوتينق عن حالة الصوت
   void Function(bool isListening, bool isSpeaking)? _onListeningStateChange;
 
-  /// تستدعينها من الـ FloatingVoiceButton مرة واحدة في initState
   void setOnListeningStateChange(
     void Function(bool isListening, bool isSpeaking)? callback,
   ) {
@@ -76,7 +73,7 @@ class VoiceAssistantService {
     final user = FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName ?? '';
     if (displayName.isNotEmpty) {
-      return 'Hi $displayName, how can I help you?';
+      return 'Hi $displayName, how can I help you? ';
     }
     return 'Hi, how can I help you today?';
   }
@@ -118,15 +115,13 @@ class VoiceAssistantService {
   //  LISTEN (Whisper)
   // =========================
 
-  Future<String?> listenWhisper({
-    int seconds = 4,
-    bool englishOnly = false,
-  }) async {
+  Future<String?> listenWhisper({int seconds = 4}) async {
     final ok = await initialize();
     if (!ok) return null;
 
     _notifyState(listening: true, speaking: false);
 
+    // 🔔
     await _playBeep();
 
     final whisper = WhisperService();
@@ -138,11 +133,7 @@ class VoiceAssistantService {
       return null;
     }
 
-    final text = await whisper.transcribeAudio(
-      file,
-      _openAIApiKey,
-      englishOnly: englishOnly,
-    );
+    final text = await whisper.transcribeAudio(file, _openAIApiKey);
 
     if (text == null || text.trim().isEmpty) {
       debugPrint('❌ Whisper returned empty text');
@@ -153,7 +144,6 @@ class VoiceAssistantService {
     final cleaned = text.trim();
     debugPrint('🧠 Whisper text: "$cleaned"');
 
-    // رجعنا لوضع idle
     _notifyState(listening: false, speaking: false);
     return cleaned;
   }
@@ -170,9 +160,9 @@ class VoiceAssistantService {
     if (!ok) return;
 
     await speak(getGreeting());
+
     final answer = await listenWhisper(seconds: 5);
 
-    // ✅ إلغاء عام بالصوت
     if (_isCancelUtterance(answer)) {
       await speak('Okay, I will stop now.');
       return;
@@ -459,7 +449,6 @@ class VoiceAssistantService {
   // =========================
   //  MEDICATION FLOWS
   // =========================
-  // (كل فلوات الأدوية نفسها بالضبط من كودك، مع إضافة englishOnly في اسم الدواء)
 
   Future<void> runAddMedicationFlow(String elderlyId) async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -475,11 +464,10 @@ class VoiceAssistantService {
       'Okay, let\'s add a new medication. I will ask you a few questions.',
     );
 
-    // 1) Name  ✅ ENGLISH ONLY
+    // 1) Name
     final name = await _askQuestion(
       'First, what is the medication name? Please say it in English.',
       listenSeconds: 5,
-      englishOnly: true,
     );
     if (_isCancelUtterance(name)) {
       await speak('Okay, we will stop adding the medication.');
@@ -551,8 +539,8 @@ class VoiceAssistantService {
     }
     final notes =
         (notesAnswer != null && notesAnswer.toLowerCase().trim() != 'no')
-            ? notesAnswer
-            : null;
+        ? notesAnswer
+        : null;
 
     final newMed = Medication(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -566,8 +554,9 @@ class VoiceAssistantService {
       updatedAt: Timestamp.now(),
     );
 
-    final docRef =
-        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(elderlyId);
 
     try {
       await docRef.set({
@@ -603,8 +592,7 @@ class VoiceAssistantService {
     const maxTries = 3;
 
     for (int attempt = 1; attempt <= maxTries; attempt++) {
-      // ✅ ENGLISH ONLY هنا
-      final answer = await listenWhisper(seconds: 4, englishOnly: true);
+      final answer = await listenWhisper(seconds: 4);
       debugPrint('🎧 delete utterance (try $attempt): "$answer"');
 
       if (_isCancelUtterance(answer)) {
@@ -659,8 +647,9 @@ class VoiceAssistantService {
       return;
     }
 
-    final docRef =
-        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(elderlyId);
 
     try {
       await docRef.update({
@@ -697,8 +686,7 @@ class VoiceAssistantService {
     const maxTries = 3;
 
     for (int attempt = 1; attempt <= maxTries; attempt++) {
-      // ✅ ENGLISH ONLY هنا
-      final answer = await listenWhisper(seconds: 4, englishOnly: true);
+      final answer = await listenWhisper(seconds: 4);
       debugPrint('🎧 Edit medication selection (try $attempt): "$answer"');
 
       if (_isCancelUtterance(answer)) {
@@ -816,15 +804,17 @@ class VoiceAssistantService {
       }
     }
 
-    final docRef =
-        FirebaseFirestore.instance.collection('medications').doc(elderlyId);
+    final docRef = FirebaseFirestore.instance
+        .collection('medications')
+        .doc(elderlyId);
 
     try {
       final doc = await docRef.get();
       final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
 
-      final List<Map<String, dynamic>> updatedMedsList =
-          currentMedsList.map((med) {
+      final List<Map<String, dynamic>> updatedMedsList = currentMedsList.map((
+        med,
+      ) {
         if (med['id'] == currentMed.id) {
           return currentMed.toMap();
         }
@@ -917,8 +907,7 @@ class VoiceAssistantService {
   Future<Medication?> _editName(Medication original) async {
     await speak('What is the new name for this medication?');
 
-    // ✅ ENGLISH ONLY هنا
-    final newName = await listenWhisper(seconds: 5, englishOnly: true);
+    final newName = await listenWhisper(seconds: 5);
 
     if (_isCancelUtterance(newName)) {
       await speak('Okay, we will keep the original name.');
@@ -1294,18 +1283,17 @@ class VoiceAssistantService {
   //  Generic helpers
   // =========================
 
-  Future<String?> _askQuestion(
-    String prompt, {
-    int listenSeconds = 4,
-    bool englishOnly = false,
-  }) async {
+  Future<String?> _askQuestion(String prompt, {int listenSeconds = 4}) async {
     await speak(prompt);
-    final answer = await listenWhisper(
-      seconds: listenSeconds,
-      englishOnly: englishOnly,
-    );
+    final answer = await listenWhisper(seconds: listenSeconds);
     debugPrint('🧠 Answer to "$prompt": "$answer"');
-    // الكولر هو اللي يشيّك إذا فيه cancel
+
+    // ✅ إلغاء عام داخل أي سؤال
+    if (_isCancelUtterance(answer)) {
+      debugPrint('🛑 Cancel utterance detected inside _askQuestion.');
+      return null;
+    }
+
     return answer;
   }
 
@@ -1372,119 +1360,37 @@ class VoiceAssistantService {
         norm.contains('الغاء');
   }
 
-  // ========  دالة الوقت (معدّلة)  ========
-
   TimeOfDay parseTimeFromSpeech(String speech) {
     final now = TimeOfDay.now();
     final lower = speech.toLowerCase();
 
-    int? hour;
+    int hour = now.hour;
     int minute = 0;
 
-    // 1) أرقام صريحة مثل 6 أو 6:30
     final regex = RegExp(r'(\d{1,2})(:(\d{1,2}))?');
     final match = regex.firstMatch(lower);
     if (match != null) {
       final hStr = match.group(1);
       final mStr = match.group(3);
       if (hStr != null) {
-        hour = int.tryParse(hStr);
+        hour = int.tryParse(hStr) ?? now.hour;
       }
       if (mStr != null) {
         minute = int.tryParse(mStr) ?? 0;
       }
     }
 
-    // 2) لو ما فيه أرقام نحاول نفهمها من الكلمات
-    if (hour == null) {
-      var text = lower;
-
-      // أهم ترقعة: Sex a.m. ➜ six a.m.
-      text = text.replaceAll('sex', 'six');
-
-      // نشيل الرموز ونخلي حروف/أرقام/مسافات
-      text = text.replaceAll(RegExp(r'[^a-z\u0600-\u06FF\s]'), ' ');
-
-      final words = text
-          .split(RegExp(r'\s+'))
-          .where((w) => w.trim().isNotEmpty)
-          .toList();
-
-      const enMap = <String, int>{
-        'one': 1,
-        'two': 2,
-        'three': 3,
-        'four': 4,
-        'five': 5,
-        'six': 6,
-        'seven': 7,
-        'eight': 8,
-        'nine': 9,
-        'ten': 10,
-        'eleven': 11,
-        'twelve': 12,
-      };
-
-      const arMap = <String, int>{
-        'واحد': 1,
-        'واحدة': 1,
-        'اثنين': 2,
-        'ثلاثة': 3,
-        'ثلاث': 3,
-        'اربعة': 4,
-        'أربعة': 4,
-        'خمسة': 5,
-        'ستة': 6,
-        'سته': 6,
-        'سبعة': 7,
-        'ثمانية': 8,
-        'ثمانيه': 8,
-        'تسعة': 9,
-        'تسعه': 9,
-        'عشرة': 10,
-        'عشره': 10,
-        'احدعش': 11,
-        'احدى عشر': 11,
-        'اثنعش': 12,
-        'اثنا عشر': 12,
-      };
-
-      for (final w in words) {
-        if (enMap.containsKey(w)) {
-          hour = enMap[w];
-          break;
-        }
-        if (arMap.containsKey(w)) {
-          hour = arMap[w];
-          break;
-        }
-      }
-    }
-
-    // لو ما لقينا ساعة أبداً استخدم ساعة الآن عشان ما تكون null
-    hour ??= now.hour;
-
-    // 3) نحدّد AM / PM
-    final isPm = lower.contains('pm') ||
-        lower.contains('p.m') ||
-        lower.contains('evening') ||
-        lower.contains('night') ||
-        lower.contains('مساء') ||
-        lower.contains('ليل');
-
-    final isAm = lower.contains('am') ||
-        lower.contains('a.m') ||
-        lower.contains('morning') ||
+    final isPm =
+        lower.contains('pm') || lower.contains('مساء') || lower.contains('ليل');
+    final isAm =
+        lower.contains('am') ||
         lower.contains('صباح') ||
         lower.contains('صباحا');
 
-    if (isPm && hour! < 12) hour = hour! + 12;
+    if (isPm && hour < 12) hour += 12;
     if (isAm && hour == 12) hour = 0;
 
-    final finalHour = hour!.clamp(0, 23);
-    final finalMinute = minute.clamp(0, 59);
-
-    return TimeOfDay(hour: finalHour, minute: finalMinute);
+    return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
   }
 
   List<String> parseDaysFromSpeech(String speech) {
@@ -1548,18 +1454,18 @@ class VoiceAssistantService {
     if (lower.contains('once') ||
         lower.contains('one time') ||
         lower.contains('مرة واحدة')) {
-      return 'Once daily';
+      return 'Once a day';
     }
     if (lower.contains('twice') ||
         lower.contains('two times') ||
         lower.contains('مرتين')) {
-      return 'Twice daily';
+      return 'Twice a day';
     }
     if (lower.contains('three') || lower.contains('ثلاث')) {
-      return 'Three times daily';
+      return 'Three times a day';
     }
     if (lower.contains('four') || lower.contains('أربع')) {
-      return 'Four times daily';
+      return 'Four times a day';
     }
     return null;
   }
@@ -1569,18 +1475,18 @@ class VoiceAssistantService {
     String frequencyLabel,
   ) {
     switch (frequencyLabel) {
-      case 'Twice daily':
+      case 'Twice a day':
         return [base, _addHours(base, 12)];
-      case 'Three times daily':
+      case 'Three times a day':
         return [base, _addHours(base, 8), _addHours(base, 16)];
-      case 'Four times daily':
+      case 'Four times a day':
         return [
           base,
           _addHours(base, 6),
           _addHours(base, 12),
           _addHours(base, 18),
         ];
-      case 'Once daily':
+      case 'Once a day':
       default:
         return [base];
     }
