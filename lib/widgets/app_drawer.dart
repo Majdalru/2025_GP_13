@@ -382,7 +382,7 @@ class AppDrawer extends StatelessWidget {
                                   );
 
                                   Navigator.pop(ctx);
-                                  // ✅ هنا استبدلنا SnackBar بـ Dialog أنيق
+                                  // ✅ Dialog أنيق لنجاح الربط
                                   await _showProfileLinkedDialog(context);
                                   onProfileLinked();
                                 }
@@ -506,7 +506,7 @@ class AppDrawer extends StatelessWidget {
     }
   }
 
-  // ===== نافذة تعديل المعلومات (اسم / جنس / جوال) مع التحقق =====
+  // ===== نافذة تعديل المعلومات (اسم / جنس / جوال) مع التحقق + منع تكرار الرقم =====
   Future<void> _openEditDialog(BuildContext context) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -578,7 +578,7 @@ class AppDrawer extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // الجوال (05XXXXXXXX)
+              // الجوال (05XXXXXXXX) + رسائل قصيرة وواضحة
               TextFormField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
@@ -595,9 +595,10 @@ class AppDrawer extends StatelessWidget {
                 style: const TextStyle(fontSize: 16),
                 validator: (v) {
                   final txt = (v ?? '').trim();
-                  return RegExp(r'^05\d{8}$').hasMatch(txt)
-                      ? null
-                      : 'Must start with 05 and be 10 digits';
+                  if (txt.isEmpty) return 'Required';
+                  if (!txt.startsWith('05')) return 'Must start with 05';
+                  if (txt.length != 10) return 'Must be 10 digits';
+                  return null;
                 },
               ),
             ],
@@ -612,27 +613,77 @@ class AppDrawer extends StatelessWidget {
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
 
-              final name = nameCtrl.text.trim();
-              final parts = name.split(RegExp(r'\s+'));
-              final first = parts.isNotEmpty ? parts.first : '';
-              final last =
+              final newName = nameCtrl.text.trim();
+              final parts = newName.split(RegExp(r'\s+'));
+              final firstName = parts.isNotEmpty ? parts.first : '';
+              final lastName =
                   parts.length > 1 ? parts.sublist(1).join(' ') : '';
+              final newGender = genderCtrl.text;
+              final newPhone = phoneCtrl.text.trim();
 
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(uid)
-                  .update({
-                'firstName': first,
-                'lastName': last,
-                'gender': genderCtrl.text,
-                'phone': phoneCtrl.text.trim(),
-              });
+              try {
+                // لو غيّر الرقم → تأكد أنه مو مستخدم
+                if (newPhone != phone) {
+                  final dup = await FirebaseFirestore.instance
+                      .collection('users')
+                      .where('phone', isEqualTo: newPhone)
+                      .limit(1)
+                      .get();
 
-              if (!context.mounted) return;
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Information updated')),
-              );
+                  if (dup.docs.isNotEmpty && dup.docs.first.id != uid) {
+                    // رقم مستخدم مسبقاً → Dialog محترم
+                    if (ctx.mounted) {
+                      await showDialog(
+                        context: ctx,
+                        builder: (dCtx) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          title: const Text(
+                            'Mobile in use',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          content: const Text(
+                            'This mobile number is already in use.',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dCtx),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return; // لا نكمّل التحديث
+                  }
+                }
+
+                // تحديث البيانات
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .update({
+                  'firstName': firstName,
+                  'lastName': lastName,
+                  'gender': newGender,
+                  'phone': newPhone,
+                });
+
+                if (!context.mounted) return;
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Information updated')),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error updating info: $e')),
+                );
+              }
             },
             child: const Text('Save'),
           ),

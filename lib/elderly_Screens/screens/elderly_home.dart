@@ -1083,6 +1083,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
   late String _selectedGender;
   final _formKey = GlobalKey<FormState>();
 
+  // error للجوال إذا طلع مستخدم
+  String? _phoneUsedError;
+
   @override
   void initState() {
     super.initState();
@@ -1098,6 +1101,27 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
     _nameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _isPhoneAvailable(String phone) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('phone', isEqualTo: phone)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isEmpty) return true;
+
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      // لو الرقم نفس المستخدم الحالي عادي
+      return snap.docs.first.id == currentUid;
+    } catch (e) {
+      // مع الرول الحالية ممكن ترجع PERMISSION_DENIED
+      debugPrint('⚠️ phone uniqueness check failed: $e');
+      // نرجّع true عشان ما نكسر التجربة
+      return true;
+    }
   }
 
   @override
@@ -1135,7 +1159,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
                   style: kBodyText,
-                  decoration: kInput("Name"),
+                  decoration: kInput("Name").copyWith(
+                    errorStyle: const TextStyle(fontSize: 18),
+                  ),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? "Name is required"
                       : null,
@@ -1147,7 +1173,11 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                   value: _selectedGender,
                   decoration: kInput(
                     "Gender",
-                  ).copyWith(filled: true, fillColor: Colors.white),
+                  ).copyWith(
+                    filled: true,
+                    fillColor: Colors.white,
+                    errorStyle: const TextStyle(fontSize: 18),
+                  ),
                   dropdownColor: Colors.white,
                   style: kBodyText,
                   items: const [
@@ -1179,13 +1209,16 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(10),
                   ],
-                  decoration: kInput("Mobile (05XXXXXXXX)"),
+                  decoration: kInput("Mobile (05XXXXXXXX)").copyWith(
+                    errorStyle: const TextStyle(fontSize: 18),
+                  ),
                   validator: (v) {
                     final txt = (v ?? "").trim();
-                    final reg = RegExp(r'^05\d{8}$');
-                    return !reg.hasMatch(txt)
-                        ? "Mobile must start with 05 and have 10 digits"
-                        : null;
+                    if (txt.isEmpty) return "Required";
+                    if (!txt.startsWith('05')) return "Start with 05";
+                    if (txt.length != 10) return "Enter 10 digits";
+                    if (_phoneUsedError != null) return _phoneUsedError;
+                    return null;
                   },
                 ),
               ],
@@ -1240,13 +1273,29 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                       vertical: 0,
                     ),
                   ).copyWith(elevation: const WidgetStatePropertyAll(2)),
-                  onPressed: () {
+                  onPressed: () async {
+                    // نفضي رسالة "مستخدم" قبل ما نتحقق
+                    setState(() => _phoneUsedError = null);
+
                     if (!_formKey.currentState!.validate()) return;
+
+                    final phone = _phoneController.text.trim();
+
+                    // نحاول نتأكد إذا الرقم مستخدم
+                    final available = await _isPhoneAvailable(phone);
+                    if (!available) {
+                      if (!mounted) return;
+                      setState(() {
+                        _phoneUsedError = "Mobile already used";
+                      });
+                      _formKey.currentState!.validate();
+                      return;
+                    }
 
                     widget.onSave(
                       _nameController.text.trim(),
                       _selectedGender,
-                      _phoneController.text.trim(),
+                      phone,
                     );
                   },
                   child: const Text("Save", style: kButtonText),

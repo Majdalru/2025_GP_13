@@ -13,7 +13,7 @@ class WhisperService {
 
   final Record _record = Record();
 
-  /// يسجل صوت ويحفظه كملف
+  
   Future<File?> recordAudio({int seconds = 4}) async {
     try {
       final hasPerm = await _record.hasPermission();
@@ -46,8 +46,7 @@ class WhisperService {
     }
   }
 
-  /// يرسل الملف إلى OpenAI gpt-4o-transcribe
-  /// الآن يدعم englishOnly → يرجّع الناتج إنجليزي فقط حتى لو المستخدم قالها بالعربي
+  
   Future<String?> transcribeAudio(
     File audioFile,
     String apiKey, {
@@ -68,9 +67,9 @@ class WhisperService {
         ..fields['model'] = 'gpt-4o-transcribe'
         ..fields['response_format'] = 'json';
 
-      // 👇 أهم تعديل:
+      
       if (englishOnly) {
-        // لو ويسبر يسمع "بنادول" → يرجّع لك "Panadol"
+        
         request.fields['translate'] = 'true';
         request.fields['language'] = 'en';
       }
