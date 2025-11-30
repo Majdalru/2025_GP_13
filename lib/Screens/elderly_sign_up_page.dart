@@ -151,7 +151,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     return true;
   }
 
-  // =============== steps navigation (مع انتظار الفحص) ===============
+  // =============== steps navigation () ===============
 
   Future<void> _nextStep() async {
     FocusScope.of(context).unfocus();

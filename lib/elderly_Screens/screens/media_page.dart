@@ -1,6 +1,6 @@
-import 'dart:math' as math; // ✅ Needed for rotation
+import 'dart:math' as math; // Needed for rotation
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // ✅ Needed for HapticFeedback
+import 'package:flutter/services.dart'; //  Needed for HapticFeedback
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -10,7 +10,7 @@ import 'audio_player_page.dart';
 
 import '../../models/audio_item.dart';
 import '../../services/voice_assistant_service.dart';
-import 'package:flutter_application_1/models/voice_command.dart'; // ✅ NEW
+import 'package:flutter_application_1/models/voice_command.dart'; //  NEW
 
 class MediaPage extends StatefulWidget {
   const MediaPage({super.key});
@@ -22,7 +22,7 @@ class MediaPage extends StatefulWidget {
 }
 
 class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
-  // ✅ Use the Singleton instance
+  // Use the Singleton instance
   final VoiceAssistantService _voiceService = VoiceAssistantService();
 
   // 🔹 Animation Controllers
@@ -52,7 +52,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 3000),
     );
 
-    // ✅ Listen to voice service state changes
+    //  Listen to voice service state changes
     _voiceService.setOnListeningStateChange(_handleVoiceStateChange);
   }
 
@@ -76,7 +76,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     _rippleController.dispose();
     _pulseController.dispose();
     _rotateController.dispose();
-    _voiceService.setOnListeningStateChange(null); // ✅ Cleanup
+    _voiceService.setOnListeningStateChange(null); //  Cleanup
     super.dispose();
   }
 
@@ -191,7 +191,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         ),
       ),
 
-      // 🔊 CUSTOM ANIMATED VOICE BUTTON
+      //  CUSTOM ANIMATED VOICE BUTTON
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: GestureDetector(
         onTap: _startVoiceConversation,
@@ -734,7 +734,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             .get();
       }
 
-      // 🔎 نطبّع النص قبل المطابقة (عربي + إنجليزي)
+      //  نطبّع النص قبل المطابقة (عربي + إنجليزي)
       final searchLower = searchTitle.toLowerCase();
       final searchNorm = _normalizeArabic(searchLower);
 

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'med_chart_page.dart'; // عدّلي المسار حسب مشروعك
+import 'med_chart_page.dart'; 
 
 class MedsSummaryPage extends StatefulWidget {
   final String elderlyId; // نفس الـ ID في medication_log/{elderlyId}
@@ -82,7 +82,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
         v.containsKey('medicationId');
   }
 
-  /// ✅ تاريخ بداية الدواء المعتمد: createdAt فقط
+  ///  تاريخ بداية الدواء المعتمد: createdAt فقط
   DateTime _medStartDate(Map<String, dynamic> med) {
     final raw = med['createdAt'];
     final dt = _toDateTime(raw);
@@ -213,7 +213,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
         final medId = (med['id'] ?? '').toString();
         final medName = (med['name'] ?? 'Med').toString();
 
-        // ✅ لا نحسب أي شيء قبل createdAt
+        // لا نحسب أي شيء قبل createdAt
         final start = _medStartDate(med);
         if (dayOnly.isBefore(start)) continue;
 
@@ -537,7 +537,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                     _buildModeToggle(cs),
                     const SizedBox(height: 16),
 
-                    // ✅ Month header هنا أيضاً
+                    //  Month header هنا أيضاً
                     Row(
                       children: [
                         IconButton(
@@ -635,7 +635,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                                         elderlyId: widget.elderlyId,
                                         medId: medId,
                                         medName: medName,
-                                       initialMonth: _current, // نفس الشهر اللي أنتِ فيه في السمّري
+                                       initialMonth: _current, // نفس الشهر اللي  في السمّري
                                           ),
                                         ),
                                       );

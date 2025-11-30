@@ -35,7 +35,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   // Voice service (Whisper + GPT)
   final VoiceAssistantService _voiceService = VoiceAssistantService();
 
-  // نحتفظ بقائمة الأدوية المعروضة لو احتجناها مستقبلاً
+  // نحتفظ بقائمة الأدوية المعروضة 
   List<Medication> _currentMeds = [];
 
   @override
@@ -85,7 +85,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       ),
     );
 
-    // ✅ لو حابة ترجعين التوست بعدين:
     // if (result == true && mounted) {
     //   _showSuccessMessage('Medication Added Successfully');
     // }
@@ -137,7 +136,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       );
     }
 
-    // ✅ Now do the database work in background
+    // Now do the database work in background
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyId);
@@ -153,7 +152,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
     } catch (e) {
       debugPrint('❌ Error deleting medication: $e');
 
-      // ✅ Show error if something went wrong
+      // Show error if something went wrong
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error deleting medication: $e')),
@@ -354,7 +353,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
         ],
       ),
 
-      // ✅ Voice button in medications page
+      //  Voice button in medications page
       floatingActionButton: FloatingVoiceButton(
         customGreeting:
             "You are in the medication page. I can help you with adding, editing, or deleting some meds. What would you like to do? , You can say add medicine, edit medicine, or delete medicine. ",
@@ -377,7 +376,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
               break;
 
             case VoiceCommand.goToMedication:
-              // 🔊 بدل البوب أب: رد صوتي
+              //  بدل البوب أب: رد صوتي
               await _voiceService.speak(
                 "You are already on your medications page. "
                 "You can say add medicine, edit medicine, or delete medicine.",
@@ -545,8 +544,8 @@ class MedicationCard extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // ✅ Close dialog first
-                onDelete(); // ✅ Then delete in background
+                Navigator.of(dialogContext).pop(); //  Close dialog first
+                onDelete(); // Then delete in background
               },
             ),
           ],

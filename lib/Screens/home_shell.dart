@@ -1,4 +1,4 @@
-import 'dart:async'; // 👈 جديد
+import 'dart:async'; //  جديد
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,20 +33,20 @@ class _HomeShellState extends State<HomeShell> {
   List<ElderlyProfile> _linkedProfiles = [];
   ElderlyProfile? _selectedProfile;
 
-  // 👇 جديد: اشتراك حي على مستند المستخدم
+  //  جديد: اشتراك حي على مستند المستخدم
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _caregiverSub;
 
   @override
   void initState() {
     super.initState();
     _fetchLinkedProfiles();
-    _subscribeToCaregiverDoc(); // 👈 جديد: حدث فوري بعد الربط
+    _subscribeToCaregiverDoc();
     _scheduleNotificationsForUser();
   }
 
   @override
   void dispose() {
-    _caregiverSub?.cancel(); // 👈 مهم: إلغاء الاشتراك
+    _caregiverSub?.cancel();
     super.dispose();
   }
 
@@ -61,7 +61,7 @@ class _HomeShellState extends State<HomeShell> {
     return chunks;
   }
 
-  // 👇 جديد: نسمع لأي تغيير على users/{uid} (elderlyIds تتغير بعد الربط)
+  //  : نسمع لأي تغيير على users/{uid} (elderlyIds تتغير بعد الربط)
   void _subscribeToCaregiverDoc() {
     final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
     if (caregiverUid == null) return;
@@ -180,13 +180,13 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       _selectedProfile != null
           ? HomePage(
-              elderlyId: _selectedProfile!.uid, // << أضيفي هذا السطر
+              elderlyId: _selectedProfile!.uid, // <<   
               elderlyName: _selectedProfile!.name,
               onTapArrowToMedsSummary: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => MedsSummaryPage(
-                      elderlyId: _selectedProfile!.uid, // ✅ مرّر الـID
+                      elderlyId: _selectedProfile!.uid, //   
                     ),
                   ),
                 );

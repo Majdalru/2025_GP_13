@@ -288,17 +288,17 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                     child: Icon(
                                       icon,
                                       color: Colors.white,
-                                      size: 60, // 👈 نفس اللي كان
+                                      size: 60, //  نفس اللي كان
                                     ),
                                   );
                                 },
                               ),
                               const SizedBox(width: 16),
 
-                              // ⏩ تقدّم 10 ثواني
+                              //  تقدّم 10 ثواني
                               IconButton(
                                 icon: const Icon(Icons.forward_10),
-                                iconSize: 44, // 👈 نفس اللي كان
+                                iconSize: 44, //  نفس اللي كان
                                 color: AudioPlayerPage.kPrimary,
                                 onPressed: () => _seekRelative(10),
                                 splashRadius: 30,

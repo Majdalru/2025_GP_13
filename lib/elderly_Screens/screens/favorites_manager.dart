@@ -23,7 +23,7 @@ class FavoritesManager extends ChangeNotifier {
     _role = userDoc.data()?["role"] ?? "unknown";
 
     if (_role != "elderly") {
-      // الكيرقفر ما له فيفورت
+
       _favorites.clear();
       notifyListeners();
       return;

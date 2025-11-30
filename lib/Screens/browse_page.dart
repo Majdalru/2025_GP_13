@@ -49,11 +49,11 @@ class BrowsePage extends StatelessWidget {
         color: cs.primary,
         onTap: () {
           if (selectedProfile != null) {
-            // ✅ مرّر نفس الـID المستخدم في بقية الصفحات
+          
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => MedsSummaryPage(
-                  elderlyId: selectedProfile!.uid, // لو اسم الحقل عندك id بدّلها لـ .id
+                  elderlyId: selectedProfile!.uid,
                 ),
               ),
             );

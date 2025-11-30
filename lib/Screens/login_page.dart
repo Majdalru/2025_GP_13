@@ -209,7 +209,7 @@ class _LoginPageState extends State<LoginPage> {
                 // ===== Form =====
                 Form(
                   key: _formKey,
-                  // 👈 شلنا autovalidateMode عشان ما يحمر كل شيء من أول لمسة
+                  //  شلنا autovalidateMode عشان ما يحمر كل شيء من أول لمسة
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

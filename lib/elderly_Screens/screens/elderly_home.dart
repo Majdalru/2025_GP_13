@@ -415,7 +415,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     ),
                   ),
 
-                  // ✅ Floating voice button with advanced flows
+                  // Floating voice button with advanced flows
                   FloatingVoiceButton(
                     onCommand: (command) async {
                       final uid = FirebaseAuth.instance.currentUser?.uid;

@@ -140,8 +140,8 @@ class _AudioListPageState extends State<AudioListPage> {
 
             const SizedBox(height: 4),
 
-            // ✅ Filter by Tag (Chips)
-           // ✅ Filter by Tag (Chips) — scroll أفقي أوضح
+            //  Filter by Tag (Chips)
+           //  Filter by Tag (Chips) — scroll أفقي أوضح
 SizedBox(
   height: 46,
   child: ListView.separated(
@@ -153,7 +153,7 @@ SizedBox(
       final tag = tags[index];
       final isSelected = _selectedTag == tag;
 
-      // نسوي label ألطف لليوزر
+      // نسوي label  لليوزر
       String label = tag;
       if (tag == 'All') label = 'All';
       if (tag == 'maher-almuaiqly') label = 'Maher Al-Muaiqly';
