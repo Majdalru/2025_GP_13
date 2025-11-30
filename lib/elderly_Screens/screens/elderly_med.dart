@@ -238,7 +238,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
 
                 // Tab 2: Full list
                 Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.fromLTRB(20, 5, 20, 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -261,7 +261,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                           elevation: 6,
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
                       const Text(
                         'Medication List',
                         style: TextStyle(
