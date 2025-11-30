@@ -858,9 +858,9 @@ class _TodayMedicationCard extends StatelessWidget {
         baseBorderColor = Colors.green;
         statusBackgroundColor = const Color.fromARGB(
           255,
-          243,
-          249,
-          244,
+          247,
+          250,
+          246,
         ); // Light green
         headerColor = Colors.green.shade700;
         headerIcon = Icons.check_circle;
@@ -884,9 +884,9 @@ class _TodayMedicationCard extends StatelessWidget {
         baseBorderColor = Colors.red;
         statusBackgroundColor = const Color.fromARGB(
           255,
-          250,
-          246,
-          246,
+          248,
+          245,
+          245,
         ); // Light red
         headerColor = Colors.red.shade700;
         headerIcon = Icons.cancel;
@@ -1027,8 +1027,8 @@ class _TodayMedicationCard extends StatelessWidget {
                 fontSize: medNameFontSize,
                 fontWeight: FontWeight.bold,
                 color: status == DoseStatus.missed
-                    ? Colors.red.shade700
-                    : const Color(0xFF212121),
+                    ? const Color.fromARGB(255, 0, 0, 0)
+                    : const Color.fromARGB(255, 0, 0, 0),
                 decoration: TextDecoration.none,
               ),
             ),
@@ -1076,7 +1076,7 @@ class _TodayMedicationCard extends StatelessWidget {
                     ),
                     label: Text(
                       isStrictlyPastDue || status == DoseStatus.missed
-                          ? 'Mark as Taken (Late)'
+                          ? 'Mark as Taken Late'
                           : 'Mark as Taken',
                       style: TextStyle(
                         fontSize: buttonFontSize,
@@ -1126,26 +1126,21 @@ class _TodayMedicationCard extends StatelessWidget {
                       label: const Text(
                         'Undo',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color.fromARGB(
-                          255,
-                          255,
-                          255,
-                          255,
-                        ),
+                        foregroundColor: const Color.fromARGB(255, 1, 54, 6),
                         padding: EdgeInsets.symmetric(vertical: undoVPadding),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(buttonRadius),
                         ),
                         backgroundColor: const Color.fromARGB(
                           255,
-                          134,
-                          131,
-                          131,
+                          207,
+                          207,
+                          207,
                         ),
                       ),
                     ),

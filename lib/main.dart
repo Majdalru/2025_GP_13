@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; //  إضافة Firebase Core
-import 'firebase_options.dart'; //  الملف الذي تم توليده تلقائيًا
+import 'package:firebase_core/firebase_core.dart'; //   Firebase Core
+import 'firebase_options.dart';
 import 'Screens/login_page.dart';
 import 'services/notification_service.dart';
 
@@ -9,9 +9,9 @@ const Color customNavyColor = Color.fromRGBO(13, 45, 93, 1);
 // Let's also define your teal color
 const Color customTealColor = Colors.teal;
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); //  ضروري قبل تشغيل Firebase
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, //  تهيئة Firebase
+    options: DefaultFirebaseOptions.currentPlatform, //  Firebase
   );
 
   await NotificationService().initialize();
@@ -72,7 +72,6 @@ class CaregiverApp extends StatelessWidget {
         ),
       ),
 
-      //  الصفحة الأولى المشتركة بين الطرفين
       home: const LoginPage(),
     );
   }
