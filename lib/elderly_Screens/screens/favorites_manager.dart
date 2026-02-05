@@ -75,6 +75,8 @@ class FavoritesManager extends ChangeNotifier {
         "category": audio["category"],
         "fileName": audio["fileName"],
         "image": audio["image"],
+         "type": audio["type"],   // audio | youtube
+        "url": audio["url"],     // رابط اليوتيوب إن وجد
         "createdAt": FieldValue.serverTimestamp(),
       };
       await favCol.add(data);

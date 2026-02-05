@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'audio_player_page.dart';
+import 'youTube_player_page.dart';
 import 'favorites_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/audio_item.dart';
@@ -308,6 +309,8 @@ SizedBox(
                                 "image": item.imageAsset,
                                 "fileName": item.fileName,
                                 "tag": item.tag, 
+                                 "type": item.type,       // 👈 مهم
+                                 "url": item.url,         // 👈 مهم لليوتيوب
                               });
 
                               final nowFav =
@@ -327,15 +330,28 @@ SizedBox(
                             },
                           ),
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AudioPlayerPage(
-                                  item: item,
-                                ),
-                              ),
-                            );
-                          },
+  // لو نوعه YouTube نروح لصفحة اليوتيوب
+  if (item.type == 'youtube' && item.url != null && item.url!.isNotEmpty) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => YouTubePlayerPage(
+          item: item,
+        ),
+      ),
+    );
+  } else {
+    // أي شيء ثاني (أو ما فيه type) يفتح المشغّل الصوتي العادي
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AudioPlayerPage(
+          item: item,
+        ),
+      ),
+    );
+  }
+},
                         ),
                       );
                     },

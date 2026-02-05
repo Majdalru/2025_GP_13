@@ -11,6 +11,7 @@ import 'audio_player_page.dart';
 import '../../models/audio_item.dart';
 import '../../services/voice_assistant_service.dart';
 import 'package:flutter_application_1/models/voice_command.dart'; //  NEW
+import 'youtube_player_page.dart'; 
 
 class MediaPage extends StatefulWidget {
   const MediaPage({super.key});
@@ -400,6 +401,91 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     return null;
   }
 
+  String? _healthFileKeywordFromUtterance(String normalizedUtter) {
+  // 🏃 Exercises
+  if (_containsAnyNormalized(normalizedUtter, [
+    'exercise',
+    'exercises',
+    'Five Exercises in Home',
+    'رياضه',
+    'رياضة',
+    'تحرك',
+    'حركه',
+    'movement',
+  ])) {
+    return 'Exercises';
+  }
+
+  // 🛏 Sleep
+  if (_containsAnyNormalized(normalizedUtter, [
+    'sleep',
+    'sleeping',
+    'نوم',
+    'وضعية نوم',
+    'وضعية النوم',
+    'النوم',
+  ])) {
+    return 'sleep';
+  }
+
+  // 💆 Self care
+  if (_containsAnyNormalized(normalizedUtter, [
+    'self care',
+    'care',
+    'العنايه',
+    'العناية',
+    'نفسي',
+    'صحه نفسيه',
+  ])) {
+    return 'self care';
+  }
+
+  // 🥗 Diet
+  if (_containsAnyNormalized(normalizedUtter, [
+    'diet',
+    'food',
+    'nutrition',
+    'The Ideal Diet for Senior',
+    'غذاء',
+    'حمية',
+    'رجيم',
+    'كبار السن',
+    'senior',
+  ])) {
+    return 'diet';
+  }
+
+  return null;
+}
+
+
+/// يرجع كلمة مفتاحية من كلام المستخدم عشان نعرف القصة (  )
+String? _storyFileKeywordFromUtterance(String normalizedUtter) {
+  if (_containsAnyNormalized(normalizedUtter, [
+    'muhammad',
+    'النبي محمد',
+    'رسول الله',
+    'سيدنا محمد',
+    'prophet muhammad',
+    'Muhammad',
+    'محمد',
+  ])) {
+    return 'muhammad';
+  }
+
+  if (_containsAnyNormalized(normalizedUtter, [
+    'noah',
+    'النبي نوح',
+    'سيدنا نوح',
+    'prophet noah',
+    'Noah',
+  ])) {
+    return 'noah';
+  }
+
+  return null;
+}
+
   /// ✅ هل الكلام يعتبر إلغاء للجلسة؟
   bool _isCancelUtterance(String? answer) {
     if (answer == null) return false;
@@ -545,7 +631,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           _containsAnyNormalized(modeLower, ['معين', 'سوره', 'سورة'])) {
         // --- STEP 3A: Handle Specific ---
         await _voiceService.speak(
-          "Please say the name of the audio you want to hear.",
+          "Please say the name of the audio or the video that you want.",
         );
 
         String? titleQuery = await _voiceService.listenWhisper(seconds: 5);
@@ -774,8 +860,72 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           }
         }
       }
+     // ------ 2) لو category = Health نطيح على  بالكلمة المفتاحية ------
+  if (category == 'Health') {
+  String? keyword = _healthFileKeywordFromUtterance(searchNorm);
+  if (keyword != null) {
+    keyword = keyword.toLowerCase();
 
-      // ------ 3) لو لا عنوان ولا ملف طابقوا ------
+    final healthDocs = qs.docs.where((doc) {
+      final data = doc.data();
+
+      final rawTitle = (data['title'] ?? '').toString();
+      final titleLower = rawTitle.toLowerCase();
+      final titleNorm = _normalizeArabic(titleLower);
+
+      final rawTag = (data['tag'] ?? '').toString();
+      final tagLower = rawTag.toLowerCase();
+      final tagNorm = _normalizeArabic(tagLower);
+
+      // نطابق الكلمة الأساسية مع العنوان أو التاق
+      return titleLower.contains(keyword!) ||
+             titleNorm.contains(keyword)   ||
+             tagLower.contains(keyword)    ||
+             tagNorm.contains(keyword);
+    }).toList();
+
+    if (healthDocs.isNotEmpty) {
+      final item = AudioItem.fromDoc(healthDocs.first);
+      await _voiceService.speak("Playing ${item.title}");
+      _navigateToPlayer(item);   // لو type = youtube → يفتح YouTubePlayerPage
+      return;
+    }
+  }
+} 
+
+
+// ------ لو category = Story نطابق الكلمة على العنوان أو التاق ------
+if (category == 'Story') {
+  String? keyword = _storyFileKeywordFromUtterance(searchNorm);
+  if (keyword != null) {
+    keyword = keyword.toLowerCase();
+
+    final storyDocs = qs.docs.where((doc) {
+      final data = doc.data();
+
+      final rawTitle = (data['title'] ?? '').toString();
+      final titleLower = rawTitle.toLowerCase();
+      final titleNorm = _normalizeArabic(titleLower);
+
+      final rawTag = (data['tag'] ?? '').toString();
+      final tagLower = rawTag.toLowerCase();
+      final tagNorm = _normalizeArabic(tagLower);
+
+      return titleLower.contains(keyword!) ||
+             titleNorm.contains(keyword)   ||
+             tagLower.contains(keyword)    ||
+             tagNorm.contains(keyword);
+    }).toList();
+
+    if (storyDocs.isNotEmpty) {
+      final item = AudioItem.fromDoc(storyDocs.first);
+      await _voiceService.speak("Playing ${item.title}");
+      _navigateToPlayer(item);   // لو type = youtube يفتح YouTubePlayerPage تلقائيًا
+      return;
+    }
+  }
+}
+     // ------ 3) لو لا عنوان ولا ملف طابقوا ------
       await _voiceService.speak(
         "I couldn't find any audio named $searchTitle in $category.",
       );
@@ -786,12 +936,26 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   }
 
   void _navigateToPlayer(AudioItem item) {
-    if (!mounted) return;
+  if (!mounted) return;
+
+  // لو الميديا من نوع يوتيوب → افتح صفحة اليوتيوب
+  if (item.type == 'youtube' && item.url != null && item.url!.isNotEmpty) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => AudioPlayerPage(item: item)),
+      MaterialPageRoute(
+        builder: (_) => YouTubePlayerPage(item: item),
+      ),
+    );
+  } else {
+    // غير كذا → افتح مشغّل الصوت العادي
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AudioPlayerPage(item: item),
+      ),
     );
   }
+}
 }
 
 // 🖌️ PAINTER FOR THE RIPPLES

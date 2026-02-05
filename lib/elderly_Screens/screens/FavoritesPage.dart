@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'audio_player_page.dart';
 import 'favorites_manager.dart';
 import '../../models/audio_item.dart';
+import 'youtube_player_page.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -95,9 +96,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-
       body: Column(
         children: [
+          // حقل البحث
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -108,7 +109,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white, // 🎉 أبيض
+                fillColor: Colors.white,
                 hintText: 'Search favorites...',
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 contentPadding: const EdgeInsets.symmetric(
@@ -123,15 +124,18 @@ class _FavoritesPageState extends State<FavoritesPage> {
             ),
           ),
 
-          // ===== محتوى الصفحة =====
+          // محتوى الصفحة
           Expanded(
             child: filteredFavorites.isEmpty
                 ? const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.favorite_border,
-                            size: 100, color: Colors.grey),
+                        Icon(
+                          Icons.favorite_border,
+                          size: 100,
+                          color: Colors.grey,
+                        ),
                         SizedBox(height: 20),
                         Text(
                           "No results found",
@@ -143,7 +147,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       ],
                     ),
                   )
-
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                     children: grouped.entries.map((entry) {
@@ -153,10 +156,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // عنوان القسم
+                          // عنوان القسم (Story / Quran / Health / Caregiver)
                           Padding(
                             padding: const EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 4),
+                              vertical: 10,
+                              horizontal: 4,
+                            ),
                             child: Text(
                               category,
                               style: const TextStyle(
@@ -167,14 +172,15 @@ class _FavoritesPageState extends State<FavoritesPage> {
                             ),
                           ),
 
-                          // قائمة الفيفورت التابعة للقسم
+                          // عناصر الفيفورت في هذا القسم
                           ...items.map((audio) {
                             final title = audio["title"] ?? "";
                             final image =
                                 audio["image"] ?? 'assets/audio.jpg';
 
                             return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              margin:
+                                  const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
                                 side: BorderSide(
@@ -204,7 +210,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                   ),
                                 ),
 
-                                //  زر حذف
+                                // زر حذف من الفيفورت
                                 trailing: IconButton(
                                   icon: const Icon(
                                     Icons.favorite,
@@ -212,7 +218,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                     size: 36,
                                   ),
                                   onPressed: () async {
-                                    await favoritesManager.toggleFavorite(audio);
+                                    await favoritesManager
+                                        .toggleFavorite(audio);
 
                                     _showTopBanner(
                                       "Removed from Favorites",
@@ -222,21 +229,44 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                 ),
 
                                 onTap: () {
+                                  // نقرأ النوع والرابط من البيانات المخزّنة
+                                  final type =
+                                      (audio["type"] ?? 'audio') as String;
+                                  final url = audio["url"] as String?;
+
                                   final item = AudioItem(
                                     id: audio["audioId"] ?? '',
                                     title: title,
                                     category: category,
-                                    fileName: audio["fileName"] ?? '',
+                                    fileName:
+                                        audio["fileName"] ?? '',
                                     tag: audio["tag"] ?? '',
                                     imageAsset: image,
+                                    type: type,
+                                    url: url,
                                   );
 
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => AudioPlayerPage(item: item),
-                                    ),
-                                  );
+                                  // لو يوتيوب → افتح صفحة يوتيوب
+                                  if (item.type == 'youtube' &&
+                                      item.url != null &&
+                                      item.url!.isNotEmpty) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            YouTubePlayerPage(item: item),
+                                      ),
+                                    );
+                                  } else {
+                                    // غير كذا → Audio عادي
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            AudioPlayerPage(item: item),
+                                      ),
+                                    );
+                                  }
                                 },
                               ),
                             );

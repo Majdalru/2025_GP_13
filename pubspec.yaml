@@ -35,7 +35,7 @@ dependencies:
   mime: ^1.0.4
   path_provider: ^2.0.13
   fl_chart: ^0.69.0
-
+  webview_flutter: ^4.7.0
   # Firebase packages
   firebase_core: ^3.4.0
   firebase_auth: ^5.3.1
@@ -98,6 +98,7 @@ flutter:
     - assets/audio/Story Of Prophet Muhammad  And The Blind Man .mp3
     - assets/audio/self_care_tips.mp3
     - assets/sounds/beep.mp3
+    - assets/audio/SADDEST UMAR STORY EVER.mp3
     
     
 

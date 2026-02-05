@@ -7,6 +7,8 @@ class AudioItem {
   final String fileName;
   final String tag;            //  
   final String imageAsset;
+  final String type;     // audio | youtube
+  final String? url;     // رابط اليوتيوب لاحقًا
 
   AudioItem({
     required this.id,
@@ -15,6 +17,8 @@ class AudioItem {
     required this.fileName,
     required this.tag,         //  
     required this.imageAsset,
+    this.type = 'audio',   // افتراضي
+    this.url,
   });
 
   factory AudioItem.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -28,6 +32,8 @@ class AudioItem {
       fileName: data['fileName'] as String? ?? '',
       tag: data['tag'] as String? ?? 'All',     //  نقرأ tag من Firestore
       imageAsset: _imageForCategory(category),
+      type: data['type'] as String? ?? 'audio',
+      url: data['url'] as String?,
     );
   }
 
