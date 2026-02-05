@@ -1,18 +1,33 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'models/medication.dart'; // Import the new model
-import 'services/medication_scheduler.dart'; //   هذا
+import 'package:image_picker/image_picker.dart';
 
-// This screen is now for the CAREGIVER to add/edit meds for an elderly person
+import 'models/medication.dart';
+import 'services/medication_scheduler.dart';
+import 'services/medication_scan_service.dart';
+
+// ===============================
+//  CAREGIVER Add/Edit Medication
+// ===============================
 class AddMedScreen extends StatefulWidget {
   final Medication? medicationToEdit;
-  final String elderlyId; // The ID of the elderly person to add the med for
+  final String elderlyId;
+
+  // ✅ new: if true, open camera automatically on screen open (only when adding)
+  final bool autoScanOnOpen;
+
+  // ✅ new: start from a specific step (0..5). default = 0.
+  final int startFromStep;
 
   const AddMedScreen({
     super.key,
     this.medicationToEdit,
     required this.elderlyId,
+    this.autoScanOnOpen = false,
+    this.startFromStep = 0,
   });
 
   @override
@@ -20,8 +35,6 @@ class AddMedScreen extends StatefulWidget {
 }
 
 class _AddMedScreenState extends State<AddMedScreen> {
-  // All the state management and UI navigation code from your original file
-  // can remain exactly the same. The only change is in `_saveMedication`.
   final PageController _pageController = PageController();
   int _currentPageIndex = 0;
   late final bool _isEditing;
@@ -31,6 +44,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
   String? _frequency;
   List<TimeOfDay?> _selectedTimes = [];
   String? _notes;
+
+  // Scan (camera + OCR)
+  final ImagePicker _picker = ImagePicker();
+  final MedicationScanService _scanService = MedicationScanService();
+  bool _isScanning = false;
 
   @override
   void initState() {
@@ -45,15 +63,352 @@ class _AddMedScreenState extends State<AddMedScreen> {
       _selectedTimes = List<TimeOfDay?>.from(med.times);
       _notes = med.notes;
     }
+
+    // ✅ Start from a specific step if requested
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      final start = widget.startFromStep.clamp(0, 5);
+      if (start != 0) {
+        _pageController.jumpToPage(start);
+        setState(() => _currentPageIndex = start);
+      }
+
+      // ✅ Auto open camera if requested (only when adding, not editing)
+      if (widget.autoScanOnOpen && !_isEditing) {
+        await _scanFromCamera();
+      }
+    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _scanService.dispose();
     super.dispose();
   }
+  
+  Future<bool?> _showEditableScanSheet({required MedicationScanResult result}) {
+  final nameCtrl = TextEditingController(text: result.name ?? '');
+  final notesCtrl = TextEditingController(text: result.notes ?? '');
 
-  // --- Firestore Logic (The only part that needs significant changes) ---
+  String? selectedFreq = result.frequency;
+  List<String> selectedDays =
+      result.days.isNotEmpty ? List<String>.from(result.days) : <String>[];
+
+  const allDays = [
+    'Every day',
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+
+  const freqOptions = [
+    'Once a day',
+    'Twice a day',
+    'Three times a day',
+    'Four times a day',
+    'Custom',
+  ];
+
+  return showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.72,
+        minChildSize: 0.45,
+        maxChildSize: 0.92,
+        builder: (_, scrollController) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                ),
+                child: StatefulBuilder(
+                  builder: (context, setSheetState) {
+                    void toggleDay(String d) {
+                      setSheetState(() {
+                        if (d == 'Every day') {
+                          final isOn = selectedDays.contains('Every day');
+                          if (!isOn) {
+                            selectedDays = List<String>.from(allDays);
+                          } else {
+                            selectedDays.clear();
+                          }
+                          return;
+                        }
+
+                        if (selectedDays.contains(d)) {
+                          selectedDays.remove(d);
+                        } else {
+                          selectedDays.add(d);
+                        }
+
+                        // if all individual days selected -> mark as Every day
+                        final indiv = allDays.sublist(1);
+                        final hasAll = indiv.every((x) => selectedDays.contains(x));
+                        if (hasAll) {
+                          selectedDays = List<String>.from(allDays);
+                        } else {
+                          selectedDays.remove('Every day');
+                        }
+                      });
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 44,
+                            height: 5,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+
+                        Row(
+                          children: [
+                            const Icon(Icons.qr_code_scanner, color: Colors.teal),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Scan Preview',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        const Text(
+                          'Medication name',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: nameCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            hintText: 'e.g. Fusidic Acid',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        const Text(
+                          'Frequency',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: freqOptions.map((opt) {
+                            final selected = selectedFreq == opt;
+                            return ChoiceChip(
+                              label: Text(opt),
+                              selected: selected,
+                              onSelected: (_) =>
+                                  setSheetState(() => selectedFreq = opt),
+                              selectedColor: Colors.teal.shade100,
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 14),
+
+                        const Text(
+                          'Days',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: allDays.map((d) {
+                            final selected = selectedDays.contains(d);
+                            return FilterChip(
+                              label: Text(d),
+                              selected: selected,
+                              onSelected: (_) => toggleDay(d),
+                              selectedColor: Colors.teal.shade100,
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 14),
+
+                        const Text(
+                          'Notes',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: notesCtrl,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: 'Optional instructions…',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.pop(context, null),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Rescan'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  final name = nameCtrl.text.trim();
+                                  if (name.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Please enter a medication name.',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  setState(() {
+                                    _medicationName = name;
+                                    _notes = notesCtrl.text.trim();
+
+                                    _selectedDays = selectedDays.isEmpty
+                                        ? []
+                                        : List<String>.from(selectedDays);
+
+                                    _frequency = selectedFreq;
+
+                                    // initialize time slots if we have frequency
+                                    if (_frequency != null) {
+                                      _initializeTimesForFrequency(_frequency!);
+                                    }
+                                  });
+
+                                  Navigator.pop(context, true);
+                                },
+                                icon: const Icon(Icons.check_circle),
+                                label: const Text('Apply'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+  
+
+  // --------------------------------
+  // Scan (Camera -> OCR -> Autofill)
+  // --------------------------------
+  Future<void> _scanFromCamera() async {
+  if (_isScanning) return;
+
+  setState(() => _isScanning = true);
+
+  try {
+    final XFile? shot = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
+
+    if (shot == null) return;
+
+    final result = await _scanService.scanImage(File(shot.path));
+    if (!mounted) return;
+
+    final action = await _showEditableScanSheet(result: result);
+
+    // null = Rescan
+    if (action == null) {
+      await _scanFromCamera();
+      return;
+    }
+
+    // false = Cancel
+    if (action != true) return;
+
+    if (!mounted) return;
+
+    // ✅ after apply: go to Step 4 (times) if frequency exists, else Step 3
+    final targetPage = (_frequency == null) ? 2 : 3;
+    _pageController.jumpToPage(targetPage);
+    setState(() => _currentPageIndex = targetPage);
+  } catch (e) {
+    debugPrint('❌ Scan failed: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Scan failed: $e')),
+      );
+    }
+  } finally {
+    if (mounted) setState(() => _isScanning = false);
+  }
+}
+
+
+      
+
+  // ---------------------
+  // Firestore Save Logic
+  // ---------------------
   Future<void> _saveMedication() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
@@ -68,7 +423,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         .doc(widget.elderlyId);
 
     if (_isEditing) {
-      // --- UPDATE LOGIC ---
+      // UPDATE
       final updatedMed = Medication(
         id: widget.medicationToEdit!.id,
         name: _medicationName ?? 'Unnamed',
@@ -85,9 +440,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
         final doc = await docRef.get();
         final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
 
-        final List<Map<String, dynamic>> updatedMedsList = currentMedsList.map((
-          med,
-        ) {
+        final List<Map<String, dynamic>> updatedMedsList =
+            currentMedsList.map((med) {
           if (med['id'] == updatedMed.id) {
             return updatedMed.toMap();
           }
@@ -95,19 +449,19 @@ class _AddMedScreenState extends State<AddMedScreen> {
         }).toList();
 
         await docRef.update({'medsList': updatedMedsList});
+
         MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        // ✅ Show success dialog AFTER database operation completes
         if (mounted) {
-          Navigator.of(context).pop(true); // Close add/edit screen with result
+          Navigator.of(context).pop(true);
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  const Text(
+                children: const [
+                  Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  SizedBox(width: 12),
+                  Text(
                     'Medication updated successfully',
                     style: TextStyle(fontSize: 14),
                   ),
@@ -132,7 +486,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         }
       }
     } else {
-      // --- ADD NEW LOGIC ---
+      // ADD NEW
       final newMed = Medication(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _medicationName ?? 'Unnamed',
@@ -149,19 +503,19 @@ class _AddMedScreenState extends State<AddMedScreen> {
         await docRef.set({
           'medsList': FieldValue.arrayUnion([newMed.toMap()]),
         }, SetOptions(merge: true));
+
         MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
-        // ✅ Show success dialog AFTER database operation completes
         if (mounted) {
-          Navigator.of(context).pop(true); // Close add screen with result
+          Navigator.of(context).pop(true);
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  const Text(
+                children: const [
+                  Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  SizedBox(width: 12),
+                  Text(
                     'Medication added successfully',
                     style: TextStyle(fontSize: 14),
                   ),
@@ -188,7 +542,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
     }
   }
 
-  // --- UI Navigation and State Management (UNMODIFIED) ---
+  // ---------------------
+  // UI Navigation Helpers
+  // ---------------------
   void _goToNextPage() {
     if (_currentPageIndex < 5) {
       _pageController.nextPage(
@@ -209,6 +565,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
     }
   }
 
+  // ---------------------
+  // Times + Frequency Logic
+  // ---------------------
   void _initializeTimesForFrequency(String selectedFrequency) {
     setState(() {
       _frequency = selectedFrequency;
@@ -286,6 +645,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
     }
   }
 
+  // ---------------------
+  // Build
+  // ---------------------
   @override
   Widget build(BuildContext context) {
     final ButtonStyle tealButtonStyle = ElevatedButton.styleFrom(
@@ -311,6 +673,17 @@ class _AddMedScreenState extends State<AddMedScreen> {
           onPressed: _goToPreviousPage,
         ),
         actions: [
+          IconButton(
+            icon: _isScanning
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.camera_alt, color: Colors.white),
+            onPressed: _isScanning ? null : _scanFromCamera,
+            tooltip: 'Scan medication',
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
@@ -372,12 +745,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   buttonStyle: tealButtonStyle,
                   onTimeChanged: _updateTimes,
                   onClearTimes: _clearAllTimes,
-                  onAddTime: _frequency == 'Custom'
-                      ? _addCustomTimeField
-                      : null,
-                  onRemoveTime: _frequency == 'Custom'
-                      ? _removeCustomTimeField
-                      : null,
+                  onAddTime: _frequency == 'Custom' ? _addCustomTimeField : null,
+                  onRemoveTime:
+                      _frequency == 'Custom' ? _removeCustomTimeField : null,
                   onNext: () {
                     _goToNextPage();
                   },
@@ -410,15 +780,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 }
 
-// All the Step widgets (_Stepper, _StepHeader, _Step1MedName, etc.) are purely for UI
-// and do not need to be changed. They can remain exactly as they are in your original file.
-// For completeness, they are included below.
-
-// --- Stepper and Header Widgets ---
+// =====================
+// Stepper + Header
+// =====================
 class _Stepper extends StatelessWidget {
   final int currentIndex;
   final int stepCount;
-  const _Stepper({required this.currentIndex, this.stepCount = 5});
+  const _Stepper({required this.currentIndex, this.stepCount = 6});
 
   @override
   Widget build(BuildContext context) {
@@ -488,8 +856,9 @@ class _StepHeader extends StatelessWidget {
   }
 }
 
-// --- Step Widgets (Refactored to be inside a Card) ---
-
+// =====================
+// Step 1
+// =====================
 class _Step1MedName extends StatefulWidget {
   final ValueChanged<String> onNext;
   final String? initialValue;
@@ -561,6 +930,9 @@ class _Step1MedNameState extends State<_Step1MedName> {
   }
 }
 
+// =====================
+// Step 2
+// =====================
 class _Step2SelectDays extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<List<String>> onNext;
@@ -614,7 +986,6 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
         } else {
           _selectedDays.remove(day);
         }
-        // Check if all individual days are selected
         if (_daysOfWeek.sublist(1).every((d) => _selectedDays.contains(d))) {
           _selectedDays = List.from(_daysOfWeek);
         }
@@ -641,16 +1012,14 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
                 title: 'Step 2: Select Days',
                 subtitle: 'Which days should you take this medication?',
               ),
-
-              // --- Added Titles ---
               Padding(
                 padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
                 child: Text(
                   'Daily Schedule',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal,
+                      ),
                 ),
               ),
               CheckboxListTile(
@@ -663,23 +1032,18 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
                 child: Text(
                   'Specific Days',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal,
+                      ),
                 ),
               ),
-              ..._daysOfWeek
-                  .sublist(1)
-                  .map(
-                    // Start from index 1 ('Sunday')
+              ..._daysOfWeek.sublist(1).map(
                     (day) => CheckboxListTile(
                       title: Text(day),
                       value: _selectedDays.contains(day),
                       onChanged: (bool? value) => _onDaySelected(value, day),
                     ),
                   ),
-
-              // --- End of modifications ---
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _selectedDays.isNotEmpty
@@ -696,6 +1060,9 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
   }
 }
 
+// =====================
+// Step 3
+// =====================
 class _Step3HowManyTimesPerDay extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String> onNext;
@@ -774,6 +1141,9 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
   }
 }
 
+// =====================
+// Step 4
+// =====================
 class _Step4SetTimes extends StatefulWidget {
   final String? medicationName;
   final String? frequency;
@@ -806,25 +1176,24 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: widget.selectedTimes[index] ?? TimeOfDay.now(),
-      // --- This 'builder' is the new code ---
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.teal, // This sets the main color
-              onPrimary: Colors.white, // Text on top of the main color
-            ),
+                  primary: Colors.teal,
+                  onPrimary: Colors.white,
+                ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.teal, // Color for "OK" and "Cancel"
+                foregroundColor: Colors.teal,
               ),
             ),
           ),
           child: child!,
         );
       },
-      // --- End of new code ---
     );
+
     if (picked != null) {
       widget.onTimeChanged(index, picked);
     }
@@ -832,8 +1201,8 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
 
   @override
   Widget build(BuildContext context) {
-    bool isCustom = widget.frequency == 'Custom';
-    bool allTimesSelected = widget.selectedTimes.every((time) => time != null);
+    final bool isCustom = widget.frequency == 'Custom';
+    final bool allTimesSelected = widget.selectedTimes.every((time) => time != null);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -853,8 +1222,9 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
                 subtitle: 'When should you take this medication?',
               ),
               ...widget.selectedTimes.asMap().entries.map((entry) {
-                int index = entry.key;
-                TimeOfDay? time = entry.value;
+                final int index = entry.key;
+                final TimeOfDay? time = entry.value;
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Row(
@@ -924,6 +1294,9 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
   }
 }
 
+// =====================
+// Step 5
+// =====================
 class _Step5AddNotes extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String?> onNext;
@@ -997,6 +1370,9 @@ class _Step5AddNotesState extends State<_Step5AddNotes> {
   }
 }
 
+// =====================
+// Step 6
+// =====================
 class _Step6Summary extends StatelessWidget {
   final String? medicationName;
   final List<String> selectedDays;
@@ -1020,9 +1396,7 @@ class _Step6Summary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formattedTimes = selectedTimes
-        .map((t) => t.format(context))
-        .join(', ');
+    final formattedTimes = selectedTimes.map((t) => t.format(context)).join(', ');
     final formattedDays = selectedDays.join(', ');
 
     return SingleChildScrollView(
