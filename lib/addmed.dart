@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'models/medication.dart';
 import 'services/medication_scheduler.dart';
 import 'services/medication_scan_service.dart';
+import 'package:intl/intl.dart';
 
 // ===============================
 //  CAREGIVER Add/Edit Medication
@@ -40,6 +41,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
   late final bool _isEditing;
 
   String? _medicationName;
+  int? _durationDays; // ← NEW: null=not set, -1=custom, >0=preset
+  DateTime? _customEndDate; // ← NEW: for custom date pick or preset calc
   List<String> _selectedDays = [];
   String? _frequency;
   List<TimeOfDay?> _selectedTimes = [];
@@ -62,13 +65,24 @@ class _AddMedScreenState extends State<AddMedScreen> {
       _frequency = med.frequency;
       _selectedTimes = List<TimeOfDay?>.from(med.times);
       _notes = med.notes;
+
+      // ← NEW: restore duration from endDate
+      if (med.endDate != null) {
+        _customEndDate = med.endDate!.toDate();
+        final diff = _customEndDate!.difference(med.createdAt.toDate()).inDays;
+        if ([3, 5, 7, 10, 14, 30].contains(diff)) {
+          _durationDays = diff;
+        } else {
+          _durationDays = -1; // custom
+        }
+      }
     }
 
     // ✅ Start from a specific step if requested
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-      final start = widget.startFromStep.clamp(0, 5);
+      final start = widget.startFromStep.clamp(0, 6);
       if (start != 0) {
         _pageController.jumpToPage(start);
         setState(() => _currentPageIndex = start);
@@ -87,324 +101,356 @@ class _AddMedScreenState extends State<AddMedScreen> {
     _scanService.dispose();
     super.dispose();
   }
-  
+
+  // ← NEW: compute the Timestamp endDate for Firestore
+  Timestamp? _computeEndDate() {
+    if (_customEndDate != null) {
+      return Timestamp.fromDate(
+        DateTime(
+          _customEndDate!.year,
+          _customEndDate!.month,
+          _customEndDate!.day,
+          23,
+          59,
+          59,
+        ),
+      );
+    }
+    if (_durationDays != null && _durationDays! > 0) {
+      final startDate = _isEditing
+          ? widget.medicationToEdit!.createdAt.toDate()
+          : DateTime.now();
+      final end = startDate.add(Duration(days: _durationDays!));
+      return Timestamp.fromDate(
+        DateTime(end.year, end.month, end.day, 23, 59, 59),
+      );
+    }
+    return null; // ongoing / no end date
+  }
+
   Future<bool?> _showEditableScanSheet({required MedicationScanResult result}) {
-  final nameCtrl = TextEditingController(text: result.name ?? '');
-  final notesCtrl = TextEditingController(text: result.notes ?? '');
+    final nameCtrl = TextEditingController(text: result.name ?? '');
+    final notesCtrl = TextEditingController(text: result.notes ?? '');
 
-  String? selectedFreq = result.frequency;
-  List<String> selectedDays =
-      result.days.isNotEmpty ? List<String>.from(result.days) : <String>[];
+    String? selectedFreq = result.frequency;
+    List<String> selectedDays = result.days.isNotEmpty
+        ? List<String>.from(result.days)
+        : <String>[];
 
-  const allDays = [
-    'Every day',
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
+    const allDays = [
+      'Every day',
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
 
-  const freqOptions = [
-    'Once a day',
-    'Twice a day',
-    'Three times a day',
-    'Four times a day',
-    'Custom',
-  ];
+    const freqOptions = [
+      'Once a day',
+      'Twice a day',
+      'Three times a day',
+      'Four times a day',
+      'Custom',
+    ];
 
-  return showModalBottomSheet<bool>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.72,
-        minChildSize: 0.45,
-        maxChildSize: 0.92,
-        builder: (_, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                controller: scrollController,
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 16,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                ),
-                child: StatefulBuilder(
-                  builder: (context, setSheetState) {
-                    void toggleDay(String d) {
-                      setSheetState(() {
-                        if (d == 'Every day') {
-                          final isOn = selectedDays.contains('Every day');
-                          if (!isOn) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.72,
+          minChildSize: 0.45,
+          maxChildSize: 0.92,
+          builder: (_, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                  ),
+                  child: StatefulBuilder(
+                    builder: (context, setSheetState) {
+                      void toggleDay(String d) {
+                        setSheetState(() {
+                          if (d == 'Every day') {
+                            final isOn = selectedDays.contains('Every day');
+                            if (!isOn) {
+                              selectedDays = List<String>.from(allDays);
+                            } else {
+                              selectedDays.clear();
+                            }
+                            return;
+                          }
+
+                          if (selectedDays.contains(d)) {
+                            selectedDays.remove(d);
+                          } else {
+                            selectedDays.add(d);
+                          }
+
+                          // if all individual days selected -> mark as Every day
+                          final indiv = allDays.sublist(1);
+                          final hasAll = indiv.every(
+                            (x) => selectedDays.contains(x),
+                          );
+                          if (hasAll) {
                             selectedDays = List<String>.from(allDays);
                           } else {
-                            selectedDays.clear();
+                            selectedDays.remove('Every day');
                           }
-                          return;
-                        }
+                        });
+                      }
 
-                        if (selectedDays.contains(d)) {
-                          selectedDays.remove(d);
-                        } else {
-                          selectedDays.add(d);
-                        }
-
-                        // if all individual days selected -> mark as Every day
-                        final indiv = allDays.sublist(1);
-                        final hasAll = indiv.every((x) => selectedDays.contains(x));
-                        if (hasAll) {
-                          selectedDays = List<String>.from(allDays);
-                        } else {
-                          selectedDays.remove('Every day');
-                        }
-                      });
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 44,
-                            height: 5,
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-
-                        Row(
-                          children: [
-                            const Icon(Icons.qr_code_scanner, color: Colors.teal),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                'Scan Preview',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 44,
+                              height: 5,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        const Text(
-                          'Medication name',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: nameCtrl,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            hintText: 'e.g. Fusidic Acid',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
                           ),
-                        ),
-                        const SizedBox(height: 14),
 
-                        const Text(
-                          'Frequency',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: freqOptions.map((opt) {
-                            final selected = selectedFreq == opt;
-                            return ChoiceChip(
-                              label: Text(opt),
-                              selected: selected,
-                              onSelected: (_) =>
-                                  setSheetState(() => selectedFreq = opt),
-                              selectedColor: Colors.teal.shade100,
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 14),
-
-                        const Text(
-                          'Days',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: allDays.map((d) {
-                            final selected = selectedDays.contains(d);
-                            return FilterChip(
-                              label: Text(d),
-                              selected: selected,
-                              onSelected: (_) => toggleDay(d),
-                              selectedColor: Colors.teal.shade100,
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 14),
-
-                        const Text(
-                          'Notes',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: notesCtrl,
-                          maxLines: 4,
-                          decoration: InputDecoration(
-                            hintText: 'Optional instructions…',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => Navigator.pop(context, null),
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Rescan'),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.qr_code_scanner,
+                                color: Colors.teal,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.teal,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'Scan Preview',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                onPressed: () {
-                                  final name = nameCtrl.text.trim();
-                                  if (name.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Please enter a medication name.',
-                                        ),
-                                      ),
-                                    );
-                                    return;
-                                  }
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
 
-                                  setState(() {
-                                    _medicationName = name;
-                                    _notes = notesCtrl.text.trim();
-
-                                    _selectedDays = selectedDays.isEmpty
-                                        ? []
-                                        : List<String>.from(selectedDays);
-
-                                    _frequency = selectedFreq;
-
-                                    // initialize time slots if we have frequency
-                                    if (_frequency != null) {
-                                      _initializeTimesForFrequency(_frequency!);
-                                    }
-                                  });
-
-                                  Navigator.pop(context, true);
-                                },
-                                icon: const Icon(Icons.check_circle),
-                                label: const Text('Apply'),
+                          const Text(
+                            'Medication name',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: nameCtrl,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              hintText: 'e.g. Fusidic Acid',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
+                          ),
+                          const SizedBox(height: 14),
+
+                          const Text(
+                            'Frequency',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: freqOptions.map((opt) {
+                              final selected = selectedFreq == opt;
+                              return ChoiceChip(
+                                label: Text(opt),
+                                selected: selected,
+                                onSelected: (_) =>
+                                    setSheetState(() => selectedFreq = opt),
+                                selectedColor: Colors.teal.shade100,
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 14),
+
+                          const Text(
+                            'Days',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: allDays.map((d) {
+                              final selected = selectedDays.contains(d);
+                              return FilterChip(
+                                label: Text(d),
+                                selected: selected,
+                                onSelected: (_) => toggleDay(d),
+                                selectedColor: Colors.teal.shade100,
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 14),
+
+                          const Text(
+                            'Notes',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: notesCtrl,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              hintText: 'Optional instructions…',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => Navigator.pop(context, null),
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Rescan'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.teal,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    final name = nameCtrl.text.trim();
+                                    if (name.isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please enter a medication name.',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setState(() {
+                                      _medicationName = name;
+                                      _notes = notesCtrl.text.trim();
+
+                                      _selectedDays = selectedDays.isEmpty
+                                          ? []
+                                          : List<String>.from(selectedDays);
+
+                                      _frequency = selectedFreq;
+
+                                      // initialize time slots if we have frequency
+                                      if (_frequency != null) {
+                                        _initializeTimesForFrequency(
+                                          _frequency!,
+                                        );
+                                      }
+                                    });
+
+                                    Navigator.pop(context, true);
+                                  },
+                                  icon: const Icon(Icons.check_circle),
+                                  label: const Text('Apply'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
-  
+            );
+          },
+        );
+      },
+    );
+  }
 
   // --------------------------------
   // Scan (Camera -> OCR -> Autofill)
   // --------------------------------
   Future<void> _scanFromCamera() async {
-  if (_isScanning) return;
+    if (_isScanning) return;
 
-  setState(() => _isScanning = true);
+    setState(() => _isScanning = true);
 
-  try {
-    final XFile? shot = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85,
-    );
-
-    if (shot == null) return;
-
-    final result = await _scanService.scanImage(File(shot.path));
-    if (!mounted) return;
-
-    final action = await _showEditableScanSheet(result: result);
-
-    // null = Rescan
-    if (action == null) {
-      await _scanFromCamera();
-      return;
-    }
-
-    // false = Cancel
-    if (action != true) return;
-
-    if (!mounted) return;
-
-    // ✅ after apply: go to Step 4 (times) if frequency exists, else Step 3
-    final targetPage = (_frequency == null) ? 2 : 3;
-    _pageController.jumpToPage(targetPage);
-    setState(() => _currentPageIndex = targetPage);
-  } catch (e) {
-    debugPrint('❌ Scan failed: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Scan failed: $e')),
+    try {
+      final XFile? shot = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
       );
+
+      if (shot == null) return;
+
+      final result = await _scanService.scanImage(File(shot.path));
+      if (!mounted) return;
+
+      final action = await _showEditableScanSheet(result: result);
+
+      // null = Rescan
+      if (action == null) {
+        await _scanFromCamera();
+        return;
+      }
+
+      // false = Cancel
+      if (action != true) return;
+
+      if (!mounted) return;
+
+      // ✅ after apply: go to Step 4 (times) if frequency exists, else Step 3
+      final targetPage = (_frequency == null) ? 3 : 4;
+      _pageController.jumpToPage(targetPage);
+      setState(() => _currentPageIndex = targetPage);
+    } catch (e) {
+      debugPrint('❌ Scan failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Scan failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
     }
-  } finally {
-    if (mounted) setState(() => _isScanning = false);
   }
-}
-
-
-      
 
   // ---------------------
   // Firestore Save Logic
@@ -421,6 +467,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyId);
+    final Timestamp? endDate = _computeEndDate(); // ← NEW
 
     if (_isEditing) {
       // UPDATE
@@ -434,14 +481,16 @@ class _AddMedScreenState extends State<AddMedScreen> {
         addedBy: currentUser.uid,
         createdAt: widget.medicationToEdit!.createdAt,
         updatedAt: Timestamp.now(),
+        endDate: endDate,
       );
 
       try {
         final doc = await docRef.get();
         final List<dynamic> currentMedsList = doc.data()?['medsList'] ?? [];
 
-        final List<Map<String, dynamic>> updatedMedsList =
-            currentMedsList.map((med) {
+        final List<Map<String, dynamic>> updatedMedsList = currentMedsList.map((
+          med,
+        ) {
           if (med['id'] == updatedMed.id) {
             return updatedMed.toMap();
           }
@@ -497,6 +546,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         addedBy: currentUser.uid,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
+        endDate: endDate, // ← NEW
       );
 
       try {
@@ -546,7 +596,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   // UI Navigation Helpers
   // ---------------------
   void _goToNextPage() {
-    if (_currentPageIndex < 5) {
+    if (_currentPageIndex < 6) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeIn,
@@ -698,7 +748,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       ),
       body: Column(
         children: [
-          _Stepper(currentIndex: _currentPageIndex, stepCount: 6),
+          _Stepper(currentIndex: _currentPageIndex, stepCount: 7),
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -717,8 +767,26 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
-                _Step2SelectDays(
+                _Step2Duration(
                   medicationName: _medicationName,
+                  initialDurationDays: _durationDays,
+                  initialCustomEndDate: _customEndDate,
+                  buttonStyle: tealButtonStyle,
+                  onNext: (days, customDate) {
+                    setState(() {
+                      _durationDays = days;
+                      _customEndDate = customDate;
+                    });
+                    _goToNextPage();
+                  },
+                ),
+                _Step3SelectDays(
+                  key: ValueKey(
+                    'days_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
+                  ),
+                  medicationName: _medicationName,
+                  durationDays: _durationDays,
+                  customEndDate: _customEndDate,
                   initialDays: _selectedDays,
                   buttonStyle: tealButtonStyle,
                   onNext: (days) {
@@ -726,7 +794,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
-                _Step3HowManyTimesPerDay(
+                _Step4HowManyTimesPerDay(
                   medicationName: _medicationName,
                   initialFrequency: _frequency,
                   buttonStyle: tealButtonStyle,
@@ -738,21 +806,24 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
-                _Step4SetTimes(
+                _Step5SetTimes(
                   medicationName: _medicationName,
                   frequency: _frequency,
                   selectedTimes: _selectedTimes,
                   buttonStyle: tealButtonStyle,
                   onTimeChanged: _updateTimes,
                   onClearTimes: _clearAllTimes,
-                  onAddTime: _frequency == 'Custom' ? _addCustomTimeField : null,
-                  onRemoveTime:
-                      _frequency == 'Custom' ? _removeCustomTimeField : null,
+                  onAddTime: _frequency == 'Custom'
+                      ? _addCustomTimeField
+                      : null,
+                  onRemoveTime: _frequency == 'Custom'
+                      ? _removeCustomTimeField
+                      : null,
                   onNext: () {
                     _goToNextPage();
                   },
                 ),
-                _Step5AddNotes(
+                _Step6AddNotes(
                   medicationName: _medicationName,
                   initialNotes: _notes,
                   buttonStyle: tealButtonStyle,
@@ -761,8 +832,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
-                _Step6Summary(
+                _Step7Summary(
+                  key: ValueKey(
+                    'summary_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
+                  ),
                   medicationName: _medicationName,
+                  durationDays: _durationDays,
+                  customEndDate: _customEndDate,
                   selectedDays: _selectedDays,
                   frequency: _frequency,
                   selectedTimes: _selectedTimes.whereType<TimeOfDay>().toList(),
@@ -932,69 +1008,83 @@ class _Step1MedNameState extends State<_Step1MedName> {
 
 // =====================
 // Step 2
-// =====================
-class _Step2SelectDays extends StatefulWidget {
-  final String? medicationName;
-  final ValueChanged<List<String>> onNext;
-  final List<String>? initialDays;
-  final ButtonStyle buttonStyle;
 
-  const _Step2SelectDays({
+class _Step2Duration extends StatefulWidget {
+  final String? medicationName;
+  final int? initialDurationDays;
+  final DateTime? initialCustomEndDate;
+  final ButtonStyle buttonStyle;
+  final void Function(int? durationDays, DateTime? customEndDate) onNext;
+
+  const _Step2Duration({
     this.medicationName,
-    required this.onNext,
-    this.initialDays,
+    this.initialDurationDays,
+    this.initialCustomEndDate,
     required this.buttonStyle,
+    required this.onNext,
   });
 
   @override
-  State<_Step2SelectDays> createState() => _Step2SelectDaysState();
+  State<_Step2Duration> createState() => _Step2DurationState();
 }
 
-class _Step2SelectDaysState extends State<_Step2SelectDays> {
-  final List<String> _daysOfWeek = [
-    'Every day',
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
+class _Step2DurationState extends State<_Step2Duration> {
+  int? _selected; // null=none, -1=custom, >0=preset days
+  DateTime? _customDate;
+
+  static const _presets = [
+    {'days': 3, 'label': '3 Days', 'sub': 'Short infections'},
+    {'days': 5, 'label': '5 Days', 'sub': 'Common courses'},
+    {
+      'days': 7,
+      'label': '7 Days (1 Week)',
+      'sub': 'Very common for antibiotics',
+    },
+    {'days': 10, 'label': '10 Days', 'sub': 'Extended courses'},
+    {'days': 14, 'label': '14 Days (2 Weeks)', 'sub': ''},
+    {'days': 30, 'label': '30 Days (1 Month)', 'sub': ''},
   ];
-  List<String> _selectedDays = [];
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialDays != null) {
-      _selectedDays = List.from(widget.initialDays!);
-    }
+    _selected = widget.initialDurationDays;
+    _customDate = widget.initialCustomEndDate;
   }
 
-  void _onDaySelected(bool? value, String day) {
-    setState(() {
-      if (day == 'Every day') {
-        if (value == true) {
-          _selectedDays = List.from(_daysOfWeek);
-        } else {
-          _selectedDays.clear();
-        }
-      } else {
-        if (value == true) {
-          _selectedDays.add(day);
-          _selectedDays.remove('Every day');
-        } else {
-          _selectedDays.remove(day);
-        }
-        if (_daysOfWeek.sublist(1).every((d) => _selectedDays.contains(d))) {
-          _selectedDays = List.from(_daysOfWeek);
-        }
-      }
-    });
+  String _endDateLabel(int days) {
+    final end = DateTime.now().add(Duration(days: days));
+    return 'Ends ${DateFormat('MMM d, yyyy').format(end)}';
+  }
+
+  Future<void> _pickCustomDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _customDate ?? now.add(const Duration(days: 7)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: Colors.teal),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _selected = -1;
+        _customDate = picked;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool canProceed =
+        _selected != null &&
+        (_selected! > 0 || (_selected == -1 && _customDate != null));
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Card(
@@ -1009,41 +1099,373 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 2: Select Days',
+                title: 'Step 2: Duration',
+                subtitle: 'How long should this medication be taken?',
+              ),
+
+              // Preset options
+              ..._presets.map((p) {
+                final days = p['days'] as int;
+                final label = p['label'] as String;
+                final sub = p['sub'] as String;
+                final isSelected = _selected == days;
+
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _selected = days;
+                    _customDate = null; // clear custom when preset chosen
+                  }),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.teal.withOpacity(0.08)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? Colors.teal : Colors.grey.shade300,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Radio<int>(
+                          value: days,
+                          groupValue: _selected,
+                          onChanged: (v) => setState(() {
+                            _selected = v;
+                            _customDate = null;
+                          }),
+                          activeColor: Colors.teal,
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                label,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                              if (sub.isNotEmpty)
+                                Text(
+                                  sub,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          Text(
+                            _endDateLabel(days),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.teal.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+              // Custom date option
+              GestureDetector(
+                onTap: _pickCustomDate,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _selected == -1
+                        ? Colors.teal.withOpacity(0.08)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _selected == -1
+                          ? Colors.teal
+                          : Colors.grey.shade300,
+                      width: _selected == -1 ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Radio<int>(
+                        value: -1,
+                        groupValue: _selected,
+                        onChanged: (_) => _pickCustomDate(),
+                        activeColor: Colors.teal,
+                      ),
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 20,
+                        color: Colors.teal,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selected == -1 && _customDate != null
+                              ? 'Custom: ${DateFormat('MMM d, yyyy').format(_customDate!)}'
+                              : 'Custom Date',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: _selected == -1
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_selected == -1 && _customDate != null)
+                        TextButton(
+                          onPressed: _pickCustomDate,
+                          child: const Text('Change'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: canProceed
+                    ? () {
+                        DateTime? endDate;
+                        if (_selected == -1) {
+                          endDate = _customDate;
+                        } else if (_selected != null && _selected! > 0) {
+                          endDate = DateTime.now().add(
+                            Duration(days: _selected!),
+                          );
+                        }
+                        widget.onNext(_selected, endDate);
+                      }
+                    : null,
+                style: widget.buttonStyle,
+                child: const Text('Next'),
+              ),
+
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton(
+                  onPressed: () => widget.onNext(null, null), // skip = ongoing
+                  child: const Text(
+                    'Skip (Ongoing medication)',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =====================
+
+class _Step3SelectDays extends StatefulWidget {
+  final String? medicationName;
+  final ValueChanged<List<String>> onNext;
+  final List<String>? initialDays;
+  final int? durationDays;
+  final DateTime? customEndDate;
+  final ButtonStyle buttonStyle;
+  const _Step3SelectDays({
+    super.key,
+    this.medicationName,
+    required this.onNext,
+    this.initialDays,
+    this.durationDays,
+    this.customEndDate,
+    required this.buttonStyle,
+  });
+  @override
+  State<_Step3SelectDays> createState() => _Step3SelectDaysState();
+}
+
+class _Step3SelectDaysState extends State<_Step3SelectDays> {
+  static const _allDays = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  List<String> _selectedDays = [];
+
+  /// Compute which day-names are reachable within the duration.
+  List<String> get _allowedDays {
+    int? totalDays;
+    if (widget.durationDays != null && widget.durationDays! > 0) {
+      totalDays = widget.durationDays;
+    } else if (widget.durationDays == -1 && widget.customEndDate != null) {
+      totalDays = widget.customEndDate!.difference(DateTime.now()).inDays + 1;
+    }
+    // Ongoing or ≥7 → all days reachable
+    if (totalDays == null || totalDays >= 7) return _allDays;
+
+    final now = DateTime.now();
+    final daySet = <String>{};
+    for (int i = 0; i < totalDays; i++) {
+      final date = now.add(Duration(days: i));
+      daySet.add(DateFormat('EEEE').format(date));
+    }
+    // Return in canonical week order
+    return _allDays.where((d) => daySet.contains(d)).toList();
+  }
+
+  bool get _isDurationLimited {
+    if (widget.durationDays == null) return false;
+    if (widget.durationDays! > 0 && widget.durationDays! < 7) return true;
+    if (widget.durationDays == -1 && widget.customEndDate != null) {
+      return widget.customEndDate!.difference(DateTime.now()).inDays + 1 < 7;
+    }
+    return false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialDays != null)
+      _selectedDays = List.from(widget.initialDays!);
+    // Remove any previously selected days that are no longer allowed
+    _selectedDays.removeWhere(
+      (d) => d != 'Every day' && !_allowedDays.contains(d),
+    );
+    if (_selectedDays.contains('Every day') && _isDurationLimited) {
+      _selectedDays = List.from(_allowedDays);
+    }
+  }
+
+  void _onDaySelected(bool? value, String day) {
+    final allowed = _allowedDays;
+    setState(() {
+      if (day == 'Every day') {
+        if (value == true) {
+          _selectedDays = ['Every day', ...allowed];
+        } else {
+          _selectedDays.clear();
+        }
+      } else {
+        if (value == true) {
+          _selectedDays.add(day);
+          _selectedDays.remove('Every day');
+        } else {
+          _selectedDays.remove(day);
+        }
+        // If all allowed days selected, add "Every day"
+        if (allowed.every((d) => _selectedDays.contains(d))) {
+          _selectedDays = ['Every day', ...allowed];
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allowed = _allowedDays;
+    final limited = _isDurationLimited;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _StepHeader(
+                medicationName: widget.medicationName,
+                title: 'Step 3: Select Days',
                 subtitle: 'Which days should you take this medication?',
               ),
+              if (limited)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.teal.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.teal.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.durationDays != null &&
+                                  widget.durationDays! > 0
+                              ? 'Based on your ${widget.durationDays}-day duration, only the following days apply.'
+                              : 'Based on your selected end date, only the following days apply.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.teal.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
                   'Daily Schedule',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
                 ),
               ),
               CheckboxListTile(
-                title: const Text('Every day'),
+                title: Text(
+                  limited ? 'Every day (${allowed.length} days)' : 'Every day',
+                ),
                 value: _selectedDays.contains('Every day'),
-                onChanged: (bool? value) => _onDaySelected(value, 'Every day'),
+                onChanged: (v) => _onDaySelected(v, 'Every day'),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
-                  'Specific Days',
+                  limited ? 'Available Days' : 'Specific Days',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
                 ),
               ),
-              ..._daysOfWeek.sublist(1).map(
-                    (day) => CheckboxListTile(
-                      title: Text(day),
-                      value: _selectedDays.contains(day),
-                      onChanged: (bool? value) => _onDaySelected(value, day),
-                    ),
-                  ),
+              ...allowed.map(
+                (day) => CheckboxListTile(
+                  title: Text(day),
+                  value: _selectedDays.contains(day),
+                  onChanged: (v) => _onDaySelected(v, day),
+                ),
+              ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _selectedDays.isNotEmpty
@@ -1063,13 +1485,13 @@ class _Step2SelectDaysState extends State<_Step2SelectDays> {
 // =====================
 // Step 3
 // =====================
-class _Step3HowManyTimesPerDay extends StatefulWidget {
+class _Step4HowManyTimesPerDay extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String> onNext;
   final String? initialFrequency;
   final ButtonStyle buttonStyle;
 
-  const _Step3HowManyTimesPerDay({
+  const _Step4HowManyTimesPerDay({
     this.medicationName,
     required this.onNext,
     this.initialFrequency,
@@ -1077,11 +1499,11 @@ class _Step3HowManyTimesPerDay extends StatefulWidget {
   });
 
   @override
-  State<_Step3HowManyTimesPerDay> createState() =>
-      _Step3HowManyTimesPerDayState();
+  State<_Step4HowManyTimesPerDay> createState() =>
+      _Step4HowManyTimesPerDayState();
 }
 
-class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
+class _Step4HowManyTimesPerDayState extends State<_Step4HowManyTimesPerDay> {
   String? _selectedFrequency;
   final List<String> _frequencyOptions = [
     'Once a day',
@@ -1113,7 +1535,7 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 3: Frequency',
+                title: 'Step 4: Frequency',
                 subtitle: 'Select how often you take this medication',
               ),
               ..._frequencyOptions.map(
@@ -1144,7 +1566,7 @@ class _Step3HowManyTimesPerDayState extends State<_Step3HowManyTimesPerDay> {
 // =====================
 // Step 4
 // =====================
-class _Step4SetTimes extends StatefulWidget {
+class _Step5SetTimes extends StatefulWidget {
   final String? medicationName;
   final String? frequency;
   final List<TimeOfDay?> selectedTimes;
@@ -1155,7 +1577,7 @@ class _Step4SetTimes extends StatefulWidget {
   final ValueChanged<int>? onRemoveTime;
   final ButtonStyle buttonStyle;
 
-  const _Step4SetTimes({
+  const _Step5SetTimes({
     this.medicationName,
     required this.frequency,
     required this.selectedTimes,
@@ -1168,10 +1590,10 @@ class _Step4SetTimes extends StatefulWidget {
   });
 
   @override
-  State<_Step4SetTimes> createState() => _Step4SetTimesState();
+  State<_Step5SetTimes> createState() => _Step4SetTimesState();
 }
 
-class _Step4SetTimesState extends State<_Step4SetTimes> {
+class _Step4SetTimesState extends State<_Step5SetTimes> {
   Future<void> _pickTime(int index) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -1180,13 +1602,11 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: Colors.teal,
-                  onPrimary: Colors.white,
-                ),
+              primary: Colors.teal,
+              onPrimary: Colors.white,
+            ),
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.teal,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.teal),
             ),
           ),
           child: child!,
@@ -1202,7 +1622,9 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
   @override
   Widget build(BuildContext context) {
     final bool isCustom = widget.frequency == 'Custom';
-    final bool allTimesSelected = widget.selectedTimes.every((time) => time != null);
+    final bool allTimesSelected = widget.selectedTimes.every(
+      (time) => time != null,
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -1218,7 +1640,7 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 4: Set Times',
+                title: 'Step 5: Set Times',
                 subtitle: 'When should you take this medication?',
               ),
               ...widget.selectedTimes.asMap().entries.map((entry) {
@@ -1297,13 +1719,13 @@ class _Step4SetTimesState extends State<_Step4SetTimes> {
 // =====================
 // Step 5
 // =====================
-class _Step5AddNotes extends StatefulWidget {
+class _Step6AddNotes extends StatefulWidget {
   final String? medicationName;
   final ValueChanged<String?> onNext;
   final String? initialNotes;
   final ButtonStyle buttonStyle;
 
-  const _Step5AddNotes({
+  const _Step6AddNotes({
     this.medicationName,
     required this.onNext,
     this.initialNotes,
@@ -1311,10 +1733,10 @@ class _Step5AddNotes extends StatefulWidget {
   });
 
   @override
-  State<_Step5AddNotes> createState() => _Step5AddNotesState();
+  State<_Step6AddNotes> createState() => _Step6AddNotesState();
 }
 
-class _Step5AddNotesState extends State<_Step5AddNotes> {
+class _Step6AddNotesState extends State<_Step6AddNotes> {
   late final TextEditingController _notesController;
 
   @override
@@ -1345,7 +1767,7 @@ class _Step5AddNotesState extends State<_Step5AddNotes> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 5: Add Notes',
+                title: 'Step 6: Add Notes',
                 subtitle: 'Any special instructions? (Optional)',
               ),
               TextField(
@@ -1373,8 +1795,10 @@ class _Step5AddNotesState extends State<_Step5AddNotes> {
 // =====================
 // Step 6
 // =====================
-class _Step6Summary extends StatelessWidget {
+class _Step7Summary extends StatelessWidget {
   final String? medicationName;
+  final int? durationDays;
+  final DateTime? customEndDate;
   final List<String> selectedDays;
   final String? frequency;
   final List<TimeOfDay> selectedTimes;
@@ -1383,8 +1807,11 @@ class _Step6Summary extends StatelessWidget {
   final bool isEditing;
   final ButtonStyle buttonStyle;
 
-  const _Step6Summary({
+  const _Step7Summary({
+    super.key,
     this.medicationName,
+    this.durationDays,
+    this.customEndDate,
     required this.selectedDays,
     this.frequency,
     required this.selectedTimes,
@@ -1394,11 +1821,23 @@ class _Step6Summary extends StatelessWidget {
     required this.buttonStyle,
   });
 
+  String _durationLabel() {
+    // customEndDate is always set when user picks a duration (preset or custom)
+    if (customEndDate != null) {
+      if (durationDays != null && durationDays! > 0) {
+        return '$durationDays days (until ${DateFormat('MMM d, yyyy').format(customEndDate!)})';
+      }
+      return 'Until ${DateFormat('MMM d, yyyy').format(customEndDate!)}';
+    }
+    return 'Ongoing (no end date)';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final formattedTimes = selectedTimes.map((t) => t.format(context)).join(', ');
+    final formattedTimes = selectedTimes
+        .map((t) => t.format(context))
+        .join(', ');
     final formattedDays = selectedDays.join(', ');
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -1407,7 +1846,7 @@ class _Step6Summary extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0),
             child: _StepHeader(
-              title: 'Step 6: Summary',
+              title: 'Step 7: Summary',
               subtitle: 'Please review the information before saving.',
             ),
           ),
@@ -1425,6 +1864,10 @@ class _Step6Summary extends StatelessWidget {
                     title: 'Medication Name',
                     value: medicationName ?? 'N/A',
                   ),
+                  _SummaryTile(
+                    title: 'Duration',
+                    value: _durationLabel(),
+                  ), // ← NEW
                   _SummaryTile(title: 'Frequency', value: frequency ?? 'N/A'),
                   _SummaryTile(title: 'Days', value: formattedDays),
                   _SummaryTile(title: 'Times', value: formattedTimes),
@@ -1453,7 +1896,6 @@ class _SummaryTile extends StatelessWidget {
   final String title;
   final String value;
   const _SummaryTile({required this.title, required this.value});
-
   @override
   Widget build(BuildContext context) {
     return Padding(

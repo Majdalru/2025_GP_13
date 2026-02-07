@@ -6,7 +6,7 @@ import 'services/notification_service.dart';
 
 // This is the custom navy color from your addmed.dart file (revert)
 const Color customNavyColor = Color.fromRGBO(13, 45, 93, 1);
-// Let's also define your teal color
+// Let's also define your teal color \
 const Color customTealColor = Colors.teal;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -14,6 +14,8 @@ class Medication {
   final Timestamp createdAt;
   final Timestamp updatedAt;
 
+  final Timestamp? endDate;
+
   Medication({
     required this.id,
     required this.name,
@@ -24,6 +26,7 @@ class Medication {
     required this.addedBy,
     required this.createdAt,
     required this.updatedAt,
+    this.endDate,
   });
 
   // Helper to format TimeOfDay to a string "HH:mm" for Firestore
@@ -49,6 +52,7 @@ class Medication {
       'addedBy': addedBy,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      if (endDate != null) 'endDate': endDate,
     };
   }
 
@@ -59,7 +63,8 @@ class Medication {
       name: map['name'] ?? 'Unnamed Medication',
       days: List<String>.from(map['days'] ?? []),
       frequency: map['frequency'],
-      times: (map['times'] as List<dynamic>?)
+      times:
+          (map['times'] as List<dynamic>?)
               ?.map((timeStr) => _parseTimeOfDay(timeStr.toString()))
               .toList() ??
           [],
@@ -67,6 +72,7 @@ class Medication {
       addedBy: map['addedBy'] ?? '',
       createdAt: map['createdAt'] ?? Timestamp.now(),
       updatedAt: map['updatedAt'] ?? Timestamp.now(),
+      endDate: map['endDate'] as Timestamp?,
     );
   }
 }
