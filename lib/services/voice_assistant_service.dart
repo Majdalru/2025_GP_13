@@ -14,7 +14,7 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// API KEY
-const String _openAIApiKey = '';
+const String _openAIApiKey = ''; // TODO: Add your API Key here safely (e.g. environment variable)
 
 class VoiceAssistantService {
   // ===== Singleton =====

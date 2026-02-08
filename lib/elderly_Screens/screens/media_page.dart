@@ -12,6 +12,7 @@ import '../../models/audio_item.dart';
 import '../../services/voice_assistant_service.dart';
 import 'package:flutter_application_1/models/voice_command.dart'; //  NEW
 import 'youtube_player_page.dart'; 
+import 'shared_media_list_page.dart'; 
 
 class MediaPage extends StatefulWidget {
   const MediaPage({super.key});
@@ -301,10 +302,17 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(18),
         splashColor: MediaPage.kPrimary.withOpacity(0.15),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AudioListPage(category: title)),
-          );
+          if (title == "Caregiver") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SharedMediaListPage()),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AudioListPage(category: title)),
+            );
+          }
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 10),

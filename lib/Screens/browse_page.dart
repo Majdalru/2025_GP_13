@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../medmain.dart'; // Corrected import
 import 'meds_summary_page.dart';
 import 'location_page.dart';
-import 'upload_audio_page.dart';
+import 'share_content_page.dart';
 import 'home_shell.dart'; // Import to get the ElderlyProfile model
 
 class BrowsePage extends StatelessWidget {
@@ -86,13 +86,27 @@ class BrowsePage extends StatelessWidget {
         onTap: null, // Not tappable
       ),
       _BrowseItem(
-        title: 'Upload Audio for Elderly',
-        subtitle: 'Share recordings or stories',
-        icon: Icons.upload_file,
+        title: 'Share with Elderly',
+        subtitle: 'Share your life updates with your loved',
+        icon: Icons.share,
         color: const Color(0xFF2A4D69),
-        onTap: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const UploadAudioPage())),
+        onTap: () {
+          if (selectedProfile != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ShareContentPage(
+                  elderlyId: selectedProfile!.uid,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please select an elderly profile first.'),
+              ),
+            );
+          }
+        },
       ),
     ];
 
