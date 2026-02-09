@@ -269,6 +269,18 @@ class _ShareContentPageState extends State<ShareContentPage> {
                   isRecording: _isRecording,
                   onTap: _isRecording ? _stopRecording : _startRecording,
                 ),
+
+                const SizedBox(height: 40),
+                const Text(
+                  'Recently Shared',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSharedItemsList(),
               ],
             ),
           ),
@@ -295,6 +307,122 @@ class _ShareContentPageState extends State<ShareContentPage> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSharedItemsList() {
+    return StreamBuilder<List<SharedItem>>(
+      stream: _sharingService.getSharedItems(widget.elderlyId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        }
+        final items = snapshot.data ?? [];
+        if (items.isEmpty) {
+          return const Text(
+            'No items shared yet.',
+            style: TextStyle(color: Colors.grey),
+          );
+        }
+
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return _buildSharedItemTile(item);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSharedItemTile(SharedItem item) {
+    IconData icon;
+    Color color;
+    switch (item.type) {
+      case SharedItemType.video:
+        icon = Icons.videocam;
+        color = Colors.orange;
+        break;
+      case SharedItemType.audio:
+        icon = Icons.audiotrack;
+        color = Colors.blue;
+        break;
+      default:
+        icon = Icons.article;
+        color = Colors.grey;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          item.title.isNotEmpty ? item.title : item.type.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '${item.timestamp.day}/${item.timestamp.month}/${item.timestamp.year}',
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          onPressed: () => _confirmDelete(item),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(SharedItem item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Item?'),
+        content: const Text('Are you sure you want to delete this shared item?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await _sharingService.deleteItem(
+                  elderlyId: widget.elderlyId,
+                  item: item,
+                );
+                _showSnack('Item deleted successfully');
+              } catch (e) {
+                _showSnack('Error deleting item: $e', isError: true);
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );

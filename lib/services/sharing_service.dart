@@ -63,4 +63,33 @@ class SharingService {
       return snapshot.docs.map((doc) => SharedItem.fromMap(doc.data())).toList();
     });
   }
+
+  // Delete shared item
+  Future<void> deleteItem({
+    required String elderlyId,
+    required SharedItem item,
+  }) async {
+    try {
+      // 1. Delete from Firestore
+      await _firestore
+          .collection('shared_content')
+          .doc(elderlyId)
+          .collection('items')
+          .doc(item.id)
+          .delete();
+
+      // 2. Delete from Storage if fileName exists
+      if (item.fileName != null) {
+        final ref = _storage
+            .ref()
+            .child('shared_media/$elderlyId/${item.type.name}/${item.fileName}');
+        await ref.delete();
+      }
+
+      debugPrint('Shared item deleted: ${item.id}');
+    } catch (e) {
+      debugPrint('Error deleting item: $e');
+      rethrow;
+    }
+  }
 }

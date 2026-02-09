@@ -156,10 +156,54 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                   ],
                 ),
               ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 30),
+                onPressed: () => _confirmDelete(context, item),
+              ),
+              const SizedBox(width: 8),
               const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, SharedItem item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Media?'),
+        content: const Text('Are you sure you want to delete this specific media?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontSize: 18)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                   await _sharingService.deleteItem(
+                    elderlyId: user.uid,
+                    item: item,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Media deleted successfully')),
+                  );
+                }
+               
+              } catch (e) {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error deleting media: $e')),
+                  );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontSize: 18)),
+          ),
+        ],
       ),
     );
   }
