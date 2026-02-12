@@ -3,6 +3,10 @@ import 'audio_player_page.dart';
 import 'favorites_manager.dart';
 import '../../models/audio_item.dart';
 import 'youtube_player_page.dart';
+import '../../models/shared_item.dart';
+import 'video_player_page.dart';
+import 'shared_audio_player_page.dart';
+
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -233,7 +237,36 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                   final type =
                                       (audio["type"] ?? 'audio') as String;
                                   final url = audio["url"] as String?;
+                                    // ✅ إضافة فقط: تشغيل مقاطع/أصوات الكيرقفر (shared)
+  if (type == "shared_video" || type == "shared_audio") {
+    if (url == null || url.isEmpty) {
+      _showTopBanner("Media link is missing", color: Colors.red.shade700);
+      return;
+    }
 
+    final sharedItem = SharedItem(
+      id: (audio["itemId"] ?? audio["audioId"] ?? '').toString(),
+      type: type == "shared_video" ? SharedItemType.video : SharedItemType.audio,
+      title: title,
+      url: url,
+      fileName: (audio["fileName"] ?? '').toString(),
+      senderId: (audio["senderId"] ?? 'caregiver').toString(),
+      timestamp: DateTime.now(), // إذا ما عندك timestamp محفوظ في favorites
+    );
+
+    if (sharedItem.type == SharedItemType.video) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => VideoPlayerPage(item: sharedItem)),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SharedAudioPlayerPage(item: sharedItem)),
+      );
+    }
+    return; // مهم جدًا عشان ما يكمل على منطق AudioItem
+  }
                                   final item = AudioItem(
                                     id: audio["audioId"] ?? '',
                                     title: title,

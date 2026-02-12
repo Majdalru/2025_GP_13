@@ -7,6 +7,7 @@ import '../../models/shared_item.dart';
 import '../../services/sharing_service.dart';
 import 'shared_audio_player_page.dart';
 import 'video_player_page.dart';
+import 'favorites_manager.dart';
 
 class SharedMediaListPage extends StatefulWidget {
   const SharedMediaListPage({super.key});
@@ -18,8 +19,74 @@ class SharedMediaListPage extends StatefulWidget {
 class _SharedMediaListPageState extends State<SharedMediaListPage> {
   final SharingService _sharingService = SharingService();
   static const kPrimary = Color(0xFF1B3A52);
+String _selectedFilter = 'All'; // All | Audio | Video
 
   @override
+  void _showTopBanner(
+  String message, {
+  Color color = kPrimary,
+  int seconds = 1,
+}) {
+  if (!mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+
+  messenger
+    ..hideCurrentMaterialBanner()
+    ..showMaterialBanner(
+      MaterialBanner(
+        backgroundColor: color,
+        elevation: 4,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        actions: const [SizedBox.shrink()],
+      ),
+    );
+
+  Future.delayed(Duration(seconds: seconds), () {
+    if (mounted) messenger.hideCurrentMaterialBanner();
+  });
+}
+
+Widget _buildTypeFilterChips() {
+  const options = ['All', 'Audio', 'Video'];
+
+  return SizedBox(
+    height: 46,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: options.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final opt = options[index];
+        final isSelected = _selectedFilter == opt;
+
+        return ChoiceChip(
+          label: Text(opt),
+          selected: isSelected,
+          selectedColor: kPrimary,
+          backgroundColor: Colors.grey.shade200,
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+          ),
+          onSelected: (_) {
+            setState(() => _selectedFilter = opt);
+          },
+        );
+      },
+    ),
+  );
+}
+
+
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -30,62 +97,93 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        toolbarHeight: 110,
-        backgroundColor: kPrimary,
-        title: const Text("Family Media"),
-        titleTextStyle: const TextStyle(
-          fontSize: 34,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
-          onPressed: () => Navigator.pop(context),
-        ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-        ),
-      ),
-      body: SafeArea(
-        child: StreamBuilder<List<SharedItem>>(
-          stream: _sharingService.getSharedItems(user.uid),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+  backgroundColor: Colors.white,
+  appBar: AppBar(
+    toolbarHeight: 110,
+    backgroundColor: kPrimary,
+    title: const Text("Family Media"),
+    titleTextStyle: const TextStyle(
+      fontSize: 34,
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.5,
+    ),
+    centerTitle: true,
+    leading: IconButton(
+      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
+      onPressed: () => Navigator.pop(context),
+    ),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
+    ),
+  ),
+  body: SafeArea(
+    child: Column(
+      children: [
+        const SizedBox(height: 12),
+        _buildTypeFilterChips(),
+        const SizedBox(height: 8),
 
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
+        Expanded(
+          child: StreamBuilder<List<SharedItem>>(
+            stream: _sharingService.getSharedItems(user.uid),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            final items = snapshot.data ?? [];
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-            if (items.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No media shared yet.',
-                  style: TextStyle(fontSize: 24, color: Colors.grey),
-                ),
+              final items = snapshot.data ?? [];
+
+              if (items.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No media shared yet.',
+                    style: TextStyle(fontSize: 24, color: Colors.grey),
+                  ),
+                );
+              }
+
+              final filteredItems = items.where((it) {
+                if (_selectedFilter == 'All') return true;
+                if (_selectedFilter == 'Audio') {
+                  return it.type == SharedItemType.audio;
+                }
+                if (_selectedFilter == 'Video') {
+                  return it.type == SharedItemType.video;
+                }
+                return true;
+              }).toList();
+
+              if (filteredItems.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No media in this filter.',
+                    style: TextStyle(fontSize: 24, color: Colors.grey),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.all(20),
+                itemCount: filteredItems.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                itemBuilder: (context, index) {
+                  final item = filteredItems[index];
+                  return _buildSharedItemCard(context, item);
+                },
               );
-            }
-
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return _buildSharedItemCard(context, item);
-              },
-            );
-          },
+            },
+          ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+);
+
   }
 
   Widget _buildSharedItemCard(BuildContext context, SharedItem item) {
@@ -157,11 +255,52 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 30),
-                onPressed: () => _confirmDelete(context, item),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
+  icon: Icon(
+    favoritesManager.isFavorite(item.id)
+        ? Icons.favorite
+        : Icons.favorite_border,
+    color: favoritesManager.isFavorite(item.id)
+        ? Colors.red
+        : Colors.grey,
+    size: 30,
+  ),
+ onPressed: () async {
+  await favoritesManager.toggleFavorite({
+    "itemId": item.id,
+    "audioId": item.id,
+    "title": item.title,
+    "category": "Caregiver",
+    "fileName": item.fileName,
+    "image": item.type == SharedItemType.video
+        ? "assets/video.jpg"
+        : "assets/audio.jpg",
+    "type": item.type == SharedItemType.video
+        ? "shared_video"
+        : "shared_audio",
+    "url": item.url,
+  });
+
+  final nowFav = favoritesManager.isFavorite(item.id);
+
+  _showTopBanner(
+    nowFav ? 'Added to Favorites' : 'Removed from Favorites',
+    color: nowFav ? Colors.green.shade700 : Colors.red.shade700,
+    seconds: 1,
+  );
+
+  if (mounted) setState(() {});
+},
+
+),
+
+// 🗑 زر الحذف
+IconButton(
+  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 30),
+  onPressed: () => _confirmDelete(context, item),
+),
+
+const SizedBox(width: 8),
+const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
             ],
           ),
         ),
