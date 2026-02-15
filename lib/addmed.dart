@@ -41,7 +41,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   late final bool _isEditing;
 
   String? _medicationName;
-  int? _durationDays; // ← NEW: null=not set, -1=custom, >0=preset
+  int? _durationDays;
   DateTime? _customEndDate; // ← NEW: for custom date pick or preset calc
   List<String> _selectedDays = [];
   String? _frequency;
@@ -104,15 +104,30 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
   // ← NEW: compute the Timestamp endDate for Firestore
   Timestamp? _computeEndDate() {
+    // Find the latest dose time, fallback to 23:59 if no times set
+    int endHour = 23;
+    int endMinute = 59;
+
+    final times = _selectedTimes.whereType<TimeOfDay>().toList();
+    if (times.isNotEmpty) {
+      times.sort((a, b) {
+        final aMin = a.hour * 60 + a.minute;
+        final bMin = b.hour * 60 + b.minute;
+        return aMin.compareTo(bMin);
+      });
+      endHour = times.last.hour;
+      endMinute = times.last.minute;
+    }
+
     if (_customEndDate != null) {
       return Timestamp.fromDate(
         DateTime(
           _customEndDate!.year,
           _customEndDate!.month,
           _customEndDate!.day,
-          23,
-          59,
-          59,
+          endHour,
+          endMinute,
+          0,
         ),
       );
     }
@@ -122,10 +137,15 @@ class _AddMedScreenState extends State<AddMedScreen> {
           : DateTime.now();
       final end = startDate.add(Duration(days: _durationDays!));
       return Timestamp.fromDate(
-        DateTime(end.year, end.month, end.day, 23, 59, 59),
+        DateTime(end.year, end.month, end.day, endHour, endMinute, 0),
       );
     }
-    return null; // ongoing / no end date
+    return null;
+  }
+
+  String _formatEndDate(int days) {
+    final end = DateTime.now().add(Duration(days: days));
+    return DateFormat('MMM d, yyyy').format(end);
   }
 
   Future<bool?> _showEditableScanSheet({required MedicationScanResult result}) {
@@ -133,6 +153,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
     final notesCtrl = TextEditingController(text: result.notes ?? '');
 
     String? selectedFreq = result.frequency;
+    int? selectedDuration = result.durationDays; // ← NEW: from scan
+    DateTime? scanCustomEndDate; // ← for custom date pick in scan sheet
+
     List<String> selectedDays = result.days.isNotEmpty
         ? List<String>.from(result.days)
         : <String>[];
@@ -147,6 +170,34 @@ class _AddMedScreenState extends State<AddMedScreen> {
       'Friday',
       'Saturday',
     ];
+
+    // Compute which day-names fall within the duration window
+    List<String> getAllowedDays() {
+      int? totalDays;
+      if (selectedDuration != null && selectedDuration! > 0) {
+        totalDays = selectedDuration;
+      } else if (selectedDuration == -1 && scanCustomEndDate != null) {
+        totalDays = scanCustomEndDate!.difference(DateTime.now()).inDays + 1;
+      }
+      // Ongoing or ≥7 → all days reachable
+      if (totalDays == null || totalDays >= 7) return allDays.sublist(1);
+      final now = DateTime.now();
+      final daySet = <String>{};
+      for (int i = 0; i < totalDays; i++) {
+        final date = now.add(Duration(days: i));
+        daySet.add(DateFormat('EEEE').format(date));
+      }
+      return allDays.sublist(1).where((d) => daySet.contains(d)).toList();
+    }
+
+    // Auto-select days within duration window
+    void constrainDays() {
+      final allowed = getAllowedDays();
+      selectedDays.removeWhere((d) => d != 'Every day' && !allowed.contains(d));
+      if (selectedDays.contains('Every day') && allowed.length < 7) {
+        selectedDays = List.from(allowed);
+      }
+    }
 
     const freqOptions = [
       'Once a day',
@@ -185,10 +236,12 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     builder: (context, setSheetState) {
                       void toggleDay(String d) {
                         setSheetState(() {
+                          final allowed = getAllowedDays();
+
                           if (d == 'Every day') {
                             final isOn = selectedDays.contains('Every day');
                             if (!isOn) {
-                              selectedDays = List<String>.from(allDays);
+                              selectedDays = ['Every day', ...allowed];
                             } else {
                               selectedDays.clear();
                             }
@@ -201,13 +254,10 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             selectedDays.add(d);
                           }
 
-                          // if all individual days selected -> mark as Every day
-                          final indiv = allDays.sublist(1);
-                          final hasAll = indiv.every(
-                            (x) => selectedDays.contains(x),
-                          );
-                          if (hasAll) {
-                            selectedDays = List<String>.from(allDays);
+                          // if all allowed days selected -> mark as Every day
+                          if (allowed.every((x) => selectedDays.contains(x)) &&
+                              allowed.length == 7) {
+                            selectedDays = ['Every day', ...allowed];
                           } else {
                             selectedDays.remove('Every day');
                           }
@@ -261,6 +311,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                           TextField(
                             controller: nameCtrl,
                             textInputAction: TextInputAction.next,
+                            onChanged: (_) => setSheetState(() {}),
                             decoration: InputDecoration(
                               hintText: 'e.g. Fusidic Acid',
                               border: OutlineInputBorder(
@@ -270,6 +321,113 @@ class _AddMedScreenState extends State<AddMedScreen> {
                           ),
                           const SizedBox(height: 14),
 
+                          // ═══════════ Duration (NEW) ═══════════
+                          const Text(
+                            'Duration',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ...[3, 5, 7, 10, 14, 30].map((d) {
+                                final selected = selectedDuration == d;
+                                final label = d == 30
+                                    ? '1 month'
+                                    : d == 14
+                                    ? '2 weeks'
+                                    : '$d days';
+                                return ChoiceChip(
+                                  label: Text(label),
+                                  selected: selected,
+                                  onSelected: (_) => setSheetState(() {
+                                    selectedDuration = selected ? null : d;
+                                    scanCustomEndDate = null;
+                                    constrainDays();
+                                  }),
+                                  selectedColor: Colors.teal.shade100,
+                                );
+                              }),
+                              // Custom date chip
+                              ChoiceChip(
+                                label: Text(
+                                  selectedDuration == -1 &&
+                                          scanCustomEndDate != null
+                                      ? 'Custom: ${DateFormat('MMM d').format(scanCustomEndDate!)}'
+                                      : 'Custom',
+                                ),
+                                selected: selectedDuration == -1,
+                                onSelected: (_) async {
+                                  final now = DateTime.now();
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate:
+                                        scanCustomEndDate ??
+                                        now.add(const Duration(days: 7)),
+                                    firstDate: now,
+                                    lastDate: now.add(
+                                      const Duration(days: 365),
+                                    ),
+                                    builder: (ctx, child) => Theme(
+                                      data: Theme.of(ctx).copyWith(
+                                        colorScheme: Theme.of(ctx).colorScheme
+                                            .copyWith(primary: Colors.teal),
+                                      ),
+                                      child: child!,
+                                    ),
+                                  );
+                                  if (picked != null) {
+                                    setSheetState(() {
+                                      selectedDuration = -1;
+                                      scanCustomEndDate = picked;
+                                      constrainDays();
+                                    });
+                                  }
+                                },
+                                selectedColor: Colors.teal.shade100,
+                              ),
+                              // Ongoing chip
+                              ChoiceChip(
+                                label: const Text('Ongoing'),
+                                selected: selectedDuration == null,
+                                onSelected: (_) => setSheetState(() {
+                                  selectedDuration = null;
+                                  scanCustomEndDate = null;
+                                  constrainDays();
+                                }),
+                                selectedColor: Colors.grey.shade300,
+                              ),
+                            ],
+                          ),
+                          if (selectedDuration != null &&
+                              selectedDuration != -1 &&
+                              selectedDuration! > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'Ends ${_formatEndDate(selectedDuration!)}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.teal.shade700,
+                                ),
+                              ),
+                            ),
+                          if (selectedDuration == -1 &&
+                              scanCustomEndDate != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'Ends ${DateFormat('MMM d, yyyy').format(scanCustomEndDate!)}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.teal.shade700,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 14),
+
+                          // ═══════════════════════════════════════
                           const Text(
                             'Frequency',
                             style: TextStyle(fontWeight: FontWeight.w600),
@@ -296,18 +454,55 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: allDays.map((d) {
-                              final selected = selectedDays.contains(d);
-                              return FilterChip(
-                                label: Text(d),
-                                selected: selected,
-                                onSelected: (_) => toggleDay(d),
-                                selectedColor: Colors.teal.shade100,
+                          Builder(
+                            builder: (_) {
+                              final allowed = getAllowedDays();
+                              final isLimited = allowed.length < 7;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (isLimited)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Text(
+                                        'Only showing days within your ${selectedDuration == -1 ? "custom" : "$selectedDuration-day"} duration',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.teal.shade600,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      if (!isLimited)
+                                        FilterChip(
+                                          label: const Text('Every day'),
+                                          selected: selectedDays.contains(
+                                            'Every day',
+                                          ),
+                                          onSelected: (_) =>
+                                              toggleDay('Every day'),
+                                          selectedColor: Colors.teal.shade100,
+                                        ),
+                                      ...allowed.map((d) {
+                                        final selected = selectedDays.contains(
+                                          d,
+                                        );
+                                        return FilterChip(
+                                          label: Text(d),
+                                          selected: selected,
+                                          onSelected: (_) => toggleDay(d),
+                                          selectedColor: Colors.teal.shade100,
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                ],
                               );
-                            }).toList(),
+                            },
                           ),
                           const SizedBox(height: 14),
 
@@ -339,54 +534,84 @@ class _AddMedScreenState extends State<AddMedScreen> {
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    final name = nameCtrl.text.trim();
-                                    if (name.isEmpty) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Please enter a medication name.',
+                                child: Builder(
+                                  builder: (_) {
+                                    final hasName = nameCtrl.text
+                                        .trim()
+                                        .isNotEmpty;
+                                    final hasFreq = selectedFreq != null;
+                                    final hasDays = selectedDays.isNotEmpty;
+                                    final canApply =
+                                        hasName && hasFreq && hasDays;
+
+                                    return ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: canApply
+                                            ? Colors.teal
+                                            : Colors.grey.shade400,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
                                         ),
-                                      );
-                                      return;
-                                    }
+                                      ),
+                                      onPressed: canApply
+                                          ? () {
+                                              final name = nameCtrl.text.trim();
 
-                                    setState(() {
-                                      _medicationName = name;
-                                      _notes = notesCtrl.text.trim();
+                                              setState(() {
+                                                _medicationName = name;
+                                                _notes = notesCtrl.text.trim();
 
-                                      _selectedDays = selectedDays.isEmpty
-                                          ? []
-                                          : List<String>.from(selectedDays);
+                                                _selectedDays =
+                                                    List<String>.from(
+                                                      selectedDays,
+                                                    );
 
-                                      _frequency = selectedFreq;
+                                                _frequency = selectedFreq;
 
-                                      // initialize time slots if we have frequency
-                                      if (_frequency != null) {
-                                        _initializeTimesForFrequency(
-                                          _frequency!,
-                                        );
-                                      }
-                                    });
+                                                if (selectedDuration != null &&
+                                                    selectedDuration! > 0) {
+                                                  _durationDays =
+                                                      selectedDuration;
+                                                  _customEndDate =
+                                                      DateTime.now().add(
+                                                        Duration(
+                                                          days:
+                                                              selectedDuration!,
+                                                        ),
+                                                      );
+                                                } else if (selectedDuration ==
+                                                        -1 &&
+                                                    scanCustomEndDate != null) {
+                                                  _durationDays = -1;
+                                                  _customEndDate =
+                                                      scanCustomEndDate;
+                                                } else {
+                                                  _durationDays = null;
+                                                  _customEndDate = null;
+                                                }
 
-                                    Navigator.pop(context, true);
+                                                if (_frequency != null) {
+                                                  _initializeTimesForFrequency(
+                                                    _frequency!,
+                                                  );
+                                                }
+                                              });
+
+                                              Navigator.pop(context, true);
+                                            }
+                                          : null,
+                                      icon: const Icon(Icons.check_circle),
+                                      label: Text(
+                                        canApply ? 'Apply' : 'Fill all fields',
+                                      ),
+                                    );
                                   },
-                                  icon: const Icon(Icons.check_circle),
-                                  label: const Text('Apply'),
                                 ),
                               ),
                             ],
@@ -427,6 +652,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
       // null = Rescan
       if (action == null) {
+        setState(() => _isScanning = false);
         await _scanFromCamera();
         return;
       }
@@ -436,8 +662,18 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
       if (!mounted) return;
 
-      // ✅ after apply: go to Step 4 (times) if frequency exists, else Step 3
-      final targetPage = (_frequency == null) ? 3 : 4;
+      // ✅ after apply: skip to the first step that still needs user input
+      // Steps: 0=Name, 1=Duration, 2=Days, 3=Frequency, 4=Times, 5=Notes, 6=Summary
+      int targetPage;
+      if (_durationDays == null && _customEndDate == null) {
+        targetPage = 1; // go to duration step
+      } else if (_selectedDays.isEmpty) {
+        targetPage = 2; // go to days step
+      } else if (_frequency == null) {
+        targetPage = 3; // go to frequency step
+      } else {
+        targetPage = 4; // everything filled, go to times
+      }
       _pageController.jumpToPage(targetPage);
       setState(() => _currentPageIndex = targetPage);
     } catch (e) {
@@ -1015,7 +1251,6 @@ class _Step2Duration extends StatefulWidget {
   final DateTime? initialCustomEndDate;
   final ButtonStyle buttonStyle;
   final void Function(int? durationDays, DateTime? customEndDate) onNext;
-
   const _Step2Duration({
     this.medicationName,
     this.initialDurationDays,
@@ -1023,24 +1258,19 @@ class _Step2Duration extends StatefulWidget {
     required this.buttonStyle,
     required this.onNext,
   });
-
   @override
   State<_Step2Duration> createState() => _Step2DurationState();
 }
 
 class _Step2DurationState extends State<_Step2Duration> {
-  int? _selected; // null=none, -1=custom, >0=preset days
+  int? _selected;
   DateTime? _customDate;
 
   static const _presets = [
-    {'days': 3, 'label': '3 Days', 'sub': 'Short infections'},
-    {'days': 5, 'label': '5 Days', 'sub': 'Common courses'},
-    {
-      'days': 7,
-      'label': '7 Days (1 Week)',
-      'sub': 'Very common for antibiotics',
-    },
-    {'days': 10, 'label': '10 Days', 'sub': 'Extended courses'},
+    {'days': 3, 'label': '3 Days', 'sub': ''},
+    {'days': 5, 'label': '5 Days', 'sub': ''},
+    {'days': 7, 'label': '7 Days (1 Week)', 'sub': ''},
+    {'days': 10, 'label': '10 Days', 'sub': ''},
     {'days': 14, 'label': '14 Days (2 Weeks)', 'sub': ''},
     {'days': 30, 'label': '30 Days (1 Month)', 'sub': ''},
   ];
@@ -1071,20 +1301,20 @@ class _Step2DurationState extends State<_Step2Duration> {
         child: child!,
       ),
     );
-    if (picked != null) {
+    if (picked != null)
       setState(() {
         _selected = -1;
         _customDate = picked;
       });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final bool canProceed =
         _selected != null &&
-        (_selected! > 0 || (_selected == -1 && _customDate != null));
-
+        (_selected == 0 ||
+            _selected! > 0 ||
+            (_selected == -1 && _customDate != null));
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Card(
@@ -1102,34 +1332,21 @@ class _Step2DurationState extends State<_Step2Duration> {
                 title: 'Step 2: Duration',
                 subtitle: 'How long should this medication be taken?',
               ),
-
-              // Preset options
               ..._presets.map((p) {
                 final days = p['days'] as int;
                 final label = p['label'] as String;
                 final sub = p['sub'] as String;
                 final isSelected = _selected == days;
-
                 return GestureDetector(
                   onTap: () => setState(() {
                     _selected = days;
-                    _customDate = null; // clear custom when preset chosen
+                    _customDate = null;
                   }),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.symmetric(
                       vertical: 12,
                       horizontal: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.teal.withOpacity(0.08)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? Colors.teal : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
-                      ),
                     ),
                     child: Row(
                       children: [
@@ -1163,25 +1380,26 @@ class _Step2DurationState extends State<_Step2Duration> {
                                     color: Colors.grey.shade600,
                                   ),
                                 ),
+                              if (isSelected)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    _endDateLabel(days),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.teal.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
-                        if (isSelected)
-                          Text(
-                            _endDateLabel(days),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.teal.shade700,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                       ],
                     ),
                   ),
                 );
               }),
-
-              // Custom date option
               GestureDetector(
                 onTap: _pickCustomDate,
                 child: Container(
@@ -1189,18 +1407,6 @@ class _Step2DurationState extends State<_Step2Duration> {
                   padding: const EdgeInsets.symmetric(
                     vertical: 12,
                     horizontal: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _selected == -1
-                        ? Colors.teal.withOpacity(0.08)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _selected == -1
-                          ? Colors.teal
-                          : Colors.grey.shade300,
-                      width: _selected == -1 ? 2 : 1,
-                    ),
                   ),
                   child: Row(
                     children: [
@@ -1238,11 +1444,58 @@ class _Step2DurationState extends State<_Step2Duration> {
                   ),
                 ),
               ),
-
+              // ═══ Ongoing option ═══
+              GestureDetector(
+                onTap: () => setState(() {
+                  _selected = 0;
+                  _customDate = null;
+                }),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Radio<int>(
+                        value: 0,
+                        groupValue: _selected,
+                        onChanged: (v) => setState(() {
+                          _selected = 0;
+                          _customDate = null;
+                        }),
+                        activeColor: Colors.teal,
+                      ),
+                      const Icon(
+                        Icons.all_inclusive,
+                        size: 20,
+                        color: Colors.teal,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Ongoing (No end date)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: _selected == 0
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: canProceed
                     ? () {
+                        if (_selected == 0) {
+                          widget.onNext(null, null);
+                          return;
+                        }
                         DateTime? endDate;
                         if (_selected == -1) {
                           endDate = _customDate;
@@ -1256,17 +1509,6 @@ class _Step2DurationState extends State<_Step2Duration> {
                     : null,
                 style: widget.buttonStyle,
                 child: const Text('Next'),
-              ),
-
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton(
-                  onPressed: () => widget.onNext(null, null), // skip = ongoing
-                  child: const Text(
-                    'Skip (Ongoing medication)',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
               ),
             ],
           ),

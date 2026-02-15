@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../models/medication.dart';
 import 'notification_service.dart';
+import 'medication_history_service.dart';
 
 class MedicationScheduler {
   static final MedicationScheduler _instance = MedicationScheduler._internal();
@@ -43,8 +44,51 @@ class MedicationScheduler {
               .toList() ??
           [];
 
-      int scheduledCount = 0;
+      // ═══════════════════════════════════════════════
+      // ✅ NEW: Remove expired medications from Firestore
+      // ═══════════════════════════════════════════════
+      final now = DateTime.now();
+      final List<Medication> expiredMeds = [];
+      final List<Medication> activeMeds = [];
+
       for (final med in medsList) {
+        if (med.endDate != null && med.endDate!.toDate().isBefore(now)) {
+          expiredMeds.add(med);
+        } else {
+          activeMeds.add(med);
+        }
+      }
+
+      if (expiredMeds.isNotEmpty) {
+        debugPrint(
+          '🧹 Found ${expiredMeds.length} expired medication(s) to remove:',
+        );
+        for (final expired in expiredMeds) {
+          debugPrint(
+            '   - ${expired.name} (ended ${DateFormat('MMM d, yyyy').format(expired.endDate!.toDate())})',
+          );
+        }
+
+        // ✅ Save expired meds to history before removing
+        await MedicationHistoryService().saveBatchToHistory(
+          elderlyId: elderlyId,
+          medications: expiredMeds,
+          reason: 'expired',
+        );
+
+        // Update Firestore: replace medsList with only active meds
+        final docRef = _firestore.collection('medications').doc(elderlyId);
+        await docRef.update({
+          'medsList': activeMeds.map((m) => m.toMap()).toList(),
+        });
+
+        debugPrint(
+          '✅ Removed ${expiredMeds.length} expired medication(s) from Firestore',
+        );
+      }
+
+      int scheduledCount = 0;
+      for (final med in activeMeds) {
         await _scheduleMedication(elderlyId, med);
         scheduledCount++;
       }
@@ -86,8 +130,8 @@ class MedicationScheduler {
     }
 
     // ✅ تعديل: زيادة عدد الأيام لـ 14 يوم
-    final daysToSchedule = _getDaysToSchedule(med.days, today);
-    
+    final daysToSchedule = _getDaysToSchedule(med.days, today, med.endDate);
+
     debugPrint('🗓️ Scheduling ${med.name} for ${daysToSchedule.length} days');
 
     for (final day in daysToSchedule) {
@@ -124,7 +168,13 @@ class MedicationScheduler {
         // --- Schedule Notifications ---
 
         // ✅ تعديل: إضافة scheduledTime للـ ID
-        final notifId1 = _generateNotificationId(elderlyId, med.id, i, 0, scheduledTime);
+        final notifId1 = _generateNotificationId(
+          elderlyId,
+          med.id,
+          i,
+          0,
+          scheduledTime,
+        );
         if (scheduledTime.isAfter(now)) {
           await _notificationService.scheduleNotification(
             id: notifId1,
@@ -137,7 +187,13 @@ class MedicationScheduler {
 
         // ✅ تعديل: إضافة scheduledTime للـ ID
         final reminderTime = scheduledTime.add(const Duration(minutes: 5));
-        final notifId2 = _generateNotificationId(elderlyId, med.id, i, 1, scheduledTime);
+        final notifId2 = _generateNotificationId(
+          elderlyId,
+          med.id,
+          i,
+          1,
+          scheduledTime,
+        );
         if (reminderTime.isAfter(now)) {
           await _notificationService.scheduleNotification(
             id: notifId2,
@@ -150,7 +206,13 @@ class MedicationScheduler {
 
         // ✅ تعديل: إضافة scheduledTime للـ ID
         final missedAlertTime = scheduledTime.add(const Duration(minutes: 10));
-        final notifId3 = _generateNotificationId(elderlyId, med.id, i, 2, scheduledTime);
+        final notifId3 = _generateNotificationId(
+          elderlyId,
+          med.id,
+          i,
+          2,
+          scheduledTime,
+        );
         if (missedAlertTime.isAfter(now)) {
           await notifyCaregiversMissed(
             elderlyId: elderlyId,
@@ -384,8 +446,22 @@ class MedicationScheduler {
   List<DateTime> _getDaysToSchedule(
     List<String> selectedDays,
     DateTime startDay,
+    Timestamp? endDate, // ← NEW parameter
   ) {
     final today = DateTime(startDay.year, startDay.month, startDay.day);
+
+    int maxDays = 14;
+    if (endDate != null) {
+      final endDateTime = endDate.toDate();
+      final endDay = DateTime(
+        endDateTime.year,
+        endDateTime.month,
+        endDateTime.day,
+      );
+      final daysUntilEnd = endDay.difference(today).inDays + 1; // inclusive
+      if (daysUntilEnd <= 0) return []; // Already expired
+      maxDays = daysUntilEnd.clamp(1, 14);
+    }
 
     if (selectedDays.contains('Every day')) {
       return List.generate(14, (i) => today.add(Duration(days: i)));
@@ -409,14 +485,17 @@ class MedicationScheduler {
     if (targetWeekdays.isEmpty) return [];
 
     final result = <DateTime>[];
-    for (int i = 0; i < 14; i++) { // ← زيادة من 7 إلى 14
+    for (int i = 0; i < 14; i++) {
+      // ← زيادة من 7 إلى 14
       final day = today.add(Duration(days: i));
       if (targetWeekdays.contains(day.weekday)) {
         result.add(day);
       }
     }
-    
-    debugPrint('📅 Days to schedule for ${selectedDays.join(", ")}: ${result.length} days');
+
+    debugPrint(
+      '📅 Days to schedule for ${selectedDays.join(", ")}: ${result.length} days',
+    );
     return result;
   }
 

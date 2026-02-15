@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'med_chart_page.dart'; 
+import 'med_chart_page.dart';
 
 class MedsSummaryPage extends StatefulWidget {
   final String elderlyId; // نفس الـ ID في medication_log/{elderlyId}
@@ -30,14 +30,14 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
   int get _weekdayOfFirst => DateTime(_current.year, _current.month, 1).weekday;
 
   void _goPrevMonth() => setState(() {
-        _current = DateTime(_current.year, _current.month - 1, 1);
-        _selectedDay = null;
-      });
+    _current = DateTime(_current.year, _current.month - 1, 1);
+    _selectedDay = null;
+  });
 
   void _goNextMonth() => setState(() {
-        _current = DateTime(_current.year, _current.month + 1, 1);
-        _selectedDay = null;
-      });
+    _current = DateTime(_current.year, _current.month + 1, 1);
+    _selectedDay = null;
+  });
 
   DateTime? _toDateTime(dynamic v) {
     if (v == null) return null;
@@ -133,7 +133,8 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
 
   // ---------- Collect logs-only ----------
   Map<String, List<Map<String, dynamic>>> _collectMonthFromLogs(
-      QuerySnapshot<Map<String, dynamic>> snap) {
+    QuerySnapshot<Map<String, dynamic>> snap,
+  ) {
     final res = <String, List<Map<String, dynamic>>>{};
     for (final doc in snap.docs) {
       final list = <Map<String, dynamic>>[];
@@ -237,12 +238,16 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
             if (t is String && t.contains(':')) {
               times.add(t);
             } else if (t is Map) {
-              final hh = int.tryParse('${t['hour'] ?? t['h'] ?? t['HH'] ?? ''}');
-              final mm =
-                  int.tryParse('${t['minute'] ?? t['m'] ?? t['MM'] ?? ''}');
+              final hh = int.tryParse(
+                '${t['hour'] ?? t['h'] ?? t['HH'] ?? ''}',
+              );
+              final mm = int.tryParse(
+                '${t['minute'] ?? t['m'] ?? t['MM'] ?? ''}',
+              );
               if (hh != null && mm != null) {
                 times.add(
-                    '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}');
+                  '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}',
+                );
               }
             }
           }
@@ -252,8 +257,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
           final sched = times[i];
 
           // existing log?
-          Map<String, dynamic>? log =
-              (medId.isNotEmpty) ? byPair['$medId#$i'] : null;
+          Map<String, dynamic>? log = (medId.isNotEmpty)
+              ? byPair['$medId#$i']
+              : null;
           log ??= byTime[sched];
           if (log != null) continue;
 
@@ -318,11 +324,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
       }
     }
 
-    return {
-      'onTime': onTime,
-      'late': late,
-      'missed': missed,
-    };
+    return {'onTime': onTime, 'late': late, 'missed': missed};
   }
 
   /// 🔹 dailyStats لكل دواء: { 'yyyy-MM-dd' : {onTime, late, missed} }
@@ -351,11 +353,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
       }
 
       if (onTime > 0 || late > 0 || missed > 0) {
-        result[dayId] = {
-          'onTime': onTime,
-          'late': late,
-          'missed': missed,
-        };
+        result[dayId] = {'onTime': onTime, 'late': late, 'missed': missed};
       }
     });
 
@@ -385,8 +383,10 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
             stream: _medsStream(),
             builder: (context, medsSnap) {
               final medsData = medsSnap.data?.data();
-              final monthData =
-                  _enrichWithSchedule(monthLogs: monthLogs, medsDocData: medsData);
+              final monthData = _enrichWithSchedule(
+                monthLogs: monthLogs,
+                medsDocData: medsData,
+              );
               final cs = Theme.of(context).colorScheme;
 
               if (_mode == SummaryViewMode.byDay) {
@@ -408,7 +408,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                           child: Center(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 12),
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: cs.primary.withOpacity(.12),
                                 borderRadius: BorderRadius.circular(12),
@@ -464,8 +466,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                       ),
                       const SizedBox(height: 8),
                       ...(() {
-                        final key =
-                            DateFormat('yyyy-MM-dd').format(_selectedDay!);
+                        final key = DateFormat(
+                          'yyyy-MM-dd',
+                        ).format(_selectedDay!);
                         final doses = [...(monthData[key] ?? const [])];
                         if (doses.isEmpty) {
                           return const [Text('No logs for this day')];
@@ -485,10 +488,11 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                         });
 
                         return doses.map((m) {
-                          final status =
-                              (m['status'] ?? '').toString().toLowerCase();
-                          final name =
-                              (m['medicationName'] ?? 'Med').toString();
+                          final status = (m['status'] ?? '')
+                              .toString()
+                              .toLowerCase();
+                          final name = (m['medicationName'] ?? 'Med')
+                              .toString();
                           final sched = (m['scheduledTime'] ?? '').toString();
                           final takenAt = _toDateTime(m['takenAt']);
 
@@ -502,7 +506,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                           if (status == 'missed' ||
                               (takenAt == null &&
                                   _isOverdueMissedByClock(
-                                      sched, _selectedDay!))) {
+                                    sched,
+                                    _selectedDay!,
+                                  ))) {
                             tone = DoseTone.missed;
                             if (!timeLabel.contains('Missed')) {
                               timeLabel += ' • Missed (>10m overdue)';
@@ -548,7 +554,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                           child: Center(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 12),
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: cs.primary.withOpacity(.12),
                                 borderRadius: BorderRadius.circular(12),
@@ -586,10 +594,10 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                         if (raw is! Map) return const SizedBox.shrink();
                         final med = Map<String, dynamic>.from(raw as Map);
                         final medId = (med['id'] ?? '').toString();
-                        final medName =
-                            (med['name'] ?? 'Medication').toString();
-                        final dosage =
-                            (med['dosage'] ?? med['dose'] ?? '').toString();
+                        final medName = (med['name'] ?? 'Medication')
+                            .toString();
+                        final dosage = (med['dosage'] ?? med['dose'] ?? '')
+                            .toString();
 
                         final agg = _aggregateForMed(medId, monthData);
                         final totalTaken =
@@ -600,7 +608,8 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                             title: Text(
                               medName,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w700),
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,18 +638,18 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.push(
-                                        context,
-                                      MaterialPageRoute(
-                                       builder: (_) => MedChartPage(
-                                        elderlyId: widget.elderlyId,
-                                        medId: medId,
-                                        medName: medName,
-                                       initialMonth: _current, // نفس الشهر اللي  في السمّري
-                                          ),
-                                        ),
-                                      );
-                              },
-
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MedChartPage(
+                                    elderlyId: widget.elderlyId,
+                                    medId: medId,
+                                    medName: medName,
+                                    initialMonth:
+                                        _current, // نفس الشهر اللي  في السمّري
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       }).toList()),
@@ -752,7 +761,8 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
             }
 
             final dayDate = DateTime(_current.year, _current.month, dayNumber);
-            final isSelected = _selectedDay != null &&
+            final isSelected =
+                _selectedDay != null &&
                 dayDate.year == _selectedDay!.year &&
                 dayDate.month == _selectedDay!.month &&
                 dayDate.day == _selectedDay!.day;
@@ -822,8 +832,10 @@ class _SummaryDow extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style:
-              TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -847,11 +859,11 @@ class _SummaryDayCell extends StatelessWidget {
   });
 
   const _SummaryDayCell.empty({super.key})
-      : day = null,
-        selected = false,
-        isToday = false,
-        bgColor = null,
-        onTap = null;
+    : day = null,
+      selected = false,
+      isToday = false,
+      bgColor = null,
+      onTap = null;
 
   @override
   Widget build(BuildContext context) {
@@ -885,7 +897,7 @@ class _SummaryDayCell extends StatelessWidget {
                       BoxShadow(
                         color: borderColor.withOpacity(.25),
                         blurRadius: 8,
-                      )
+                      ),
                     ]
                   : null,
             ),

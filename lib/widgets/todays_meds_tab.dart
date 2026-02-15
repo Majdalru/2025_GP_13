@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import '../models/medication.dart'; // Make sure DoseStatus is defined here
 import '../services/medication_scheduler.dart';
-import 'package:collection/collection.dart'; // For firstWhereOrNull
+import 'package:collection/collection.dart';
 
 // Combined data class for display
 class MedicationDose {
@@ -12,6 +12,7 @@ class MedicationDose {
   final int timeIndex; // Original index from Medication.times
   DoseStatus status;
   Timestamp? takenAt;
+  final bool isFromHistory; // true if med was deleted/expired today
 
   MedicationDose({
     required this.medication,
@@ -19,6 +20,7 @@ class MedicationDose {
     required this.timeIndex,
     this.status = DoseStatus.upcoming,
     this.takenAt,
+    this.isFromHistory = false,
   });
 
   // Helper to get the full DateTime for today
@@ -104,19 +106,52 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
 
     return medsStream.asyncMap((medsSnapshot) async {
       final List<Medication> scheduledMeds = [];
+      final Set<String> activeMedIds =
+          {}; // Track active med IDs to avoid duplicates
+
       if (medsSnapshot.exists && medsSnapshot.data()?['medsList'] != null) {
         final allMeds = (medsSnapshot.data()!['medsList'] as List)
             .map((m) => Medication.fromMap(m as Map<String, dynamic>))
             .toList();
-        scheduledMeds.addAll(
-          allMeds.where(
-            (med) =>
-                med.days.contains('Every day') || med.days.contains(todayName),
-          ),
-        );
+        for (final med in allMeds) {
+          if (med.days.contains('Every day') || med.days.contains(todayName)) {
+            scheduledMeds.add(med);
+            activeMedIds.add(med.id);
+          }
+        }
       }
 
-      if (scheduledMeds.isEmpty) {
+      // ✅ Also fetch medications from history that were deleted/expired today
+      final List<Medication> historyMeds = [];
+      try {
+        final todayStart = DateTime(now.year, now.month, now.day);
+        final todayEnd = todayStart.add(const Duration(days: 1));
+
+        final historySnapshot = await _firestore
+            .collection('medications')
+            .doc(widget.elderlyId)
+            .collection('history')
+            .where(
+              'deletedAt',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart),
+            )
+            .where('deletedAt', isLessThan: Timestamp.fromDate(todayEnd))
+            .get();
+
+        for (final doc in historySnapshot.docs) {
+          final med = Medication.fromMap(doc.data());
+          // Only add if not already in active list and scheduled for today
+          if (!activeMedIds.contains(med.id) &&
+              (med.days.contains('Every day') ||
+                  med.days.contains(todayName))) {
+            historyMeds.add(med);
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error fetching history for today: $e');
+      }
+
+      if (scheduledMeds.isEmpty && historyMeds.isEmpty) {
         return <MedicationDose>[];
       }
 
@@ -139,6 +174,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
       final doses = <MedicationDose>[];
       final currentTime = DateTime.now();
 
+      // Build doses from active medications
       for (final med in scheduledMeds) {
         for (int i = 0; i < med.times.length; i++) {
           final time = med.times[i];
@@ -158,12 +194,41 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
             dose.status = _parseDoseStatus(doseLog['status'] as String?);
             dose.takenAt = doseLog['takenAt'] as Timestamp?;
           } else {
-            // If no log, determine if missed or upcoming based on current time
             if (currentTime.isAfter(missedThresholdTime)) {
               dose.status = DoseStatus.missed;
             } else {
-              dose.status =
-                  DoseStatus.upcoming; // Includes past due within grace period
+              dose.status = DoseStatus.upcoming;
+            }
+          }
+          doses.add(dose);
+        }
+      }
+
+      // ✅ Build doses from history medications (deleted/expired today)
+      for (final med in historyMeds) {
+        for (int i = 0; i < med.times.length; i++) {
+          final time = med.times[i];
+          final dose = MedicationDose(
+            medication: med,
+            scheduledTime: time,
+            timeIndex: i,
+            isFromHistory: true,
+          );
+
+          final scheduledDT = dose.scheduledDateTime;
+          final missedThresholdTime = scheduledDT.add(
+            const Duration(minutes: 10),
+          );
+
+          final doseLog = logData[dose.logKey] as Map<String, dynamic>?;
+          if (doseLog != null) {
+            dose.status = _parseDoseStatus(doseLog['status'] as String?);
+            dose.takenAt = doseLog['takenAt'] as Timestamp?;
+          } else {
+            if (currentTime.isAfter(missedThresholdTime)) {
+              dose.status = DoseStatus.missed;
+            } else {
+              dose.status = DoseStatus.upcoming;
             }
           }
           doses.add(dose);

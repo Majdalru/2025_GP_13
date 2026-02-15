@@ -30,8 +30,11 @@ class _MedChartPageState extends State<MedChartPage> {
   @override
   void initState() {
     super.initState();
-    _currentMonth =
-        DateTime(widget.initialMonth.year, widget.initialMonth.month, 1);
+    _currentMonth = DateTime(
+      widget.initialMonth.year,
+      widget.initialMonth.month,
+      1,
+    );
   }
 
   int get _daysInMonth {
@@ -41,15 +44,13 @@ class _MedChartPageState extends State<MedChartPage> {
 
   void _goPrevMonth() {
     setState(() {
-      _currentMonth =
-          DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
     });
   }
 
   void _goNextMonth() {
     setState(() {
-      _currentMonth =
-          DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
     });
   }
 
@@ -118,8 +119,11 @@ class _MedChartPageState extends State<MedChartPage> {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _monthLogsStream() {
     final first = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final last =
-        DateTime(_currentMonth.year, _currentMonth.month, _daysInMonth);
+    final last = DateTime(
+      _currentMonth.year,
+      _currentMonth.month,
+      _daysInMonth,
+    );
     final startId = DateFormat('yyyy-MM-dd').format(first);
     final endId = DateFormat('yyyy-MM-dd').format(last);
 
@@ -144,7 +148,8 @@ class _MedChartPageState extends State<MedChartPage> {
 
   /// نفس اللي في MedsSummaryPage
   Map<String, List<Map<String, dynamic>>> _collectMonthFromLogs(
-      QuerySnapshot<Map<String, dynamic>> snap) {
+    QuerySnapshot<Map<String, dynamic>> snap,
+  ) {
     final res = <String, List<Map<String, dynamic>>>{};
     for (final doc in snap.docs) {
       final list = <Map<String, dynamic>>[];
@@ -245,12 +250,16 @@ class _MedChartPageState extends State<MedChartPage> {
             if (t is String && t.contains(':')) {
               times.add(t);
             } else if (t is Map) {
-              final hh = int.tryParse('${t['hour'] ?? t['h'] ?? t['HH'] ?? ''}');
+              final hh = int.tryParse(
+                '${t['hour'] ?? t['h'] ?? t['HH'] ?? ''}',
+              );
               final mm = int.tryParse(
-                  '${t['minute'] ?? t['m'] ?? t['MM'] ?? ''}');
+                '${t['minute'] ?? t['m'] ?? t['MM'] ?? ''}',
+              );
               if (hh != null && mm != null) {
                 times.add(
-                    '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}');
+                  '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}',
+                );
               }
             }
           }
@@ -259,8 +268,9 @@ class _MedChartPageState extends State<MedChartPage> {
         for (int i = 0; i < times.length; i++) {
           final sched = times[i];
 
-          Map<String, dynamic>? log =
-              (medId.isNotEmpty) ? byPair['$medId#$i'] : null;
+          Map<String, dynamic>? log = (medId.isNotEmpty)
+              ? byPair['$medId#$i']
+              : null;
           log ??= byTime[sched];
           if (log != null) continue;
 
@@ -327,11 +337,7 @@ class _MedChartPageState extends State<MedChartPage> {
       }
 
       if (onTime > 0 || late > 0 || missed > 0) {
-        result[dayId] = {
-          'onTime': onTime,
-          'late': late,
-          'missed': missed,
-        };
+        result[dayId] = {'onTime': onTime, 'late': late, 'missed': missed};
       }
     });
 
@@ -378,10 +384,7 @@ class _MedChartPageState extends State<MedChartPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
         content: Text(body),
         actions: [
           TextButton(
@@ -400,9 +403,7 @@ class _MedChartPageState extends State<MedChartPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Summary • ${widget.medName}'),
-      ),
+      appBar: AppBar(title: Text('Summary • ${widget.medName}')),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _monthLogsStream(),
         builder: (context, snap) {
@@ -425,8 +426,10 @@ class _MedChartPageState extends State<MedChartPage> {
               );
 
               // إحصائيات هذا الدواء فقط
-              final dailyStats =
-                  _buildDailyStatsForMed(widget.medId, monthData);
+              final dailyStats = _buildDailyStatsForMed(
+                widget.medId,
+                monthData,
+              );
 
               int onTime = 0;
               int late = 0;
@@ -443,11 +446,11 @@ class _MedChartPageState extends State<MedChartPage> {
                 'late': late,
                 'missed': missed,
               };
-              final adherencePercent =
-                  total == 0 ? 0.0 : ((onTime + late) / total) * 100.0;
+              final adherencePercent = total == 0
+                  ? 0.0
+                  : ((onTime + late) / total) * 100.0;
 
-              final monthName =
-                  DateFormat('MMMM yyyy').format(_currentMonth);
+              final monthName = DateFormat('MMMM yyyy').format(_currentMonth);
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -464,7 +467,11 @@ class _MedChartPageState extends State<MedChartPage> {
                       ),
                     ] else ...[
                       _buildAdherenceCard(
-                          cs, monthlyStats, total, adherencePercent),
+                        cs,
+                        monthlyStats,
+                        total,
+                        adherencePercent,
+                      ),
                       const SizedBox(height: 24),
                       _buildSelectedChart(
                         context,
@@ -495,8 +502,7 @@ class _MedChartPageState extends State<MedChartPage> {
         Expanded(
           child: Center(
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               decoration: BoxDecoration(
                 color: cs.primary.withOpacity(.12),
                 borderRadius: BorderRadius.circular(12),
@@ -599,30 +605,21 @@ class _MedChartPageState extends State<MedChartPage> {
                 children: [
                   const Text(
                     'Monthly adherence',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'On time: $onTime   •   Late: $late   •   Missed: $missed',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     _adherenceMessage(total, adherencePercent),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade800,
-                    ),
-                  )
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                  ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -680,11 +677,7 @@ class _MedChartPageState extends State<MedChartPage> {
                   width: 32,
                   height: 32,
                 ),
-                icon: Icon(
-                  Icons.help_outline,
-                  size: 18,
-                  color: cs.primary,
-                ),
+                icon: Icon(Icons.help_outline, size: 18, color: cs.primary),
                 tooltip: 'How to understand this chart?',
                 onPressed: () => _showChartHelp(context, ChartViewMode.pie),
               ),
@@ -724,7 +717,11 @@ class _MedChartPageState extends State<MedChartPage> {
     );
   }
 
-  List<PieChartSectionData> _buildPieSections(int onTime, int late, int missed) {
+  List<PieChartSectionData> _buildPieSections(
+    int onTime,
+    int late,
+    int missed,
+  ) {
     final total = (onTime + late + missed).toDouble();
     if (total == 0) return [];
 
@@ -787,18 +784,9 @@ class _MedChartPageState extends State<MedChartPage> {
       spacing: 16,
       runSpacing: 8,
       children: const [
-        _ChartLegendItem(
-          color: Color(0xFF2E7D32),
-          label: 'On time',
-        ),
-        _ChartLegendItem(
-          color: Color(0xFFF9A825),
-          label: 'Late',
-        ),
-        _ChartLegendItem(
-          color: Color(0xFFD32F2F),
-          label: 'Missed',
-        ),
+        _ChartLegendItem(color: Color(0xFF2E7D32), label: 'On time'),
+        _ChartLegendItem(color: Color(0xFFF9A825), label: 'Late'),
+        _ChartLegendItem(color: Color(0xFFD32F2F), label: 'Missed'),
       ],
     );
   }
@@ -839,11 +827,7 @@ class _MedChartPageState extends State<MedChartPage> {
                   width: 32,
                   height: 32,
                 ),
-                icon: Icon(
-                  Icons.help_outline,
-                  size: 18,
-                  color: cs.primary,
-                ),
+                icon: Icon(Icons.help_outline, size: 18, color: cs.primary),
                 tooltip: 'How to understand this chart?',
                 onPressed: () => _showChartHelp(context, ChartViewMode.bar),
               ),
@@ -867,18 +851,9 @@ class _MedChartPageState extends State<MedChartPage> {
           spacing: 16,
           runSpacing: 8,
           children: const [
-            _ChartLegendItem(
-              color: Color(0xFF2E7D32),
-              label: 'On time',
-            ),
-            _ChartLegendItem(
-              color: Color(0xFFF9A825),
-              label: 'Late',
-            ),
-            _ChartLegendItem(
-              color: Color(0xFFD32F2F),
-              label: 'Missed',
-            ),
+            _ChartLegendItem(color: Color(0xFF2E7D32), label: 'On time'),
+            _ChartLegendItem(color: Color(0xFFF9A825), label: 'Late'),
+            _ChartLegendItem(color: Color(0xFFD32F2F), label: 'Missed'),
           ],
         ),
       ],
@@ -898,8 +873,9 @@ class _MedChartPageState extends State<MedChartPage> {
       final int missed = m['missed'] ?? 0;
       final int total = onTime + late + missed;
 
-      final double adherence =
-          total == 0 ? 0.0 : ((onTime + late) / total * 100.0);
+      final double adherence = total == 0
+          ? 0.0
+          : ((onTime + late) / total * 100.0);
 
       return _DayStat(
         date: dt,
@@ -917,8 +893,9 @@ class _MedChartPageState extends State<MedChartPage> {
       return BarChartData(barGroups: []);
     }
 
-    final int maxTotal =
-        days.map((d) => d.total).fold<int>(0, (a, b) => a > b ? a : b);
+    final int maxTotal = days
+        .map((d) => d.total)
+        .fold<int>(0, (a, b) => a > b ? a : b);
 
     final daysLocal = days;
 
@@ -984,10 +961,7 @@ class _MedChartPageState extends State<MedChartPage> {
               'On time: ${d.onTime}\n'
               'Late: ${d.late}\n'
               'Missed: ${d.missed}',
-              const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-              ),
+              const TextStyle(color: Colors.white, fontSize: 11),
             );
           },
         ),
@@ -996,16 +970,11 @@ class _MedChartPageState extends State<MedChartPage> {
         rightTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
         ),
-        topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         leftTitles: AxisTitles(
           axisNameWidget: const Padding(
             padding: EdgeInsets.only(right: 4),
-            child: Text(
-              'Number of doses',
-              style: TextStyle(fontSize: 11),
-            ),
+            child: Text('Number of doses', style: TextStyle(fontSize: 11)),
           ),
           axisNameSize: 18,
           sideTitles: SideTitles(
@@ -1021,10 +990,7 @@ class _MedChartPageState extends State<MedChartPage> {
         bottomTitles: AxisTitles(
           axisNameWidget: const Padding(
             padding: EdgeInsets.only(top: 4),
-            child: Text(
-              'Day of month',
-              style: TextStyle(fontSize: 11),
-            ),
+            child: Text('Day of month', style: TextStyle(fontSize: 11)),
           ),
           axisNameSize: 18,
           sideTitles: SideTitles(
@@ -1092,13 +1058,16 @@ class _MedChartPageState extends State<MedChartPage> {
       }
 
       final total = onTime + late + missed;
-      final double adherence =
-          total == 0 ? 0.0 : ((onTime + late) / total * 100.0);
+      final double adherence = total == 0
+          ? 0.0
+          : ((onTime + late) / total * 100.0);
 
-      final startDay =
-          list.map((d) => d.date.day).reduce((a, b) => a < b ? a : b);
-      final endDay =
-          list.map((d) => d.date.day).reduce((a, b) => a > b ? a : b);
+      final startDay = list
+          .map((d) => d.date.day)
+          .reduce((a, b) => a < b ? a : b);
+      final endDay = list
+          .map((d) => d.date.day)
+          .reduce((a, b) => a > b ? a : b);
 
       weeklyStats.add(
         _WeeklyStat(
@@ -1131,18 +1100,15 @@ class _MedChartPageState extends State<MedChartPage> {
           final Color color = w.adherence >= 80
               ? const Color(0xFF2E7D32)
               : w.adherence >= 50
-                  ? const Color(0xFFF9A825)
-                  : const Color(0xFFD32F2F);
+              ? const Color(0xFFF9A825)
+              : const Color(0xFFD32F2F);
 
           return Card(
             color: color.withOpacity(.08),
             child: ListTile(
               title: Text(
                 'Week ${w.week}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w700, color: color),
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1151,18 +1117,12 @@ class _MedChartPageState extends State<MedChartPage> {
                     w.startDay == w.endDay
                         ? 'Day: ${w.startDay}'
                         : 'Days: ${w.startDay}–${w.endDay}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'On time: ${w.onTime}   •   Late: ${w.late}   •   Missed: ${w.missed}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade800,
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
                   ),
                 ],
               ),
@@ -1285,11 +1245,7 @@ class _ChartLegendItem extends StatelessWidget {
   final Color color;
   final String label;
 
-  const _ChartLegendItem({
-    super.key,
-    required this.color,
-    required this.label,
-  });
+  const _ChartLegendItem({super.key, required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -1299,10 +1255,7 @@ class _ChartLegendItem extends StatelessWidget {
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
         Text(

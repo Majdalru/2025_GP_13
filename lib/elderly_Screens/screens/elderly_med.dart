@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // ← NEW: for duration display
 
 import 'addmedeld.dart';
 import '../../models/medication.dart';
 import '../../services/medication_scheduler.dart';
 import '../../widgets/todays_meds_tab.dart';
+import '../../services/medication_history_service.dart';
+import '../../widgets/medication_history_page.dart';
 
 // Voice imports
 import '../../widgets/floating_voice_button.dart';
@@ -35,13 +38,15 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   // Voice service (Whisper + GPT)
   final VoiceAssistantService _voiceService = VoiceAssistantService();
 
-  // نحتفظ بقائمة الأدوية المعروضة 
+  // نحتفظ بقائمة الأدوية المعروضة
   List<Medication> _currentMeds = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // ✅ Check and remove expired medications on screen load
+    MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
     // Handle initial voice command coming from home (add / edit / delete)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -142,6 +147,12 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
         .doc(widget.elderlyId);
 
     try {
+      await MedicationHistoryService().saveToHistory(
+        elderlyId: widget.elderlyId,
+        medication: medicationToDelete,
+        reason: 'deleted',
+      );
+
       await docRef.update({
         'medsList': FieldValue.arrayRemove([medicationToDelete.toMap()]),
       });
@@ -261,14 +272,49 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                         ),
                       ),
                       const SizedBox(height: 24),
-                      const Text(
-                        'Medication List',
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1B3A52),
-                          letterSpacing: 0.5,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Medication List',
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1B3A52),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MedicationHistoryPage(
+                                  elderlyId: widget.elderlyId,
+                                  isElderlyView: true,
+                                ),
+                              ),
+                            ),
+                            icon: const Icon(Icons.history, size: 26),
+                            label: const Text(
+                              'History',
+                              style: TextStyle(fontSize: 20),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF5FA5A0),
+                              side: const BorderSide(
+                                color: Color(0xFF5FA5A0),
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 24),
                       Expanded(
@@ -554,6 +600,19 @@ class MedicationCard extends StatelessWidget {
     );
   }
 
+  // ← NEW: helper to format duration for card display
+  String _durationDisplay() {
+    if (medication.endDate == null) return 'Ongoing';
+    final endDt = medication.endDate!.toDate();
+    final now = DateTime.now();
+    final daysLeft = endDt.difference(now).inDays;
+    final formattedDate = DateFormat('MMM d, yyyy').format(endDt);
+    if (daysLeft < 0) return 'Expired ($formattedDate)';
+    if (daysLeft == 0) return 'Ends today';
+    if (daysLeft == 1) return 'Ends tomorrow';
+    return 'Until $formattedDate ($daysLeft days left)';
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeString = medication.times
@@ -628,6 +687,31 @@ class MedicationCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ═══════════ Duration (NEW) ═══════════
+                  RichText(
+                    text: TextSpan(
+                      style: valueStyle,
+                      children: <TextSpan>[
+                        TextSpan(text: 'Duration: ', style: labelStyle),
+                        TextSpan(
+                          text: _durationDisplay(),
+                          style: valueStyle.copyWith(
+                            color:
+                                medication.endDate != null &&
+                                    medication.endDate!
+                                            .toDate()
+                                            .difference(DateTime.now())
+                                            .inDays <=
+                                        2
+                                ? Colors.orange.shade800
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ///////////
                   RichText(
                     text: TextSpan(
                       style: valueStyle,

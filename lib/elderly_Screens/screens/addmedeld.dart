@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/medication.dart';
 import '../../services/medication_scheduler.dart';
+import '../../services/medication_scan_service.dart';
 import 'package:intl/intl.dart';
 
 // --- Main Stateful Widget for AddMedScreen ---
@@ -34,6 +37,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
   List<TimeOfDay?> _selectedTimes = [];
   String? _notes;
 
+  // Scan
+  final ImagePicker _picker = ImagePicker();
+  final MedicationScanService _scanService = MedicationScanService();
+  bool _isScanning = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +56,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       _selectedTimes = List<TimeOfDay?>.from(med.times);
       _notes = med.notes;
 
+      // ← NEW: restore duration
       if (med.endDate != null) {
         _customEndDate = med.endDate!.toDate();
         final diff = _customEndDate!.difference(med.createdAt.toDate()).inDays;
@@ -67,15 +76,30 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 
   Timestamp? _computeEndDate() {
+    // Find the latest dose time, fallback to 23:59 if no times set
+    int endHour = 23;
+    int endMinute = 59;
+
+    final times = _selectedTimes.whereType<TimeOfDay>().toList();
+    if (times.isNotEmpty) {
+      times.sort((a, b) {
+        final aMin = a.hour * 60 + a.minute;
+        final bMin = b.hour * 60 + b.minute;
+        return aMin.compareTo(bMin);
+      });
+      endHour = times.last.hour;
+      endMinute = times.last.minute;
+    }
+
     if (_customEndDate != null) {
       return Timestamp.fromDate(
         DateTime(
           _customEndDate!.year,
           _customEndDate!.month,
           _customEndDate!.day,
-          23,
-          59,
-          59,
+          endHour,
+          endMinute,
+          0,
         ),
       );
     }
@@ -85,7 +109,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
           : DateTime.now();
       final end = startDate.add(Duration(days: _durationDays!));
       return Timestamp.fromDate(
-        DateTime(end.year, end.month, end.day, 23, 59, 59),
+        DateTime(end.year, end.month, end.day, endHour, endMinute, 0),
       );
     }
     return null;
@@ -239,6 +263,600 @@ class _AddMedScreenState extends State<AddMedScreen> {
     }
   }
 
+  String _formatEndDate(int days) {
+    final end = DateTime.now().add(Duration(days: days));
+    return DateFormat('MMM d, yyyy').format(end);
+  }
+
+  // ═══════════════════════════════════════════
+  // Elderly-Friendly Scan Preview Sheet
+  // ═══════════════════════════════════════════
+  Future<bool?> _showEditableScanSheet({required MedicationScanResult result}) {
+    final nameCtrl = TextEditingController(text: result.name ?? '');
+    final notesCtrl = TextEditingController(text: result.notes ?? '');
+
+    String? selectedFreq = result.frequency;
+    int? selectedDuration = result.durationDays;
+    DateTime? scanCustomEndDate;
+
+    List<String> selectedDays = result.days.isNotEmpty
+        ? List<String>.from(result.days)
+        : <String>[];
+
+    const allDays = [
+      'Every day',
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+
+    List<String> getAllowedDays() {
+      int? totalDays;
+      if (selectedDuration != null && selectedDuration! > 0) {
+        totalDays = selectedDuration;
+      } else if (selectedDuration == -1 && scanCustomEndDate != null) {
+        totalDays = scanCustomEndDate!.difference(DateTime.now()).inDays + 1;
+      }
+      if (totalDays == null || totalDays >= 7) return allDays.sublist(1);
+      final now = DateTime.now();
+      final daySet = <String>{};
+      for (int i = 0; i < totalDays; i++) {
+        final date = now.add(Duration(days: i));
+        daySet.add(DateFormat('EEEE').format(date));
+      }
+      return allDays.sublist(1).where((d) => daySet.contains(d)).toList();
+    }
+
+    void constrainDays() {
+      final allowed = getAllowedDays();
+      selectedDays.removeWhere((d) => d != 'Every day' && !allowed.contains(d));
+      if (selectedDays.contains('Every day') && allowed.length < 7) {
+        selectedDays = List.from(allowed);
+      }
+    }
+
+    const freqOptions = [
+      'Once a day',
+      'Twice a day',
+      'Three times a day',
+      'Four times a day',
+    ];
+
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.80,
+          minChildSize: 0.50,
+          maxChildSize: 0.95,
+          builder: (_, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: StatefulBuilder(
+                    builder: (context, setSheetState) {
+                      void toggleDay(String d) {
+                        setSheetState(() {
+                          final allowed = getAllowedDays();
+                          if (d == 'Every day') {
+                            if (!selectedDays.contains('Every day')) {
+                              selectedDays = ['Every day', ...allowed];
+                            } else {
+                              selectedDays.clear();
+                            }
+                            return;
+                          }
+                          if (selectedDays.contains(d)) {
+                            selectedDays.remove(d);
+                          } else {
+                            selectedDays.add(d);
+                          }
+                          if (allowed.every((x) => selectedDays.contains(x)) &&
+                              allowed.length == 7) {
+                            selectedDays = ['Every day', ...allowed];
+                          } else {
+                            selectedDays.remove('Every day');
+                          }
+                        });
+                      }
+
+                      final hasName = nameCtrl.text.trim().isNotEmpty;
+                      final hasFreq = selectedFreq != null;
+                      final hasDays = selectedDays.isNotEmpty;
+                      final canApply = hasName && hasFreq && hasDays;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Handle bar
+                          Center(
+                            child: Container(
+                              width: 50,
+                              height: 6,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+
+                          // Title row
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.qr_code_scanner,
+                                color: Color(0xFF5FA5A0),
+                                size: 32,
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Scan Preview',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text(
+                                  'Cancel',
+                                  style: TextStyle(fontSize: 22),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ═══ Medication Name ═══
+                          const Text(
+                            'Medication Name',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 22,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: nameCtrl,
+                            onChanged: (_) => setSheetState(() {}),
+                            style: const TextStyle(fontSize: 22),
+                            decoration: InputDecoration(
+                              hintText: 'e.g. Panadol',
+                              hintStyle: const TextStyle(fontSize: 20),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // ═══ Duration ═══
+                          const Text(
+                            'Duration',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 22,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              ...[3, 5, 7, 10, 14, 30].map((d) {
+                                final selected = selectedDuration == d;
+                                final label = d == 30
+                                    ? '1 month'
+                                    : d == 14
+                                    ? '2 weeks'
+                                    : '$d days';
+                                return ChoiceChip(
+                                  label: Text(
+                                    label,
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                  selected: selected,
+                                  onSelected: (_) => setSheetState(() {
+                                    selectedDuration = selected ? null : d;
+                                    scanCustomEndDate = null;
+                                    constrainDays();
+                                  }),
+                                  selectedColor: const Color(
+                                    0xFF0860A4,
+                                  ).withOpacity(0.3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                );
+                              }),
+                              ChoiceChip(
+                                label: Text(
+                                  selectedDuration == -1 &&
+                                          scanCustomEndDate != null
+                                      ? 'Custom: ${DateFormat('MMM d').format(scanCustomEndDate!)}'
+                                      : 'Custom',
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                                selected: selectedDuration == -1,
+                                onSelected: (_) async {
+                                  final now = DateTime.now();
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate:
+                                        scanCustomEndDate ??
+                                        now.add(const Duration(days: 7)),
+                                    firstDate: now,
+                                    lastDate: now.add(
+                                      const Duration(days: 365),
+                                    ),
+                                  );
+                                  if (picked != null) {
+                                    setSheetState(() {
+                                      selectedDuration = -1;
+                                      scanCustomEndDate = picked;
+                                      constrainDays();
+                                    });
+                                  }
+                                },
+                                selectedColor: const Color(
+                                  0xFF0860A4,
+                                ).withOpacity(0.3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                              ),
+                              ChoiceChip(
+                                label: const Text(
+                                  'Ongoing',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                selected: selectedDuration == null,
+                                onSelected: (_) => setSheetState(() {
+                                  selectedDuration = null;
+                                  scanCustomEndDate = null;
+                                  constrainDays();
+                                }),
+                                selectedColor: const Color(
+                                  0xFF0860A4,
+                                ).withOpacity(0.3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (selectedDuration != null &&
+                              selectedDuration != -1 &&
+                              selectedDuration! > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'Ends ${_formatEndDate(selectedDuration!)}',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: const Color(0xFF104541),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 18),
+
+                          // ═══ Frequency ═══
+                          const Text(
+                            'Frequency',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 22,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: freqOptions.map((opt) {
+                              final selected = selectedFreq == opt;
+                              return ChoiceChip(
+                                label: Text(
+                                  opt,
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                                selected: selected,
+                                onSelected: (_) =>
+                                    setSheetState(() => selectedFreq = opt),
+                                selectedColor: const Color(
+                                  0xFF0860A4,
+                                ).withOpacity(0.3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // ═══ Days ═══
+                          const Text(
+                            'Days',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 22,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Builder(
+                            builder: (_) {
+                              final allowed = getAllowedDays();
+                              final isLimited = allowed.length < 7;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (isLimited)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Text(
+                                        'Only showing days within your duration',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: const Color(0xFF104541),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    children: [
+                                      if (!isLimited)
+                                        FilterChip(
+                                          label: const Text(
+                                            'Every day',
+                                            style: TextStyle(fontSize: 20),
+                                          ),
+                                          selected: selectedDays.contains(
+                                            'Every day',
+                                          ),
+                                          onSelected: (_) =>
+                                              toggleDay('Every day'),
+                                          selectedColor: const Color(
+                                            0xFF0860A4,
+                                          ).withOpacity(0.3),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
+                                          ),
+                                        ),
+                                      ...allowed.map((d) {
+                                        return FilterChip(
+                                          label: Text(
+                                            d,
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                            ),
+                                          ),
+                                          selected: selectedDays.contains(d),
+                                          onSelected: (_) => toggleDay(d),
+                                          selectedColor: const Color(
+                                            0xFF0860A4,
+                                          ).withOpacity(0.3),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 18),
+
+                          // ═══ Notes ═══
+                          const Text(
+                            'Notes',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 22,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: notesCtrl,
+                            maxLines: 3,
+                            style: const TextStyle(fontSize: 20),
+                            decoration: InputDecoration(
+                              hintText: 'Optional instructions...',
+                              hintStyle: const TextStyle(fontSize: 18),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // ═══ Buttons ═══
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => Navigator.pop(context, null),
+                                  icon: const Icon(Icons.refresh, size: 28),
+                                  label: const Text(
+                                    'Rescan',
+                                    style: TextStyle(fontSize: 22),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 18,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: canApply
+                                        ? const Color(0xFF285272)
+                                        : Colors.grey.shade400,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 18,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  onPressed: canApply
+                                      ? () {
+                                          setState(() {
+                                            _medicationName = nameCtrl.text
+                                                .trim();
+                                            _notes = notesCtrl.text.trim();
+                                            _selectedDays = List<String>.from(
+                                              selectedDays,
+                                            );
+                                            _frequency = selectedFreq;
+
+                                            if (selectedDuration != null &&
+                                                selectedDuration! > 0) {
+                                              _durationDays = selectedDuration;
+                                              _customEndDate = DateTime.now()
+                                                  .add(
+                                                    Duration(
+                                                      days: selectedDuration!,
+                                                    ),
+                                                  );
+                                            } else if (selectedDuration == -1 &&
+                                                scanCustomEndDate != null) {
+                                              _durationDays = -1;
+                                              _customEndDate =
+                                                  scanCustomEndDate;
+                                            } else {
+                                              _durationDays = null;
+                                              _customEndDate = null;
+                                            }
+
+                                            if (_frequency != null) {
+                                              _initializeTimesForFrequency(
+                                                _frequency!,
+                                              );
+                                            }
+                                          });
+                                          Navigator.pop(context, true);
+                                        }
+                                      : null,
+                                  icon: const Icon(
+                                    Icons.check_circle,
+                                    size: 28,
+                                  ),
+                                  label: Text(
+                                    canApply ? 'Apply' : 'Fill all fields',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ═══════════════════════════════════════════
+  // Camera Scan
+  // ═══════════════════════════════════════════
+  Future<void> _scanFromCamera() async {
+    if (_isScanning) return;
+    setState(() => _isScanning = true);
+
+    try {
+      final XFile? shot = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
+
+      if (shot == null) return;
+
+      final result = await _scanService.scanImage(File(shot.path));
+      if (!mounted) return;
+
+      final action = await _showEditableScanSheet(result: result);
+
+      // null = Rescan
+      if (action == null) {
+        setState(() => _isScanning = false);
+        await _scanFromCamera();
+        return;
+      }
+
+      // false = Cancel
+      if (action != true) return;
+
+      if (!mounted) return;
+
+      // Always go to Times step (Apply guarantees name + freq + days filled)
+      _pageController.jumpToPage(4);
+      setState(() => _currentPageIndex = 4);
+    } catch (e) {
+      debugPrint('\u{274C} Scan failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Scan failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
+  }
+
   // --- UI Navigation and State Management (mostly unchanged) ---
   void _goToNextPage() {
     if (_currentPageIndex < 6) {
@@ -389,6 +1007,43 @@ class _AddMedScreenState extends State<AddMedScreen> {
       body: Column(
         children: [
           _Stepper(currentIndex: _currentPageIndex, stepCount: 7),
+          if (!_isEditing && _currentPageIndex == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isScanning ? null : _scanFromCamera,
+                  icon: _isScanning
+                      ? const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Icon(Icons.camera_alt, size: 30),
+                  label: Text(
+                    _isScanning ? 'Scanning...' : 'Scan Prescription',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B3A52),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 4,
+                  ),
+                ),
+              ),
+            ),
+          if (!_isEditing && _currentPageIndex == 0) const SizedBox(height: 8),
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -434,6 +1089,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
+
                 //
                 _Step4HowManyTimesPerDay(
                   medicationName: _medicationName,
@@ -577,6 +1233,21 @@ class _StepHeader extends StatelessWidget {
   }
 }
 
+Widget _elderlyCard({required Widget child}) {
+  return Card(
+    elevation: 6,
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20.0),
+      side: BorderSide(
+        color: const Color(0xFF5FA5A0).withOpacity(0.2),
+        width: 2,
+      ),
+    ),
+    child: Padding(padding: const EdgeInsets.all(24.0), child: child),
+  );
+}
+
 // --- Step 1: Medicine Name ---
 class _Step1MedName extends StatefulWidget {
   final ValueChanged<String> onNext;
@@ -608,55 +1279,44 @@ class _Step1MedNameState extends State<_Step1MedName> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
-      child: Card(
-        elevation: 6,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-          side: BorderSide(
-            color: const Color(0xFF5FA5A0).withOpacity(0.2),
-            width: 2,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _StepHeader(
-                title: 'Step 1: Medicine Name',
-                subtitle: 'What medication do you need to take?',
-              ),
-              TextField(
-                controller: _nameController,
-                style: const TextStyle(fontSize: 22),
-                decoration: InputDecoration(
-                  labelText: 'Medicine Name',
-                  labelStyle: const TextStyle(fontSize: 20),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(width: 2),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 20,
-                  ),
+      child: _elderlyCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _StepHeader(
+              title: 'Step 1: Medicine Name',
+              subtitle: 'What medication do you need to take?',
+            ),
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(fontSize: 22),
+              decoration: InputDecoration(
+                labelText: 'Medicine Name',
+                labelStyle: const TextStyle(fontSize: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(width: 2),
                 ),
-                onChanged: (_) => setState(() {}),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 20,
+                ),
               ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: _nameController.text.trim().isNotEmpty
-                    ? () => widget.onNext(_nameController.text.trim())
-                    : null,
-                style: widget.buttonStyle,
-                child: const Text('Next'),
-              ),
-            ],
-          ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: _nameController.text.trim().isNotEmpty
+                  ? () => widget.onNext(_nameController.text.trim())
+                  : null,
+              style: widget.buttonStyle,
+              child: const Text('Next'),
+            ),
+          ],
         ),
       ),
     );
@@ -714,7 +1374,7 @@ class _Step2DurationState extends State<_Step2Duration> {
       lastDate: now.add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: ThemeData.light().copyWith(
-          colorScheme: const ColorScheme.light(primary: Color(0xFF5FA5A0)),
+          colorScheme: const ColorScheme.light(primary: Color(0xFF367470)),
         ),
         child: child!,
       ),
@@ -730,11 +1390,13 @@ class _Step2DurationState extends State<_Step2Duration> {
   Widget build(BuildContext context) {
     final bool canProceed =
         _selected != null &&
-        (_selected! > 0 || (_selected == -1 && _customDate != null));
+        (_selected == 0 ||
+            _selected! > 0 ||
+            (_selected == -1 && _customDate != null));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
-      child: Card(
+      child: _elderlyCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -776,7 +1438,12 @@ class _Step2DurationState extends State<_Step2Duration> {
                     boxShadow: [
                       if (isSelected)
                         BoxShadow(
-                          color: const Color(0xFF5FA5A0).withOpacity(0.15),
+                          color: const Color.fromARGB(
+                            255,
+                            146,
+                            214,
+                            209,
+                          ).withOpacity(0.15),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -817,18 +1484,21 @@ class _Step2DurationState extends State<_Step2Duration> {
                                   color: Colors.grey.shade600,
                                 ),
                               ),
+                            if (isSelected)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  _endDateLabel(days),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: const Color(0xFF367470),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
-                      if (isSelected)
-                        Text(
-                          _endDateLabel(days),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: const Color.fromARGB(255, 16, 101, 95),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -853,7 +1523,12 @@ class _Step2DurationState extends State<_Step2Duration> {
                   border: Border.all(
                     color: _selected == -1
                         ? const Color(0xFF0D2D5D)
-                        : const Color(0xFF5FA5A0).withOpacity(0.2),
+                        : const Color.fromARGB(
+                            255,
+                            186,
+                            219,
+                            217,
+                          ).withOpacity(0.2),
                     width: 2,
                   ),
                 ),
@@ -897,10 +1572,83 @@ class _Step2DurationState extends State<_Step2Duration> {
               ),
             ),
 
+            // ═══ Ongoing option ═══
+            GestureDetector(
+              onTap: () => setState(() {
+                _selected = 0;
+                _customDate = null;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: _selected == 0
+                      ? const Color.fromARGB(255, 239, 246, 253)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: _selected == 0
+                        ? const Color(0xFF0D2D5D)
+                        : const Color(0xFF5FA5A0).withOpacity(0.2),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    if (_selected == 0)
+                      BoxShadow(
+                        color: const Color(0xFF5FA5A0).withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Radio<int>(
+                      value: 0,
+                      groupValue: _selected,
+                      onChanged: (v) => setState(() {
+                        _selected = 0;
+                        _customDate = null;
+                      }),
+                      activeColor: const Color.fromARGB(255, 34, 79, 133),
+                    ),
+                    const Icon(
+                      Icons.all_inclusive,
+                      size: 24,
+                      color: Color(0xFF5FA5A0),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Ongoing (No end date)',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: _selected == 0
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: _selected == 0
+                              ? const Color.fromARGB(255, 26, 48, 95)
+                              : const Color.fromARGB(255, 52, 52, 52),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: canProceed
                   ? () {
+                      if (_selected == 0) {
+                        widget.onNext(null, null);
+                        return;
+                      }
                       DateTime? endDate;
                       if (_selected == -1) {
                         endDate = _customDate;
@@ -914,16 +1662,6 @@ class _Step2DurationState extends State<_Step2Duration> {
                   : null,
               style: widget.buttonStyle,
               child: const Text('Next'),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: TextButton(
-                onPressed: () => widget.onNext(null, null),
-                child: const Text(
-                  'Skip (Ongoing medication)',
-                  style: TextStyle(color: Colors.grey, fontSize: 18),
-                ),
-              ),
             ),
           ],
         ),

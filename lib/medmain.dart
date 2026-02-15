@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // ← NEW: for duration display
 import 'addmed.dart';
 import 'models/medication.dart'; // Import the new model
 import 'Screens/home_shell.dart'; // Import ElderlyProfile to get UID and name
 import 'services/medication_scheduler.dart';
 import 'widgets/todays_meds_tab.dart';
+import 'services/medication_history_service.dart';
+import 'widgets/medication_history_page.dart';
 
 // --- Main Page Widget ---
 class Medmain extends StatefulWidget {
@@ -23,6 +26,8 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // ✅ Check and remove expired medications on screen load
+    MedicationScheduler().scheduleAllMedications(widget.elderlyProfile.uid);
   }
 
   @override
@@ -73,6 +78,13 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
         .doc(widget.elderlyProfile.uid);
 
     try {
+      // Save to history before deleting
+      await MedicationHistoryService().saveToHistory(
+        elderlyId: widget.elderlyProfile.uid,
+        medication: medicationToDelete,
+        reason: 'deleted',
+      );
+
       // ✅ Do the database delete
       await docRef.update({
         'medsList': FieldValue.arrayRemove([medicationToDelete.toMap()]),
@@ -203,12 +215,39 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      const Text(
-                        'Medication List',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Medication List',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MedicationHistoryPage(
+                                  elderlyId: widget.elderlyProfile.uid,
+                                ),
+                              ),
+                            ),
+                            icon: const Icon(Icons.history, size: 20),
+                            label: const Text('History'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.teal,
+                              side: const BorderSide(
+                                color: Colors.teal,
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Expanded(
@@ -412,6 +451,19 @@ class MedicationCard extends StatelessWidget {
     );
   }
 
+  // ← NEW: helper to format duration for card display
+  String _durationDisplay() {
+    if (medication.endDate == null) return 'Ongoing';
+    final endDt = medication.endDate!.toDate();
+    final now = DateTime.now();
+    final daysLeft = endDt.difference(now).inDays;
+    final formattedDate = DateFormat('MMM d, yyyy').format(endDt);
+    if (daysLeft < 0) return 'Expired ($formattedDate)';
+    if (daysLeft == 0) return 'Ends today';
+    if (daysLeft == 1) return 'Ends tomorrow';
+    return 'Until $formattedDate ($daysLeft days left)';
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeString = medication.times
@@ -465,6 +517,29 @@ class MedicationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            RichText(
+              text: TextSpan(
+                style: valueStyle,
+                children: <TextSpan>[
+                  TextSpan(text: 'Duration: ', style: labelStyle),
+                  TextSpan(
+                    text: _durationDisplay(),
+                    style: valueStyle.copyWith(
+                      color:
+                          medication.endDate != null &&
+                              medication.endDate!
+                                      .toDate()
+                                      .difference(DateTime.now())
+                                      .inDays <=
+                                  2
+                          ? Colors.orange.shade800
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
             RichText(
               text: TextSpan(
                 style: valueStyle,
