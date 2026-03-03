@@ -4,21 +4,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum DoseStatus { upcoming, takenOnTime, takenLate, missed }
 
 class Medication {
-  final String id; // Unique ID for the medication entry
+  final String id;
   final String name;
+  final String? doseForm; // ← NEW: e.g. "Tablet", "Syrup", "Cream"
+  final String? doseStrength; // ← NEW: e.g. "500 mg", "0.5%", "10 ml"
   final List<String> days;
   final String? frequency;
   final List<TimeOfDay> times;
   final String? notes;
-  final String addedBy; // UID of the user who added it
+  final String addedBy;
   final Timestamp createdAt;
   final Timestamp updatedAt;
-
   final Timestamp? endDate;
 
   Medication({
     required this.id,
     required this.name,
+    this.doseForm,
+    this.doseStrength,
     required this.days,
     this.frequency,
     required this.times,
@@ -29,22 +32,21 @@ class Medication {
     this.endDate,
   });
 
-  // Helper to format TimeOfDay to a string "HH:mm" for Firestore
   static String _formatTimeOfDay(TimeOfDay time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
-  // Helper to parse a string "HH:mm" from Firestore to TimeOfDay
   static TimeOfDay _parseTimeOfDay(String timeString) {
     final parts = timeString.split(':');
     return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
-  // Converts a Medication object into a Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
+      if (doseForm != null) 'doseForm': doseForm,
+      if (doseStrength != null) 'doseStrength': doseStrength,
       'days': days,
       'frequency': frequency,
       'times': times.map((time) => _formatTimeOfDay(time)).toList(),
@@ -56,11 +58,12 @@ class Medication {
     };
   }
 
-  // Creates a Medication object from a Firestore Map
   factory Medication.fromMap(Map<String, dynamic> map) {
     return Medication(
       id: map['id'] ?? '',
       name: map['name'] ?? 'Unnamed Medication',
+      doseForm: map['doseForm'],
+      doseStrength: map['doseStrength'],
       days: List<String>.from(map['days'] ?? []),
       frequency: map['frequency'],
       times:

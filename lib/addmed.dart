@@ -39,8 +39,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
   final PageController _pageController = PageController();
   int _currentPageIndex = 0;
   late final bool _isEditing;
-
   String? _medicationName;
+  String? _doseForm; // ← NEW
+  String? _doseStrength; // ← NEW
   int? _durationDays;
   DateTime? _customEndDate; // ← NEW: for custom date pick or preset calc
   List<String> _selectedDays = [];
@@ -53,6 +54,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
   final MedicationScanService _scanService = MedicationScanService();
   bool _isScanning = false;
 
+  static const int _totalSteps = 8;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +64,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
     if (_isEditing) {
       final med = widget.medicationToEdit!;
       _medicationName = med.name;
+      _doseForm = med.doseForm; // ← NEW
+      _doseStrength = med.doseStrength; // ← NEW
       _selectedDays = List.from(med.days);
       _frequency = med.frequency;
       _selectedTimes = List<TimeOfDay?>.from(med.times);
@@ -151,11 +156,19 @@ class _AddMedScreenState extends State<AddMedScreen> {
   Future<bool?> _showEditableScanSheet({required MedicationScanResult result}) {
     final nameCtrl = TextEditingController(text: result.name ?? '');
     final notesCtrl = TextEditingController(text: result.notes ?? '');
-
+    // Prefer patientDose ("1 tablet") over product strength ("500 mg") for the dose field
+    final strengthCtrl = TextEditingController(
+      text: result.patientDose ?? result.doseStrength ?? '',
+    );
     String? selectedFreq = result.frequency;
-    int? selectedDuration = result.durationDays; // ← NEW: from scan
-    DateTime? scanCustomEndDate; // ← for custom date pick in scan sheet
+    String? selectedForm = result.doseForm;
 
+    // Store scan quality info
+    final List<String> scanMissing = result.missingFields;
+    final bool isLabel = result.isLikelyMedLabel;
+
+    int? selectedDuration = result.durationDays;
+    DateTime? scanCustomEndDate;
     List<String> selectedDays = result.days.isNotEmpty
         ? List<String>.from(result.days)
         : <String>[];
@@ -302,6 +315,139 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
+                          // ═══ NOT A LABEL WARNING ═══
+                          if (!isLabel)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.red.shade300),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Colors.red.shade700,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'This doesn\'t look like a medication label. '
+                                      'Please take a clear photo of the prescription sticker or medication box.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.red.shade800,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // ═══ MISSING FIELDS ALERT ═══
+                          if (isLabel && scanMissing.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.orange.shade300,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Colors.orange.shade800,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Could not detect:',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.orange.shade900,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        ...scanMissing.map(
+                                          (f) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 4,
+                                              bottom: 2,
+                                            ),
+                                            child: Text(
+                                              '• $f',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.orange.shade800,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Please fill them in manually below, or take a clearer photo.',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.orange.shade700,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // ═══ ALL DETECTED SUCCESS ═══
+                          if (isLabel && scanMissing.isEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.green.shade300,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green.shade700,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'All fields detected successfully! Please verify before applying.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.green.shade800,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
 
                           const Text(
                             'Medication name',
@@ -565,6 +711,14 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
                                               setState(() {
                                                 _medicationName = name;
+                                                _doseForm =
+                                                    selectedForm; // ← NEW
+                                                _doseStrength =
+                                                    strengthCtrl.text
+                                                        .trim()
+                                                        .isNotEmpty
+                                                    ? strengthCtrl.text.trim()
+                                                    : null;
                                                 _notes = notesCtrl.text.trim();
 
                                                 _selectedDays =
@@ -662,17 +816,20 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
       if (!mounted) return;
 
-      // ✅ after apply: skip to the first step that still needs user input
-      // Steps: 0=Name, 1=Duration, 2=Days, 3=Frequency, 4=Times, 5=Notes, 6=Summary
+      // ✅ after apply: go to dose step so user can verify/fill dose info
+      // Steps: 0=Name, 1=Duration, 2=Days, 3=Frequency, 4=Dose, 5=Times, 6=Notes, 7=Summary
+      // Only skip earlier if a critical earlier step is totally empty
       int targetPage;
-      if (_durationDays == null && _customEndDate == null) {
-        targetPage = 1; // go to duration step
+      if (_medicationName == null || _medicationName!.isEmpty) {
+        targetPage = 0; // name is missing — go there first
+      } else if (_durationDays == null && _customEndDate == null) {
+        targetPage = 1; // duration not set
       } else if (_selectedDays.isEmpty) {
-        targetPage = 2; // go to days step
+        targetPage = 2; // days not set
       } else if (_frequency == null) {
-        targetPage = 3; // go to frequency step
+        targetPage = 3; // frequency not set
       } else {
-        targetPage = 4; // everything filled, go to times
+        targetPage = 4; // dose step — verify/fill from scan
       }
       _pageController.jumpToPage(targetPage);
       setState(() => _currentPageIndex = targetPage);
@@ -710,6 +867,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
       final updatedMed = Medication(
         id: widget.medicationToEdit!.id,
         name: _medicationName ?? 'Unnamed',
+        doseForm: _doseForm, // ← NEW
+        doseStrength: _doseStrength, // ← NEW
         days: _selectedDays,
         frequency: _frequency,
         times: _selectedTimes.whereType<TimeOfDay>().toList(),
@@ -775,6 +934,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
       final newMed = Medication(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _medicationName ?? 'Unnamed',
+        doseForm: _doseForm, // ← NEW
+        doseStrength: _doseStrength, // ← NEW
+
         days: _selectedDays,
         frequency: _frequency,
         times: _selectedTimes.whereType<TimeOfDay>().toList(),
@@ -832,7 +994,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   // UI Navigation Helpers
   // ---------------------
   void _goToNextPage() {
-    if (_currentPageIndex < 6) {
+    if (_currentPageIndex < 7) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeIn,
@@ -984,7 +1146,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       ),
       body: Column(
         children: [
-          _Stepper(currentIndex: _currentPageIndex, stepCount: 7),
+          _Stepper(currentIndex: _currentPageIndex, stepCount: 8),
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -1042,6 +1204,19 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
+                _Step2Dose(
+                  medicationName: _medicationName,
+                  initialForm: _doseForm,
+                  initialStrength: _doseStrength,
+                  buttonStyle: tealButtonStyle,
+                  onNext: (form, strength) {
+                    setState(() {
+                      _doseForm = form;
+                      _doseStrength = strength;
+                    });
+                    _goToNextPage();
+                  },
+                ),
                 _Step5SetTimes(
                   medicationName: _medicationName,
                   frequency: _frequency,
@@ -1068,11 +1243,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
-                _Step7Summary(
+                _Step8Summary(
                   key: ValueKey(
                     'summary_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
                   ),
                   medicationName: _medicationName,
+                  doseForm: _doseForm,
+                  doseStrength: _doseStrength,
                   durationDays: _durationDays,
                   customEndDate: _customEndDate,
                   selectedDays: _selectedDays,
@@ -1242,6 +1419,196 @@ class _Step1MedNameState extends State<_Step1MedName> {
   }
 }
 
+// ═══════════════════════════════════════════
+//  Step 5: Dose (NEW)
+// ═══════════════════════════════════════════
+class _Step2Dose extends StatefulWidget {
+  final String? medicationName;
+  final String? initialForm;
+  final String? initialStrength;
+  final ButtonStyle buttonStyle;
+  final void Function(String? form, String? strength) onNext;
+
+  const _Step2Dose({
+    this.medicationName,
+    this.initialForm,
+    this.initialStrength,
+    required this.buttonStyle,
+    required this.onNext,
+  });
+
+  @override
+  State<_Step2Dose> createState() => _Step2DoseState();
+}
+
+class _Step2DoseState extends State<_Step2Dose> {
+  String? _selectedForm;
+  late final TextEditingController _strengthCtrl;
+
+  // ── Form options with icons ──
+  static const List<Map<String, dynamic>> _formOptions = [
+    //{'label': 'Tablet', 'icon': Icons.medication},
+    {'label': 'Capsule', 'icon': Icons.medication},
+    {'label': 'Syrup', 'icon': Icons.local_drink},
+    {'label': 'Cream/Ointment', 'icon': Icons.back_hand_outlined},
+    {'label': 'Eye Drops', 'icon': Icons.visibility},
+    {'label': 'Ear Drops', 'icon': Icons.hearing},
+    {'label': 'Nasal Spray', 'icon': Icons.air},
+    //{'label': 'Inhaler', 'icon': Icons.masks},
+    {'label': 'Injection', 'icon': Icons.vaccines},
+    //{'label': 'Patch', 'icon': Icons.healing},
+    //{'label': 'Suppository', 'icon': Icons.medical_services},
+    //{'label': 'Powder/Sachet', 'icon': Icons.inventory_2},
+    {'label': 'Other', 'icon': Icons.more_horiz},
+  ];
+
+  /// Suggest a contextual strength hint based on the selected form.
+  String get _strengthHint {
+    switch (_selectedForm) {
+      case 'Capsule':
+        return 'e.g. 500 mg, 1 tablet';
+      case 'Syrup':
+        return 'e.g. 5 ml, 10 ml';
+      case 'Cream/Ointment':
+        return 'e.g. apply thin layer, 0.5%';
+      case 'Eye Drops':
+      case 'Ear Drops':
+        return 'e.g. 2 drops';
+      case 'Nasal Spray':
+        return 'e.g. 1 spray each nostril';
+      case 'Injection':
+        return 'e.g. 0.5 ml, 10 units';
+      default:
+        return 'e.g. 500 mg, 5 ml, 2 puffs';
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedForm = widget.initialForm;
+    _strengthCtrl = TextEditingController(text: widget.initialStrength);
+  }
+
+  @override
+  void dispose() {
+    _strengthCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool canProceed = _selectedForm != null;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _StepHeader(
+                medicationName: widget.medicationName,
+                title: 'Step 5: Dose',
+                subtitle: 'What form and strength is this medication?',
+              ),
+
+              // ── Form grid ──
+              const Text(
+                'Medication Form',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 10,
+                children: _formOptions.map((opt) {
+                  final label = opt['label'] as String;
+                  final icon = opt['icon'] as IconData;
+                  final isSelected = _selectedForm == label;
+                  return ChoiceChip(
+                    avatar: Icon(
+                      icon,
+                      size: 18,
+                      color: isSelected
+                          ? Colors.teal.shade800
+                          : Colors.grey.shade600,
+                    ),
+                    label: Text(label),
+                    selected: isSelected,
+                    showCheckmark: false,
+                    elevation: 0,
+                    pressElevation: 0,
+                    onSelected: (_) => setState(() {
+                      _selectedForm = isSelected ? null : label;
+                    }),
+                    selectedColor: Colors.teal.shade100,
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Strength ──
+              const Text(
+                'Strength / Dose',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _strengthCtrl,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: _strengthHint,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+
+              const SizedBox(height: 32),
+
+              ElevatedButton(
+                onPressed: canProceed
+                    ? () {
+                        widget.onNext(
+                          _selectedForm,
+                          _strengthCtrl.text.trim().isNotEmpty
+                              ? _strengthCtrl.text.trim()
+                              : null,
+                        );
+                      }
+                    : null,
+                style: widget.buttonStyle,
+                child: const Text('Next'),
+              ),
+
+              // Hint
+              if (!canProceed)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Please select a medication form to continue',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 // =====================
 // Step 2
 
@@ -2034,11 +2401,13 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
   }
 }
 
-// =====================
-// Step 6
-// =====================
-class _Step7Summary extends StatelessWidget {
+// ═══════════════════════════════════════════
+//  Step 8: Summary  (was Step 7)
+// ═══════════════════════════════════════════
+class _Step8Summary extends StatelessWidget {
   final String? medicationName;
+  final String? doseForm; // ← NEW
+  final String? doseStrength; // ← NEW
   final int? durationDays;
   final DateTime? customEndDate;
   final List<String> selectedDays;
@@ -2049,9 +2418,11 @@ class _Step7Summary extends StatelessWidget {
   final bool isEditing;
   final ButtonStyle buttonStyle;
 
-  const _Step7Summary({
+  const _Step8Summary({
     super.key,
     this.medicationName,
+    this.doseForm,
+    this.doseStrength,
     this.durationDays,
     this.customEndDate,
     required this.selectedDays,
@@ -2064,14 +2435,20 @@ class _Step7Summary extends StatelessWidget {
   });
 
   String _durationLabel() {
-    // customEndDate is always set when user picks a duration (preset or custom)
     if (customEndDate != null) {
-      if (durationDays != null && durationDays! > 0) {
+      if (durationDays != null && durationDays! > 0)
         return '$durationDays days (until ${DateFormat('MMM d, yyyy').format(customEndDate!)})';
-      }
       return 'Until ${DateFormat('MMM d, yyyy').format(customEndDate!)}';
     }
     return 'Ongoing (no end date)';
+  }
+
+  String _doseLabel() {
+    final parts = <String>[];
+    if (doseForm != null) parts.add(doseForm!);
+    if (doseStrength != null && doseStrength!.isNotEmpty)
+      parts.add(doseStrength!);
+    return parts.isEmpty ? 'Not specified' : parts.join(' — ');
   }
 
   @override
@@ -2088,7 +2465,7 @@ class _Step7Summary extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0),
             child: _StepHeader(
-              title: 'Step 7: Summary',
+              title: 'Step 8: Summary',
               subtitle: 'Please review the information before saving.',
             ),
           ),
@@ -2106,10 +2483,8 @@ class _Step7Summary extends StatelessWidget {
                     title: 'Medication Name',
                     value: medicationName ?? 'N/A',
                   ),
-                  _SummaryTile(
-                    title: 'Duration',
-                    value: _durationLabel(),
-                  ), // ← NEW
+                  _SummaryTile(title: 'Dose', value: _doseLabel()), // ← NEW
+                  _SummaryTile(title: 'Duration', value: _durationLabel()),
                   _SummaryTile(title: 'Frequency', value: frequency ?? 'N/A'),
                   _SummaryTile(title: 'Days', value: formattedDays),
                   _SummaryTile(title: 'Times', value: formattedTimes),
@@ -2135,8 +2510,7 @@ class _Step7Summary extends StatelessWidget {
 }
 
 class _SummaryTile extends StatelessWidget {
-  final String title;
-  final String value;
+  final String title, value;
   const _SummaryTile({required this.title, required this.value});
   @override
   Widget build(BuildContext context) {

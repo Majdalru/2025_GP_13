@@ -8,6 +8,7 @@ import 'services/notification_service.dart';
 const Color customNavyColor = Color.fromRGBO(13, 45, 93, 1);
 // Let's also define your teal color \
 const Color customTealColor = Colors.teal;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
