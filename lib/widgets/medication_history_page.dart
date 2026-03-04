@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/medication.dart';
 import '../services/medication_history_service.dart';
+import '../services/medication_scheduler.dart';
 
 /// Medication History Page — shows deleted and expired medications.
 /// Works for both caregiver and elderly views.
@@ -226,6 +227,105 @@ class MedicationHistoryPage extends StatelessWidget {
                     await historyService.deleteHistoryEntry(elderlyId, docId);
                   }
                 },
+                onRecover: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          isElderlyView ? 20 : 12,
+                        ),
+                      ),
+                      title: Text(
+                        'Recover Medication?',
+                        style: TextStyle(
+                          fontSize: isElderlyView ? 24 : 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      content: Text(
+                        'Add "${med.name}" back to your active medications?',
+                        style: TextStyle(fontSize: isElderlyView ? 20 : 16),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(fontSize: isElderlyView ? 20 : 16),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(
+                            'Recover',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontSize: isElderlyView ? 20 : 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    final recovered = await historyService.recoverFromHistory(
+                      elderlyId: elderlyId,
+                      historyDocId: docId,
+                    );
+                    if (recovered != null) {
+                      // Reschedule notifications
+                      await MedicationScheduler().scheduleAllMedications(
+                        elderlyId,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '"${recovered.name}" recovered successfully',
+                                    style: TextStyle(
+                                      fontSize: isElderlyView ? 20 : 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Failed to recover medication',
+                              style: TextStyle(
+                                fontSize: isElderlyView ? 20 : 14,
+                              ),
+                            ),
+                            backgroundColor: Colors.red.shade600,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
               );
             },
           );
@@ -241,6 +341,7 @@ class _HistoryCard extends StatelessWidget {
   final DateTime? deletedAt;
   final bool isElderlyView;
   final VoidCallback onDelete;
+  final VoidCallback onRecover;
 
   const _HistoryCard({
     required this.medication,
@@ -248,6 +349,7 @@ class _HistoryCard extends StatelessWidget {
     this.deletedAt,
     required this.isElderlyView,
     required this.onDelete,
+    required this.onRecover,
   });
 
   @override
@@ -374,6 +476,21 @@ class _HistoryCard extends StatelessWidget {
                     fontSize,
                   ),
                   const SizedBox(height: 4),
+                  if (medication.doseForm != null ||
+                      (medication.doseStrength != null &&
+                          medication.doseStrength!.isNotEmpty)) ...[
+                    _detailRow(
+                      'Dose',
+                      [
+                        if (medication.doseForm != null) medication.doseForm!,
+                        if (medication.doseStrength != null &&
+                            medication.doseStrength!.isNotEmpty)
+                          medication.doseStrength!,
+                      ].join(' — '),
+                      fontSize,
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                   _detailRow('Days', medication.days.join(', '), fontSize),
                   const SizedBox(height: 4),
                   _detailRow(
@@ -397,6 +514,39 @@ class _HistoryCard extends StatelessWidget {
                     _detailRow('Notes', medication.notes!, fontSize),
                   ],
                 ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Recover button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onRecover,
+                icon: Icon(
+                  Icons.restore,
+                  size: isElderlyView ? 26 : 20,
+                  color: Colors.green.shade700,
+                ),
+                label: Text(
+                  'Recover Medication',
+                  style: TextStyle(
+                    fontSize: isElderlyView ? 20 : 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    vertical: isElderlyView ? 14 : 10,
+                  ),
+                  side: BorderSide(color: Colors.green.shade400, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      isElderlyView ? 14 : 10,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 10),

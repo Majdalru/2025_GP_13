@@ -123,4 +123,62 @@ class MedicationHistoryService {
       debugPrint('❌ Error deleting history entry: $e');
     }
   }
+
+  /// Recover a medication from history back to the active medications list.
+  /// Reads the history doc, rebuilds a Medication, adds it to medsList,
+  /// removes it from history, and returns the recovered Medication (or null on error).
+  Future<Medication?> recoverFromHistory({
+    required String elderlyId,
+    required String historyDocId,
+  }) async {
+    try {
+      final historyDocRef = _firestore
+          .collection('medications')
+          .doc(elderlyId)
+          .collection('history')
+          .doc(historyDocId);
+
+      final historySnap = await historyDocRef.get();
+      if (!historySnap.exists) {
+        debugPrint('⚠️ History entry $historyDocId not found');
+        return null;
+      }
+
+      final data = historySnap.data()!;
+
+      // Strip history-only fields before rebuilding the Medication
+      final medData = Map<String, dynamic>.from(data);
+      medData.remove('reason');
+      medData.remove('deletedAt');
+      medData.remove('deletedBy');
+
+      // Give it a fresh ID + timestamps
+      medData['id'] = DateTime.now().millisecondsSinceEpoch.toString();
+      medData['updatedAt'] = Timestamp.now();
+      if (medData['createdAt'] == null) {
+        medData['createdAt'] = Timestamp.now();
+      }
+
+      final recoveredMed = Medication.fromMap(medData);
+
+      // Add back to the active medsList
+      final medsDocRef = _firestore.collection('medications').doc(elderlyId);
+
+      await medsDocRef.set({
+        'medsList': FieldValue.arrayUnion([recoveredMed.toMap()]),
+      }, SetOptions(merge: true));
+
+      // Remove from history
+      await historyDocRef.delete();
+
+      debugPrint(
+        '♻️ Recovered ${recoveredMed.name} from history for $elderlyId',
+      );
+
+      return recoveredMed;
+    } catch (e) {
+      debugPrint('❌ Error recovering medication from history: $e');
+      return null;
+    }
+  }
 }

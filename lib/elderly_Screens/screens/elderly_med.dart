@@ -613,6 +613,16 @@ class MedicationCard extends StatelessWidget {
     return 'Until $formattedDate ($daysLeft days left)';
   }
 
+  String _doseDisplay() {
+    final parts = <String>[];
+    if (medication.doseForm != null) parts.add(medication.doseForm!);
+    if (medication.doseStrength != null &&
+        medication.doseStrength!.isNotEmpty) {
+      parts.add(medication.doseStrength!);
+    }
+    return parts.isEmpty ? 'Not specified' : parts.join(' — ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeString = medication.times
@@ -711,6 +721,16 @@ class MedicationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  // ═══════════ Dose ═══════════
+                  RichText(
+                    text: TextSpan(
+                      style: valueStyle,
+                      children: <TextSpan>[
+                        TextSpan(text: 'Dose: ', style: labelStyle),
+                        TextSpan(text: _doseDisplay()),
+                      ],
+                    ),
+                  ),
                   ///////////
                   RichText(
                     text: TextSpan(

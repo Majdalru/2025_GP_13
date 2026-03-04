@@ -439,14 +439,21 @@ class VoiceAssistantService {
 
   bool _containsAny(String text, List<String> patterns) {
     for (final p in patterns) {
-      final pattern = r'\b' + RegExp.escape(p.toLowerCase()) + r'\b';
-      if (RegExp(pattern).hasMatch(text)) {
-        return true;
+      final pLower = p.toLowerCase();
+      // Arabic chars don't work with \b word boundary — use .contains()
+      final hasArabic = RegExp(r'[\u0600-\u06FF]').hasMatch(pLower);
+      if (hasArabic) {
+        if (text.contains(pLower)) return true;
+      } else {
+        // Latin: try word-boundary first, fallback to contains
+        final pattern = r'\b' + RegExp.escape(pLower) + r'\b';
+        if (RegExp(pattern).hasMatch(text)) return true;
+        // Also match if the whole utterance IS the word (e.g. user just says "dose")
+        if (text.trim() == pLower) return true;
       }
     }
     return false;
   }
-
   // =========================
   //  MEDICATION FLOWS
   // =========================
@@ -492,7 +499,24 @@ class VoiceAssistantService {
       return;
     }
 
-    // 2) Days
+    // 2) Duration
+    final durationAnswer = await _askQuestion(
+      'How long do you need to take $name? '
+      'You can say a number of days like three days, or one month, '
+      'or a specific date like March seventh. Say ongoing if there is no end date.',
+      listenSeconds: 6,
+    );
+    if (_isCancelUtterance(durationAnswer)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
+    final int? durationDays = parseDurationFromSpeech(durationAnswer ?? '');
+    DateTime? endDate;
+    if (durationDays != null && durationDays > 0) {
+      endDate = DateTime.now().add(Duration(days: durationDays));
+    }
+
+    // 3) Days
     final daysAnswer = await _askQuestion(
       'On which days do you take $name? You can say every day, or mention specific days like Sunday and Wednesday.',
       listenSeconds: 6,
@@ -503,9 +527,9 @@ class VoiceAssistantService {
     }
     final days = parseDaysFromSpeech(daysAnswer ?? '');
 
-    // 3) Frequency
+    // 4) Frequency
     final freqAnswer = await _askQuestion(
-      'How many times per day do you take $name? Say once, twice, three times, or four times.',
+      'How many times per day do you take $name? Say once, twice, three or four times.',
       listenSeconds: 4,
     );
     if (_isCancelUtterance(freqAnswer)) {
@@ -513,11 +537,40 @@ class VoiceAssistantService {
       return;
     }
     final frequency = parseFrequencyFromSpeech(freqAnswer ?? '');
-    final finalFrequency = frequency ?? 'Once daily';
+    final finalFrequency = frequency ?? 'Once a day';
 
-    // 4) First time
+    // 5) Dose form
+    final doseFormAnswer = await _askQuestion(
+      'What form is this medication? '
+      'For example, say capsule, syrup, injection, or other.',
+      listenSeconds: 5,
+    );
+    if (_isCancelUtterance(doseFormAnswer)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
+    final String? doseForm = parseDoseFormFromSpeech(doseFormAnswer ?? '');
+
+    // 6) Dose strength
+    final doseStrengthAnswer = await _askQuestion(
+      'How much do you take each time? '
+      'For example, say 1 capsule, 2 drops, or 5 ml.',
+      listenSeconds: 5,
+    );
+    if (_isCancelUtterance(doseStrengthAnswer)) {
+      await speak('Okay, we will stop adding the medication.');
+      return;
+    }
+    String? doseStrength;
+    if (doseStrengthAnswer != null &&
+        doseStrengthAnswer.trim().isNotEmpty &&
+        !_isNoNotes(doseStrengthAnswer)) {
+      doseStrength = doseStrengthAnswer.trim();
+    }
+
+    // 7) First time
     final timeAnswer = await _askQuestion(
-      'At what time do you usually take the first dose? For example, eight a.m. or nine thirty p.m.',
+      'At what time do you usually take the first dose? For example, eight am or nine thirty pm',
       listenSeconds: 5,
     );
     if (_isCancelUtterance(timeAnswer)) {
@@ -529,23 +582,23 @@ class VoiceAssistantService {
         : parseTimeFromSpeech(timeAnswer);
     final times = expandTimesForFrequency(firstTime, finalFrequency);
 
-    // 5) Notes
+    // 8) Notes
     final notesAnswer = await _askQuestion(
-      'Do you want to add any notes, like before food or after food?',
+      'Do you want to add any special notes? '
+      'For example, take before food or take after food. Say no if you have none.',
       listenSeconds: 5,
     );
     if (_isCancelUtterance(notesAnswer)) {
       await speak('Okay, we will stop adding the medication.');
       return;
     }
-    final notes =
-        (notesAnswer != null && notesAnswer.toLowerCase().trim() != 'no')
-        ? notesAnswer
-        : null;
+    final notes = _isNoNotes(notesAnswer) ? null : notesAnswer!.trim();
 
     final newMed = Medication(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
+      doseForm: doseForm,
+      doseStrength: doseStrength,
       days: days,
       frequency: finalFrequency,
       times: times,
@@ -553,8 +606,8 @@ class VoiceAssistantService {
       addedBy: currentUser.uid,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
+      endDate: endDate != null ? Timestamp.fromDate(endDate) : null,
     );
-
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(elderlyId);
@@ -742,7 +795,7 @@ class VoiceAssistantService {
 
     while (continueEditing) {
       await speak(
-        'What would you like to edit? You can say: name, days, frequency, times, or notes.',
+        'What would you like to edit? You can say: name, duration, days, frequency, dose, times, or notes.',
       );
 
       String? fieldToEdit;
@@ -758,7 +811,7 @@ class VoiceAssistantService {
         if (fieldAnswer == null || fieldAnswer.isEmpty) {
           if (attempt < 2) {
             await speak(
-              'Please say which field: name, days, frequency, times, or notes.',
+              'Please say which field: name, duration, days, frequency, dose, times, or notes.',
             );
             continue;
           } else {
@@ -773,7 +826,7 @@ class VoiceAssistantService {
 
         if (attempt < 2) {
           await speak(
-            'I did not understand. Please say: name, days, frequency, times, or notes.',
+            'I did not understand. Please say: name, duration, days, frequency, dose, times, or notes.',
           );
         }
       }
@@ -844,6 +897,39 @@ class VoiceAssistantService {
       return 'name';
     }
     if (_containsAny(lower, [
+      'duration',
+      'how long',
+      'end date',
+      'period',
+      'length',
+      'مدة',
+      'لمدة',
+      'فتره',
+      'فترة',
+      'متى ينتهي',
+    ])) {
+      return 'duration';
+    }
+    if (_containsAny(lower, [
+      'dose',
+      'dosage',
+      'form',
+      'strength',
+      'milligram',
+      'mg',
+      'tablet',
+      'capsule',
+      'syrup',
+      'drops',
+      'جرعه',
+      'جرعة',
+      'شكل',
+      'الجرعه',
+      'الجرعة',
+    ])) {
+      return 'dose';
+    }
+    if (_containsAny(lower, [
       'day',
       'days',
       'when',
@@ -892,10 +978,14 @@ class VoiceAssistantService {
     switch (field) {
       case 'name':
         return await _editName(original);
+      case 'duration':
+        return await _editDuration(original);
       case 'days':
         return await _editDays(original);
       case 'frequency':
         return await _editFrequency(original);
+      case 'dose':
+        return await _editDose(original);
       case 'times':
         return await _editTimes(original);
       case 'notes':
@@ -938,6 +1028,8 @@ class VoiceAssistantService {
     return Medication(
       id: original.id,
       name: newName.trim(),
+      doseForm: original.doseForm,
+      doseStrength: original.doseStrength,
       days: original.days,
       frequency: original.frequency,
       times: original.times,
@@ -945,6 +1037,142 @@ class VoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
+    );
+  }
+
+  Future<Medication?> _editDuration(Medication original) async {
+    await speak(
+      'How long should you take this medication? '
+      'You can say a number of days like seven days, two weeks '
+      'or a specific date like March seventh.or  Say ongoing if there is no end date.',
+    );
+
+    final durationAnswer = await listenWhisper(seconds: 5);
+
+    if (_isCancelUtterance(durationAnswer)) {
+      await speak('Okay, keeping the original duration.');
+      return null;
+    }
+
+    if (durationAnswer == null || durationAnswer.isEmpty) {
+      await speak('I did not hear a duration. Keeping the old duration.');
+      return null;
+    }
+
+    final int? newDuration = parseDurationFromSpeech(durationAnswer);
+    Timestamp? newEndDate;
+
+    if (newDuration != null && newDuration > 0) {
+      final end = DateTime.now().add(Duration(days: newDuration));
+      newEndDate = Timestamp.fromDate(end);
+    }
+
+    final durationText = newDuration != null ? '$newDuration days' : 'ongoing';
+    final confirm = await _askQuestion(
+      'Set the duration to $durationText. Is that correct? Say yes or no.',
+      listenSeconds: 3,
+    );
+
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, keeping the original duration.');
+      return null;
+    }
+
+    if (!_isYes(confirm)) {
+      await speak('Okay, keeping the original duration.');
+      return null;
+    }
+
+    return Medication(
+      id: original.id,
+      name: original.name,
+      doseForm: original.doseForm,
+      doseStrength: original.doseStrength,
+      days: original.days,
+      frequency: original.frequency,
+      times: original.times,
+      notes: original.notes,
+      addedBy: original.addedBy,
+      createdAt: original.createdAt,
+      updatedAt: Timestamp.now(),
+      endDate: newEndDate,
+    );
+  }
+
+  Future<Medication?> _editDose(Medication original) async {
+    // Ask for form
+    await speak(
+      'What form is this medication? '
+      'For example, say capsule, syrup, injection, or other.',
+    );
+
+    final formAnswer = await listenWhisper(seconds: 5);
+
+    if (_isCancelUtterance(formAnswer)) {
+      await speak('Okay, keeping the original dose.');
+      return null;
+    }
+
+    String? newForm;
+    if (formAnswer != null && formAnswer.isNotEmpty) {
+      newForm = parseDoseFormFromSpeech(formAnswer);
+    }
+    newForm ??= original.doseForm;
+
+    // Ask for strength
+    await speak(
+      'How much do you take each time? '
+      'For example, say 1 capsule, 2 drops, or 5 ml. ',
+    );
+
+    final strengthAnswer = await listenWhisper(seconds: 5);
+
+    if (_isCancelUtterance(strengthAnswer)) {
+      await speak('Okay, keeping the original dose.');
+      return null;
+    }
+
+    String? newStrength = original.doseStrength;
+    if (strengthAnswer != null &&
+        strengthAnswer.trim().isNotEmpty &&
+        !_isNoNotes(strengthAnswer) &&
+        !strengthAnswer.toLowerCase().contains('keep')) {
+      newStrength = strengthAnswer.trim();
+    }
+
+    final formLabel = newForm ?? 'not set';
+    final strengthLabel = (newStrength != null && newStrength.isNotEmpty)
+        ? newStrength
+        : 'not set';
+    final confirm = await _askQuestion(
+      'Set the dose to $formLabel, $strengthLabel. Is that correct? Say yes or no.',
+      listenSeconds: 3,
+    );
+
+    if (_isCancelUtterance(confirm)) {
+      await speak('Okay, keeping the original dose.');
+      return null;
+    }
+
+    if (!_isYes(confirm)) {
+      await speak('Okay, keeping the original dose.');
+      return null;
+    }
+
+    return Medication(
+      id: original.id,
+      name: original.name,
+      doseForm: newForm,
+      doseStrength: newStrength,
+      days: original.days,
+      frequency: original.frequency,
+      times: original.times,
+      notes: original.notes,
+      addedBy: original.addedBy,
+      createdAt: original.createdAt,
+      updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
@@ -987,6 +1215,8 @@ class VoiceAssistantService {
     return Medication(
       id: original.id,
       name: original.name,
+      doseForm: original.doseForm,
+      doseStrength: original.doseStrength,
       days: newDays,
       frequency: original.frequency,
       times: original.times,
@@ -994,6 +1224,7 @@ class VoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
@@ -1041,6 +1272,8 @@ class VoiceAssistantService {
     return Medication(
       id: original.id,
       name: original.name,
+      doseForm: original.doseForm,
+      doseStrength: original.doseStrength,
       days: original.days,
       frequency: newFrequency,
       times: newTimes,
@@ -1048,13 +1281,14 @@ class VoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
   Future<Medication?> _editTimes(Medication original) async {
     await speak(
       'At what time should you take the first dose? '
-      'For example, say eight a.m. or nine thirty p.m.',
+      'For example, say eight am or nine thirty pm.',
     );
 
     final timeAnswer = await listenWhisper(seconds: 5);
@@ -1094,6 +1328,8 @@ class VoiceAssistantService {
     return Medication(
       id: original.id,
       name: original.name,
+      doseForm: original.doseForm,
+      doseStrength: original.doseStrength,
       days: original.days,
       frequency: original.frequency,
       times: newTimes,
@@ -1101,13 +1337,15 @@ class VoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
   Future<Medication?> _editNotes(Medication original) async {
     await speak(
-      'What are the new notes or instructions? '
-      'For example, you can say: take with food, or take before bed.',
+      'What are the new Notes? '
+      'For example, you can say: take with food, or take before bed. '
+      'Say no or none to remove all notes.',
     );
 
     final notesAnswer = await listenWhisper(seconds: 6);
@@ -1118,10 +1356,10 @@ class VoiceAssistantService {
     }
 
     String? newNotes;
-    if (notesAnswer == null || notesAnswer.isEmpty || _isNo(notesAnswer)) {
+    if (_isNoNotes(notesAnswer)) {
       newNotes = null;
     } else {
-      newNotes = notesAnswer.trim();
+      newNotes = notesAnswer!.trim();
     }
 
     final confirm = await _askQuestion(
@@ -1144,6 +1382,8 @@ class VoiceAssistantService {
     return Medication(
       id: original.id,
       name: original.name,
+      doseForm: original.doseForm,
+      doseStrength: original.doseStrength,
       days: original.days,
       frequency: original.frequency,
       times: original.times,
@@ -1151,9 +1391,9 @@ class VoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
-
   // ===== Helpers for medication data =====
 
   Future<List<Medication>> _loadMedications(String elderlyId) async {
@@ -1317,6 +1557,49 @@ class VoiceAssistantService {
         lower.contains('خلاص');
   }
 
+  /// Detects when the user means "no notes / nothing to add" rather than
+  /// dictating actual note content.  Catches: "no", "nope", "none",
+  /// "nothing", "that's it", "that is it", "I'm done", "no notes",
+  /// "not really", "all good", Arabic equivalents, etc.
+  bool _isNoNotes(String? answer) {
+    if (answer == null) return true;
+    final lower = answer.toLowerCase().trim();
+    if (lower.isEmpty) return true;
+
+    // Exact short phrases that clearly mean "no notes"
+    const noPatterns = [
+      'no', 'nope', 'none', 'nothing', 'nah', 'not really',
+      'no notes', 'no note', 'no thanks', 'no thank you',
+      "that's it", 'that is it', "that's all", 'that is all',
+      "i'm done", 'i am done', 'done', 'all done',
+      'all good', "i'm good", 'i am good', 'good',
+      'not now', 'no instructions', 'skip', 'next',
+      // Arabic
+      'لا', 'خلاص', 'بس', 'مافي', 'ما في', 'لا شي',
+      'لا شيء', 'ماعندي', 'ما عندي', 'تمام', 'انتهيت',
+      'مو لازم', 'لا ملاحظات',
+    ];
+
+    for (final p in noPatterns) {
+      if (lower == p || lower == '$p.' || lower == '$p!') return true;
+    }
+
+    // Also match if the entire utterance is very short (≤3 words)
+    // and starts with "no" or "not" — e.g. "no I don't", "not really"
+    final words = lower.split(RegExp(r'\s+'));
+    if (words.length <= 4 &&
+        (lower.startsWith('no') ||
+            lower.startsWith('not') ||
+            lower.startsWith('nah') ||
+            lower.startsWith('لا') ||
+            lower.startsWith('خلاص') ||
+            lower.startsWith('بس'))) {
+      return true;
+    }
+
+    return false;
+  }
+
   // ====== Global Voice Cancellation ======
   String _normalizeArabicForCancel(String input) {
     // Remove diacritics
@@ -1464,6 +1747,230 @@ class VoiceAssistantService {
       return 'Four times a day';
     }
     return null;
+  }
+
+  /// Parse dose form from speech (English + Arabic)
+  String? parseDoseFormFromSpeech(String speech) {
+    final lower = speech.toLowerCase();
+
+    // English
+    if (lower.contains('capsule') || lower.contains('cap')) return 'Capsule';
+    if (lower.contains('syrup') ||
+        lower.contains('liquid') ||
+        lower.contains('solution'))
+      return 'Syrup';
+    if (lower.contains('cream') ||
+        lower.contains('ointment') ||
+        lower.contains('gel'))
+      return 'Cream/Ointment';
+    if (lower.contains('eye drop')) return 'Eye Drops';
+    if (lower.contains('ear drop')) return 'Ear Drops';
+    if (lower.contains('nasal') || lower.contains('nose spray'))
+      return 'Nasal Spray';
+    if (lower.contains('injection') ||
+        lower.contains('inject') ||
+        lower.contains('needle'))
+      return 'Injection';
+    if (lower.contains('other')) return 'Other';
+    // Generic 'drop' after specific eye/ear/nasal
+    if (lower.contains('drop')) return 'Eye Drops';
+
+    // Arabic (normalized)
+    if (speech.contains('كبسول')) return 'Capsule';
+    if (speech.contains('حبوب') ||
+        speech.contains('حبه') ||
+        speech.contains('اقراص') ||
+        speech.contains('قرص'))
+      return 'Capsule';
+    if (speech.contains('شراب') || speech.contains('محلول')) return 'Syrup';
+    if (speech.contains('كريم') ||
+        speech.contains('مرهم') ||
+        speech.contains('جل'))
+      return 'Cream/Ointment';
+    if (speech.contains('قطره') && speech.contains('عين')) return 'Eye Drops';
+    if (speech.contains('قطره') && speech.contains('اذن')) return 'Ear Drops';
+    if (speech.contains('بخاخ') && speech.contains('انف')) return 'Nasal Spray';
+    if (speech.contains('قطره')) return 'Eye Drops';
+    if (speech.contains('حقنه') || speech.contains('ابره')) return 'Injection';
+    if (speech.contains('بخاخ')) return 'Nasal Spray';
+
+    return null;
+  }
+
+  /// Parse duration from speech → number of days (or null for ongoing).
+  /// Supports relative ("7 days", "two weeks") AND specific dates
+  /// ("7 of March", "March 7th", "until the tenth of april", "٧ مارس").
+  int? parseDurationFromSpeech(String speech) {
+    final lower = speech.toLowerCase();
+
+    // "ongoing", "forever", "no end", "لا يوجد" → null means ongoing
+    if (lower.contains('ongoing') ||
+        lower.contains('forever') ||
+        lower.contains('no end') ||
+        lower.contains('مستمر') ||
+        lower.contains('لا يوجد')) {
+      return null;
+    }
+
+    // ── Try specific date first ("7 of March", "March 7th", "٧ مارس") ──
+    final dateResult = _parseDateFromSpeech(speech);
+    if (dateResult != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final diff = dateResult.difference(today).inDays;
+      if (diff > 0 && diff <= 365) {
+        debugPrint('📅 Parsed date: $dateResult → $diff days from today');
+        return diff;
+      }
+    }
+
+    // ── Relative durations ──
+
+    // English: "7 days", "two weeks", "1 month"
+    final daysMatch = RegExp(r'(\d+)\s*days?').firstMatch(lower);
+    if (daysMatch != null) {
+      final d = int.tryParse(daysMatch.group(1) ?? '');
+      if (d != null && d > 0 && d <= 365) return d;
+    }
+
+    final weeksMatch = RegExp(r'(\d+)\s*weeks?').firstMatch(lower);
+    if (weeksMatch != null) {
+      final w = int.tryParse(weeksMatch.group(1) ?? '');
+      if (w != null && w > 0 && w <= 52) return w * 7;
+    }
+
+    final monthsMatch = RegExp(r'(\d+)\s*months?').firstMatch(lower);
+    if (monthsMatch != null) {
+      final m = int.tryParse(monthsMatch.group(1) ?? '');
+      if (m != null && m > 0 && m <= 12) return m * 30;
+    }
+
+    // Word numbers
+    if (lower.contains('one week') || lower.contains('a week')) return 7;
+    if (lower.contains('two week')) return 14;
+    if (lower.contains('three week')) return 21;
+    if (lower.contains('one month') || lower.contains('a month')) return 30;
+    if (lower.contains('two month')) return 60;
+    if (lower.contains('three day')) return 3;
+    if (lower.contains('five day')) return 5;
+    if (lower.contains('ten day')) return 10;
+
+    // Arabic
+    if (speech.contains('اسبوعين')) return 14;
+    if (speech.contains('اسبوع')) return 7;
+    if (speech.contains('شهرين')) return 60;
+    if (speech.contains('شهر')) return 30;
+
+    final arDaysMatch = RegExp(r'(\d+)\s*(يوم|ايام)').firstMatch(speech);
+    if (arDaysMatch != null) {
+      final d = int.tryParse(arDaysMatch.group(1) ?? '');
+      if (d != null && d > 0 && d <= 365) return d;
+    }
+
+    return null; // default ongoing
+  }
+
+  /// Parse a specific date from speech like "7 of March", "March 7th",
+  /// "7th March", "the seventh of march", "until march 7", "٧ مارس"
+  DateTime? _parseDateFromSpeech(String speech) {
+    final lower = speech.toLowerCase().trim();
+
+    const monthMap = {
+      // English
+      'january': 1, 'jan': 1, 'february': 2, 'feb': 2,
+      'march': 3, 'mar': 3, 'april': 4, 'apr': 4,
+      'may': 5, 'june': 6, 'jun': 6, 'july': 7, 'jul': 7,
+      'august': 8, 'aug': 8, 'september': 9, 'sep': 9, 'sept': 9,
+      'october': 10, 'oct': 10, 'november': 11, 'nov': 11,
+      'december': 12, 'dec': 12,
+      // Arabic
+      'يناير': 1, 'فبراير': 2, 'مارس': 3, 'ابريل': 4, 'أبريل': 4,
+      'مايو': 5, 'يونيو': 6, 'يوليو': 7, 'اغسطس': 8, 'أغسطس': 8,
+      'سبتمبر': 9, 'اكتوبر': 10, 'أكتوبر': 10, 'نوفمبر': 11, 'ديسمبر': 12,
+    };
+
+    const ordinalMap = {
+      'first': 1,
+      'second': 2,
+      'third': 3,
+      'fourth': 4,
+      'fifth': 5,
+      'sixth': 6,
+      'seventh': 7,
+      'eighth': 8,
+      'ninth': 9,
+      'tenth': 10,
+      'eleventh': 11,
+      'twelfth': 12,
+      'thirteenth': 13,
+      'fourteenth': 14,
+      'fifteenth': 15,
+      'sixteenth': 16,
+      'seventeenth': 17,
+      'eighteenth': 18,
+      'nineteenth': 19,
+      'twentieth': 20,
+      'twenty first': 21,
+      'twenty second': 22,
+      'twenty third': 23,
+      'twenty fourth': 24,
+      'twenty fifth': 25,
+      'twenty sixth': 26,
+      'twenty seventh': 27,
+      'twenty eighth': 28,
+      'twenty ninth': 29,
+      'thirtieth': 30,
+      'thirty first': 31,
+    };
+
+    // Find which month
+    int? month;
+    for (final entry in monthMap.entries) {
+      if (lower.contains(entry.key) || speech.contains(entry.key)) {
+        month = entry.value;
+        break;
+      }
+    }
+    if (month == null) return null;
+
+    // Find the day number
+    int? day;
+
+    // Word ordinals ("seventh of march")
+    for (final entry in ordinalMap.entries) {
+      if (lower.contains(entry.key)) {
+        day = entry.value;
+        break;
+      }
+    }
+
+    // Digit patterns: "7 of march", "7th march", "march 7"
+    if (day == null) {
+      // Convert Arabic-Indic numerals to Western
+      String normalized = speech;
+      const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+      for (int i = 0; i < arabicDigits.length; i++) {
+        normalized = normalized.replaceAll(arabicDigits[i], '$i');
+      }
+
+      final digitMatch = RegExp(r'(\d{1,2})').firstMatch(normalized);
+      if (digitMatch != null) {
+        final d = int.tryParse(digitMatch.group(1) ?? '');
+        if (d != null && d >= 1 && d <= 31) day = d;
+      }
+    }
+
+    if (day == null) return null;
+
+    // Build date, roll to next year if in the past
+    final now = DateTime.now();
+    int year = now.year;
+    var candidate = DateTime(year, month, day);
+    if (candidate.isBefore(DateTime(now.year, now.month, now.day))) {
+      candidate = DateTime(year + 1, month, day);
+    }
+
+    return candidate;
   }
 
   List<TimeOfDay> expandTimesForFrequency(

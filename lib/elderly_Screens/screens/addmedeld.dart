@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -295,6 +296,35 @@ class _AddMedScreenState extends State<AddMedScreen> {
     int? selectedDuration = result.durationDays;
     DateTime? scanCustomEndDate;
 
+    // Wheel picker state for OCR duration
+    int ocrDurUnit = 0; // 0=Days, 1=Weeks, 2=Months
+    int ocrDurCount = 7;
+    String ocrDurMode = 'wheel'; // 'wheel' | 'ongoing' | 'custom'
+    const ocrUnits = ['Days', 'Weeks', 'Months'];
+    const ocrMaxVals = [30, 12, 12];
+
+    // Initialize from scanned duration
+    if (selectedDuration == null || selectedDuration == 0) {
+      ocrDurMode = 'ongoing';
+    } else if (selectedDuration == -1) {
+      ocrDurMode = 'custom';
+    } else if (selectedDuration! > 0) {
+      ocrDurMode = 'wheel';
+      if (selectedDuration! % 30 == 0 && selectedDuration! ~/ 30 <= 12) {
+        ocrDurUnit = 2;
+        ocrDurCount = selectedDuration! ~/ 30;
+      } else if (selectedDuration! % 7 == 0 && selectedDuration! ~/ 7 <= 12) {
+        ocrDurUnit = 1;
+        ocrDurCount = selectedDuration! ~/ 7;
+      } else {
+        ocrDurUnit = 0;
+        ocrDurCount = selectedDuration!.clamp(1, 30);
+      }
+    }
+    final ocrWheelCtrl = FixedExtentScrollController(
+      initialItem: ocrDurCount - 1,
+    );
+
     List<String> selectedDays = result.days.isNotEmpty
         ? List<String>.from(result.days)
         : <String>[];
@@ -309,7 +339,6 @@ class _AddMedScreenState extends State<AddMedScreen> {
       'Friday',
       'Saturday',
     ];
-
     List<String> getAllowedDays() {
       int? totalDays;
       if (selectedDuration != null && selectedDuration! > 0) {
@@ -612,6 +641,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                           const SizedBox(height: 18),
 
                           // ═══ Duration ═══
+                          // ═══ Duration ═══
                           const Text(
                             'Duration',
                             style: TextStyle(
@@ -620,25 +650,159 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              ...[3, 5, 7, 10, 14, 30].map((d) {
-                                final selected = selectedDuration == d;
-                                final label = d == 30
-                                    ? '1 month'
-                                    : d == 14
-                                    ? '2 weeks'
-                                    : '$d days';
-                                return ChoiceChip(
-                                  label: Text(
-                                    label,
-                                    style: const TextStyle(fontSize: 20),
+
+                          // Unit selector: Days / Weeks / Months
+                          Row(
+                            children: List.generate(3, (i) {
+                              final sel =
+                                  ocrDurMode == 'wheel' && ocrDurUnit == i;
+                              return Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    left: i == 0 ? 0 : 4,
+                                    right: i == 2 ? 0 : 4,
                                   ),
-                                  selected: selected,
+                                  child: ChoiceChip(
+                                    label: SizedBox(
+                                      width: double.infinity,
+                                      child: Text(
+                                        ocrUnits[i],
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: sel
+                                              ? FontWeight.bold
+                                              : FontWeight.w500,
+                                          color: sel
+                                              ? Colors.white
+                                              : Colors.grey[700],
+                                        ),
+                                      ),
+                                    ),
+                                    selected: sel,
+                                    onSelected: (_) => setSheetState(() {
+                                      ocrDurMode = 'wheel';
+                                      ocrDurUnit = i;
+                                      if (ocrDurCount > ocrMaxVals[i]) {
+                                        ocrDurCount = ocrMaxVals[i];
+                                      }
+                                      ocrWheelCtrl.jumpToItem(ocrDurCount - 1);
+                                      // Sync selectedDuration
+                                      final mult = [1, 7, 30][ocrDurUnit];
+                                      selectedDuration = ocrDurCount * mult;
+                                      scanCustomEndDate = null;
+                                      constrainDays();
+                                    }),
+                                    selectedColor: const Color(0xFF0D2D5D),
+                                    backgroundColor: Colors.grey.shade100,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    showCheckmark: false,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 6),
+
+                          // Compact wheel picker
+                          if (ocrDurMode == 'wheel')
+                            Container(
+                              height: 130,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F8FC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFF0D2D5D,
+                                  ).withOpacity(0.12),
+                                ),
+                              ),
+                              child: CupertinoPicker(
+                                scrollController: ocrWheelCtrl,
+                                itemExtent: 42,
+                                diameterRatio: 1.2,
+                                selectionOverlay: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.symmetric(
+                                      horizontal: BorderSide(
+                                        color: const Color(
+                                          0xFF0D2D5D,
+                                        ).withOpacity(0.18),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                onSelectedItemChanged: (index) {
+                                  setSheetState(() {
+                                    ocrDurCount = index + 1;
+                                    final mult = [1, 7, 30][ocrDurUnit];
+                                    selectedDuration = ocrDurCount * mult;
+                                    constrainDays();
+                                  });
+                                },
+                                children: List.generate(
+                                  ocrMaxVals[ocrDurUnit],
+                                  (i) => Center(
+                                    child: Text(
+                                      '${i + 1}',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0D2D5D),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // End date preview
+                          if (ocrDurMode == 'wheel')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                '${ocrDurCount} ${ocrUnits[ocrDurUnit].toLowerCase()}  •  Ends ${_formatEndDate(selectedDuration!)}',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  color: Color(0xFF104541),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+
+                          const SizedBox(height: 8),
+
+                          // Ongoing + Custom row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ChoiceChip(
+                                  label: SizedBox(
+                                    width: double.infinity,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Icon(Icons.all_inclusive, size: 18),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'Ongoing',
+                                          style: TextStyle(fontSize: 18),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  selected: ocrDurMode == 'ongoing',
                                   onSelected: (_) => setSheetState(() {
-                                    selectedDuration = selected ? null : d;
+                                    ocrDurMode = 'ongoing';
+                                    selectedDuration = null;
                                     scanCustomEndDate = null;
                                     constrainDays();
                                   }),
@@ -646,79 +810,82 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     0xFF0860A4,
                                   ).withOpacity(0.3),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
+                                    horizontal: 8,
+                                    vertical: 8,
                                   ),
-                                );
-                              }),
-                              ChoiceChip(
-                                label: Text(
-                                  selectedDuration == -1 &&
-                                          scanCustomEndDate != null
-                                      ? 'Custom: ${DateFormat('MMM d').format(scanCustomEndDate!)}'
-                                      : 'Custom',
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                                selected: selectedDuration == -1,
-                                onSelected: (_) async {
-                                  final now = DateTime.now();
-                                  final picked = await showDatePicker(
-                                    context: context,
-                                    initialDate:
-                                        scanCustomEndDate ??
-                                        now.add(const Duration(days: 7)),
-                                    firstDate: now,
-                                    lastDate: now.add(
-                                      const Duration(days: 365),
-                                    ),
-                                  );
-                                  if (picked != null) {
-                                    setSheetState(() {
-                                      selectedDuration = -1;
-                                      scanCustomEndDate = picked;
-                                      constrainDays();
-                                    });
-                                  }
-                                },
-                                selectedColor: const Color(
-                                  0xFF0860A4,
-                                ).withOpacity(0.3),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
                                 ),
                               ),
-                              ChoiceChip(
-                                label: const Text(
-                                  'Ongoing',
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                                selected: selectedDuration == null,
-                                onSelected: (_) => setSheetState(() {
-                                  selectedDuration = null;
-                                  scanCustomEndDate = null;
-                                  constrainDays();
-                                }),
-                                selectedColor: const Color(
-                                  0xFF0860A4,
-                                ).withOpacity(0.3),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ChoiceChip(
+                                  label: SizedBox(
+                                    width: double.infinity,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.calendar_today,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          ocrDurMode == 'custom' &&
+                                                  scanCustomEndDate != null
+                                              ? DateFormat(
+                                                  'MMM d',
+                                                ).format(scanCustomEndDate!)
+                                              : 'Custom',
+                                          style: const TextStyle(fontSize: 18),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  selected: ocrDurMode == 'custom',
+                                  onSelected: (_) async {
+                                    final now = DateTime.now();
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          scanCustomEndDate ??
+                                          now.add(const Duration(days: 7)),
+                                      firstDate: now,
+                                      lastDate: now.add(
+                                        const Duration(days: 365),
+                                      ),
+                                    );
+                                    if (picked != null) {
+                                      setSheetState(() {
+                                        ocrDurMode = 'custom';
+                                        selectedDuration = -1;
+                                        scanCustomEndDate = picked;
+                                        constrainDays();
+                                      });
+                                    }
+                                  },
+                                  selectedColor: const Color(
+                                    0xFF0860A4,
+                                  ).withOpacity(0.3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 8,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          if (selectedDuration != null &&
-                              selectedDuration != -1 &&
-                              selectedDuration! > 0)
+
+                          if (ocrDurMode == 'custom' &&
+                              scanCustomEndDate != null)
                             Padding(
-                              padding: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.only(top: 6),
                               child: Text(
-                                'Ends ${_formatEndDate(selectedDuration!)}',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: const Color(0xFF104541),
+                                'Ends ${DateFormat('MMM d, yyyy').format(scanCustomEndDate!)}',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  color: Color(0xFF104541),
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -1717,23 +1884,62 @@ class _Step2Duration extends StatefulWidget {
 }
 
 class _Step2DurationState extends State<_Step2Duration> {
-  int? _selected;
+  // 'wheel' | 'ongoing' | 'custom'
+  String _mode = 'wheel';
+  int _unitIndex = 0; // 0=Days, 1=Weeks, 2=Months
+  late FixedExtentScrollController _wheelCtrl;
+  int _count = 7; // default: 7 days
   DateTime? _customDate;
 
-  static const _presets = [
-    {'days': 3, 'label': '3 Days', 'sub': ''},
-    {'days': 5, 'label': '5 Days', 'sub': ''},
-    {'days': 7, 'label': '7 Days (1 Week)', 'sub': ''},
-    {'days': 10, 'label': '10 Days', 'sub': ''},
-    {'days': 14, 'label': '14 Days (2 Weeks)', 'sub': ''},
-    {'days': 30, 'label': '30 Days (1 Month)', 'sub': ''},
-  ];
+  static const _units = ['Days', 'Weeks', 'Months'];
+  static const _maxValues = [30, 12, 12];
 
   @override
   void initState() {
     super.initState();
-    _selected = widget.initialDurationDays;
+    final init = widget.initialDurationDays;
     _customDate = widget.initialCustomEndDate;
+
+    if (init == null || init == 0) {
+      // Ongoing
+      _mode = 'ongoing';
+      _count = 7;
+    } else if (init == -1) {
+      // Custom
+      _mode = 'custom';
+      _count = 7;
+    } else {
+      _mode = 'wheel';
+      // Reverse-engineer best unit
+      if (init % 30 == 0 && init ~/ 30 <= 12) {
+        _unitIndex = 2;
+        _count = init ~/ 30;
+      } else if (init % 7 == 0 && init ~/ 7 <= 12) {
+        _unitIndex = 1;
+        _count = init ~/ 7;
+      } else {
+        _unitIndex = 0;
+        _count = init.clamp(1, 30);
+      }
+    }
+    _wheelCtrl = FixedExtentScrollController(initialItem: _count - 1);
+  }
+
+  @override
+  void dispose() {
+    _wheelCtrl.dispose();
+    super.dispose();
+  }
+
+  int get _totalDays {
+    switch (_unitIndex) {
+      case 1:
+        return _count * 7;
+      case 2:
+        return _count * 30;
+      default:
+        return _count;
+    }
   }
 
   String _endDateLabel(int days) {
@@ -1755,20 +1961,32 @@ class _Step2DurationState extends State<_Step2Duration> {
         child: child!,
       ),
     );
-    if (picked != null)
+    if (picked != null) {
       setState(() {
-        _selected = -1;
+        _mode = 'custom';
         _customDate = picked;
       });
+    }
+  }
+
+  void _switchUnit(int newIndex) {
+    setState(() {
+      _unitIndex = newIndex;
+      // Clamp count to new max
+      if (_count > _maxValues[newIndex]) {
+        _count = _maxValues[newIndex];
+      }
+      _wheelCtrl.dispose();
+      _wheelCtrl = FixedExtentScrollController(initialItem: _count - 1);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final bool canProceed =
-        _selected != null &&
-        (_selected == 0 ||
-            _selected! > 0 ||
-            (_selected == -1 && _customDate != null));
+        _mode == 'ongoing' ||
+        _mode == 'wheel' ||
+        (_mode == 'custom' && _customDate != null);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -1782,106 +2000,135 @@ class _Step2DurationState extends State<_Step2Duration> {
               subtitle: 'How long should this medication be taken?',
             ),
 
-            ..._presets.map((p) {
-              final days = p['days'] as int;
-              final label = p['label'] as String;
-              final sub = p['sub'] as String;
-              final isSelected = _selected == days;
-
-              return GestureDetector(
-                onTap: () => setState(() {
-                  _selected = days;
-                  _customDate = null;
-                }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 239, 246, 253)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF0D2D5D)
-                          : const Color(0xFF5FA5A0).withOpacity(0.2),
-                      width: 2,
+            // ── Unit selector chips ──
+            Row(
+              children: List.generate(3, (i) {
+                final selected = _mode == 'wheel' && _unitIndex == i;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: i == 0 ? 0 : 5,
+                      right: i == 2 ? 0 : 5,
                     ),
-                    boxShadow: [
-                      if (isSelected)
-                        BoxShadow(
-                          color: const Color.fromARGB(
-                            255,
-                            146,
-                            214,
-                            209,
-                          ).withOpacity(0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                    child: ChoiceChip(
+                      label: SizedBox(
+                        width: double.infinity,
+                        child: Text(
+                          _units[i],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: selected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: selected ? Colors.white : Colors.grey[700],
+                          ),
                         ),
-                    ],
+                      ),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() => _mode = 'wheel');
+                        _switchUnit(i);
+                      },
+                      selectedColor: const Color(0xFF0D2D5D),
+                      backgroundColor: Colors.grey.shade100,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 4,
+                      ),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Radio<int>(
-                        value: days,
-                        groupValue: _selected,
-                        onChanged: (v) => setState(() {
-                          _selected = v;
-                          _customDate = null;
-                        }),
-                        activeColor: const Color.fromARGB(255, 34, 79, 133),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              label,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: isSelected
-                                    ? const Color.fromARGB(255, 26, 48, 95)
-                                    : const Color.fromARGB(255, 52, 52, 52),
-                              ),
-                            ),
-                            if (sub.isNotEmpty)
-                              Text(
-                                sub,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            if (isSelected)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  _endDateLabel(days),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: const Color(0xFF367470),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
+                );
+              }),
+            ),
+            const SizedBox(height: 8),
+
+            // ── Wheel picker ──
+            if (_mode == 'wheel')
+              Container(
+                height: 170,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F8FC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF0D2D5D).withOpacity(0.15),
                   ),
                 ),
-              );
-            }),
+                child: CupertinoPicker(
+                  scrollController: _wheelCtrl,
+                  itemExtent: 48,
+                  diameterRatio: 1.2,
+                  selectionOverlay: Container(
+                    decoration: BoxDecoration(
+                      border: Border.symmetric(
+                        horizontal: BorderSide(
+                          color: const Color(0xFF0D2D5D).withOpacity(0.2),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  onSelectedItemChanged: (index) {
+                    setState(() => _count = index + 1);
+                  },
+                  children: List.generate(
+                    _maxValues[_unitIndex],
+                    (i) => Center(
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF0D2D5D),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
-            // Custom date option
+            // ── End date preview ──
+            if (_mode == 'wheel')
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Center(
+                  child: Text(
+                    '${_count} ${_units[_unitIndex].toLowerCase()}  •  ${_endDateLabel(_totalDays)}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: const Color(0xFF367470),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 14),
+            // ── Divider ──
+            Row(
+              children: [
+                Expanded(child: Divider(color: Colors.grey.shade300)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'OR',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(color: Colors.grey.shade300)),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ── Custom Date option ──
             GestureDetector(
               onTap: _pickCustomDate,
               child: AnimatedContainer(
@@ -1892,27 +2139,22 @@ class _Step2DurationState extends State<_Step2Duration> {
                   horizontal: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: _selected == -1
+                  color: _mode == 'custom'
                       ? const Color.fromARGB(255, 239, 246, 253)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(
-                    color: _selected == -1
+                    color: _mode == 'custom'
                         ? const Color(0xFF0D2D5D)
-                        : const Color.fromARGB(
-                            255,
-                            186,
-                            219,
-                            217,
-                          ).withOpacity(0.2),
+                        : const Color(0xFF5FA5A0).withOpacity(0.2),
                     width: 2,
                   ),
                 ),
                 child: Row(
                   children: [
-                    Radio<int>(
-                      value: -1,
-                      groupValue: _selected,
+                    Radio<String>(
+                      value: 'custom',
+                      groupValue: _mode,
                       onChanged: (_) => _pickCustomDate(),
                       activeColor: const Color.fromARGB(255, 34, 79, 133),
                     ),
@@ -1924,18 +2166,18 @@ class _Step2DurationState extends State<_Step2Duration> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        _selected == -1 && _customDate != null
+                        _mode == 'custom' && _customDate != null
                             ? 'Custom: ${DateFormat('MMM d, yyyy').format(_customDate!)}'
-                            : 'Custom Date',
+                            : 'Pick a specific end date',
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: _selected == -1
+                          fontWeight: _mode == 'custom'
                               ? FontWeight.bold
                               : FontWeight.normal,
                         ),
                       ),
                     ),
-                    if (_selected == -1 && _customDate != null)
+                    if (_mode == 'custom' && _customDate != null)
                       TextButton(
                         onPressed: _pickCustomDate,
                         child: const Text(
@@ -1948,10 +2190,10 @@ class _Step2DurationState extends State<_Step2Duration> {
               ),
             ),
 
-            // ═══ Ongoing option ═══
+            // ── Ongoing option ──
             GestureDetector(
               onTap: () => setState(() {
-                _selected = 0;
+                _mode = 'ongoing';
                 _customDate = null;
               }),
               child: AnimatedContainer(
@@ -1962,18 +2204,18 @@ class _Step2DurationState extends State<_Step2Duration> {
                   horizontal: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: _selected == 0
+                  color: _mode == 'ongoing'
                       ? const Color.fromARGB(255, 239, 246, 253)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(
-                    color: _selected == 0
+                    color: _mode == 'ongoing'
                         ? const Color(0xFF0D2D5D)
                         : const Color(0xFF5FA5A0).withOpacity(0.2),
                     width: 2,
                   ),
                   boxShadow: [
-                    if (_selected == 0)
+                    if (_mode == 'ongoing')
                       BoxShadow(
                         color: const Color(0xFF5FA5A0).withOpacity(0.15),
                         blurRadius: 8,
@@ -1983,11 +2225,11 @@ class _Step2DurationState extends State<_Step2Duration> {
                 ),
                 child: Row(
                   children: [
-                    Radio<int>(
-                      value: 0,
-                      groupValue: _selected,
+                    Radio<String>(
+                      value: 'ongoing',
+                      groupValue: _mode,
                       onChanged: (v) => setState(() {
-                        _selected = 0;
+                        _mode = 'ongoing';
                         _customDate = null;
                       }),
                       activeColor: const Color.fromARGB(255, 34, 79, 133),
@@ -2003,10 +2245,10 @@ class _Step2DurationState extends State<_Step2Duration> {
                         'Ongoing (No end date)',
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: _selected == 0
+                          fontWeight: _mode == 'ongoing'
                               ? FontWeight.bold
                               : FontWeight.normal,
-                          color: _selected == 0
+                          color: _mode == 'ongoing'
                               ? const Color.fromARGB(255, 26, 48, 95)
                               : const Color.fromARGB(255, 52, 52, 52),
                         ),
@@ -2021,19 +2263,18 @@ class _Step2DurationState extends State<_Step2Duration> {
             ElevatedButton(
               onPressed: canProceed
                   ? () {
-                      if (_selected == 0) {
+                      if (_mode == 'ongoing') {
                         widget.onNext(null, null);
                         return;
                       }
-                      DateTime? endDate;
-                      if (_selected == -1) {
-                        endDate = _customDate;
-                      } else if (_selected != null && _selected! > 0) {
-                        endDate = DateTime.now().add(
-                          Duration(days: _selected!),
-                        );
+                      if (_mode == 'custom') {
+                        widget.onNext(-1, _customDate);
+                        return;
                       }
-                      widget.onNext(_selected, endDate);
+                      // wheel mode
+                      final days = _totalDays;
+                      final endDate = DateTime.now().add(Duration(days: days));
+                      widget.onNext(days, endDate);
                     }
                   : null,
               style: widget.buttonStyle,
