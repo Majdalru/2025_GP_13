@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class LocationPage extends StatelessWidget {
   const LocationPage({super.key});
@@ -7,11 +8,11 @@ class LocationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Location')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.location)),
       body: Center(
         child: Text(
-          "Coming Soon",
-          style: TextStyle(
+          AppLocalizations.of(context)!.comingSoon,
+          style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
             color: const Color.fromARGB(255, 51, 60, 116),

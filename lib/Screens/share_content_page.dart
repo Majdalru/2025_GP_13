@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
@@ -25,7 +26,6 @@ class _ShareContentPageState extends State<ShareContentPage> {
 
   bool _isUploading = false;
   bool _isRecording = false;
-
 
   @override
   void dispose() {
@@ -58,7 +58,8 @@ class _ShareContentPageState extends State<ShareContentPage> {
         setState(() => _isUploading = true);
         try {
           final File videoFile = File(file.path);
-          final String fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+          final String fileName =
+              '${DateTime.now().millisecondsSinceEpoch}.mp4';
 
           final url = await _sharingService.uploadFile(
             file: videoFile,
@@ -82,12 +83,18 @@ class _ShareContentPageState extends State<ShareContentPage> {
               item: item,
               elderlyId: widget.elderlyId,
             );
-            _showSnack('Video shared successfully!');
+            _showSnack(AppLocalizations.of(context)!.videoSharedSuccessfully);
           } else {
-            _showSnack('Failed to upload video', isError: true);
+            _showSnack(
+              AppLocalizations.of(context)!.failedToUploadVideo,
+              isError: true,
+            );
           }
         } catch (e) {
-          _showSnack('Error sharing video: $e', isError: true);
+          _showSnack(
+            AppLocalizations.of(context)!.errorSharingVideo(e.toString()),
+            isError: true,
+          );
         } finally {
           setState(() => _isUploading = false);
         }
@@ -100,18 +107,19 @@ class _ShareContentPageState extends State<ShareContentPage> {
     try {
       if (await _audioRecorder.hasPermission()) {
         final dir = await getTemporaryDirectory();
-        final path = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-        
-        await _audioRecorder.start(
-          path: path,
-          encoder: AudioEncoder.aacLc,
-        );
+        final path =
+            '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        await _audioRecorder.start(path: path, encoder: AudioEncoder.aacLc);
         setState(() {
           _isRecording = true;
         });
       }
     } catch (e) {
-      _showSnack('Error starting recording: $e', isError: true);
+      _showSnack(
+        AppLocalizations.of(context)!.errorStartingRecording(e.toString()),
+        isError: true,
+      );
     }
   }
 
@@ -126,7 +134,10 @@ class _ShareContentPageState extends State<ShareContentPage> {
         _confirmUploadVoice(path);
       }
     } catch (e) {
-      _showSnack('Error stopping recording: $e', isError: true);
+      _showSnack(
+        AppLocalizations.of(context)!.errorStoppingRecording(e.toString()),
+        isError: true,
+      );
     }
   }
 
@@ -137,7 +148,8 @@ class _ShareContentPageState extends State<ShareContentPage> {
         setState(() => _isUploading = true);
         try {
           final File audioFile = File(path);
-          final String fileName = '${DateTime.now().millisecondsSinceEpoch}.m4a';
+          final String fileName =
+              '${DateTime.now().millisecondsSinceEpoch}.m4a';
 
           final url = await _sharingService.uploadFile(
             file: audioFile,
@@ -161,45 +173,49 @@ class _ShareContentPageState extends State<ShareContentPage> {
               item: item,
               elderlyId: widget.elderlyId,
             );
-            _showSnack('Voice message shared successfully!');
+            _showSnack(
+              AppLocalizations.of(context)!.voiceMessageSharedSuccessfully,
+            );
           }
         } catch (e) {
-          _showSnack('Error sharing voice: $e', isError: true);
+          _showSnack(
+            AppLocalizations.of(context)!.errorSharingVoice(e.toString()),
+            isError: true,
+          );
         } finally {
           setState(() => _isUploading = false);
         }
       },
     );
   }
-  
-
 
   void _showTitleDialog({
     required String type,
     required Function(String) onConfirm,
   }) {
-    _titleController.text = '$type ${DateTime.now().hour}:${DateTime.now().minute}';
+    _titleController.text =
+        '$type ${DateTime.now().hour}:${DateTime.now().minute}';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Name this $type'),
+        title: Text(AppLocalizations.of(context)!.nameThisType(type)),
         content: TextField(
           controller: _titleController,
-          decoration: const InputDecoration(
-            hintText: 'Enter title (optional)',
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context)!.enterTitleOptional,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               onConfirm(_titleController.text);
             },
-            child: const Text('Share'),
+            child: Text(AppLocalizations.of(context)!.share),
           ),
         ],
       ),
@@ -211,9 +227,9 @@ class _ShareContentPageState extends State<ShareContentPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB), // Light grey background
       appBar: AppBar(
-        title: const Text(
-          'Share with Elderly',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+        title: Text(
+          AppLocalizations.of(context)!.shareWithElderly,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
@@ -240,10 +256,7 @@ class _ShareContentPageState extends State<ShareContentPage> {
                 const Text(
                   'Choose a media type below',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF6B7280),
-                  ),
+                  style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
                 ),
                 const SizedBox(height: 40),
 
@@ -261,19 +274,19 @@ class _ShareContentPageState extends State<ShareContentPage> {
                 // Voice Card
                 _buildActionCard(
                   title: _isRecording ? 'Recording...' : 'Voice Message',
-                  subtitle: _isRecording
-                      ? 'Tap to Stop'
-                      : 'Tap to Record',
+                  subtitle: _isRecording ? 'Tap to Stop' : 'Tap to Record',
                   icon: _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                  color: _isRecording ? Colors.red.shade600 : Colors.blue.shade600,
+                  color: _isRecording
+                      ? Colors.red.shade600
+                      : Colors.blue.shade600,
                   isRecording: _isRecording,
                   onTap: _isRecording ? _stopRecording : _startRecording,
                 ),
 
                 const SizedBox(height: 40),
-                const Text(
-                  'Recently Shared',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.recentlyShared,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF374151),
@@ -289,15 +302,15 @@ class _ShareContentPageState extends State<ShareContentPage> {
           if (_isUploading)
             Container(
               color: Colors.black.withValues(alpha: 0.5),
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 20),
+                    const CircularProgressIndicator(color: Colors.white),
+                    const SizedBox(height: 20),
                     Text(
-                      'Uploading...',
-                      style: TextStyle(
+                      AppLocalizations.of(context)!.uploading,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -324,9 +337,9 @@ class _ShareContentPageState extends State<ShareContentPage> {
         }
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
-          return const Text(
-            'No items shared yet.',
-            style: TextStyle(color: Colors.grey),
+          return Text(
+            AppLocalizations.of(context)!.noItemsSharedYet,
+            style: const TextStyle(color: Colors.grey),
           );
         }
 
@@ -383,7 +396,11 @@ class _ShareContentPageState extends State<ShareContentPage> {
           child: Icon(icon, color: color),
         ),
         title: Text(
-          item.title.isNotEmpty ? item.title : item.type.name,
+          item.title.isNotEmpty
+              ? item.title
+              : (item.type == SharedItemType.video
+                    ? AppLocalizations.of(context)!.video
+                    : AppLocalizations.of(context)!.voiceMessage),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
@@ -401,12 +418,12 @@ class _ShareContentPageState extends State<ShareContentPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Item?'),
-        content: const Text('Are you sure you want to delete this shared item?'),
+        title: Text(AppLocalizations.of(context)!.deleteItem),
+        content: Text(AppLocalizations.of(context)!.areYouSureDeleteSharedItem),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -416,12 +433,20 @@ class _ShareContentPageState extends State<ShareContentPage> {
                   elderlyId: widget.elderlyId,
                   item: item,
                 );
-                _showSnack('Item deleted successfully');
+                _showSnack(
+                  AppLocalizations.of(context)!.itemDeletedSuccessfully,
+                );
               } catch (e) {
-                _showSnack('Error deleting item: $e', isError: true);
+                _showSnack(
+                  AppLocalizations.of(context)!.errorDeletingItem(e.toString()),
+                  isError: true,
+                );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -468,14 +493,10 @@ class _ShareContentPageState extends State<ShareContentPage> {
                     color: color.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    icon,
-                    size: 40,
-                    color: color,
-                  ),
+                  child: Icon(icon, size: 40, color: color),
                 ),
                 const SizedBox(width: 24),
-                
+
                 // Text Content
                 Expanded(
                   child: Column(
@@ -487,7 +508,9 @@ class _ShareContentPageState extends State<ShareContentPage> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: isRecording ? Colors.red.shade700 : const Color(0xFF1F2937),
+                          color: isRecording
+                              ? Colors.red.shade700
+                              : const Color(0xFF1F2937),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -501,7 +524,7 @@ class _ShareContentPageState extends State<ShareContentPage> {
                     ],
                   ),
                 ),
-                
+
                 // Arrow or status indicator
                 Icon(
                   Icons.arrow_forward_ios_rounded,

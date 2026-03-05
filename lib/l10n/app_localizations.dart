@@ -134,24 +134,6 @@ abstract class AppLocalizations {
   /// **'Elderly'**
   String get elderly;
 
-  /// No description provided for @requiredField.
-  ///
-  /// In en, this message translates to:
-  /// **'Required'**
-  String get requiredField;
-
-  /// No description provided for @invalidEmail.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a valid email'**
-  String get invalidEmail;
-
-  /// No description provided for @shortPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Min 6 characters'**
-  String get shortPassword;
-
   /// No description provided for @forgotPassword.
   ///
   /// In en, this message translates to:
@@ -524,24 +506,6 @@ abstract class AppLocalizations {
   /// **'Edit Info'**
   String get editInfo;
 
-  /// No description provided for @name.
-  ///
-  /// In en, this message translates to:
-  /// **'Name'**
-  String get name;
-
-  /// No description provided for @nameRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Name is required'**
-  String get nameRequired;
-
-  /// No description provided for @gender.
-  ///
-  /// In en, this message translates to:
-  /// **'Gender'**
-  String get gender;
-
   /// No description provided for @male.
   ///
   /// In en, this message translates to:
@@ -866,12 +830,6 @@ abstract class AppLocalizations {
   /// **'Undo'**
   String get undo;
 
-  /// No description provided for @favorites.
-  ///
-  /// In en, this message translates to:
-  /// **'Favorites'**
-  String get favorites;
-
   /// No description provided for @medications.
   ///
   /// In en, this message translates to:
@@ -902,12 +860,6 @@ abstract class AppLocalizations {
   /// **'Edit'**
   String get edit;
 
-  /// No description provided for @delete.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete'**
-  String get delete;
-
   /// No description provided for @errorLoadingVideo.
   ///
   /// In en, this message translates to:
@@ -920,12 +872,6 @@ abstract class AppLocalizations {
   /// **'Error loading audio: {error}'**
   String errorLoadingAudio(String error);
 
-  /// No description provided for @media.
-  ///
-  /// In en, this message translates to:
-  /// **'Media'**
-  String get media;
-
   /// No description provided for @searchFavorites.
   ///
   /// In en, this message translates to:
@@ -937,30 +883,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No results found'**
   String get noResultsFound;
-
-  /// No description provided for @voiceCommandFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Voice command failed, please try again.'**
-  String get voiceCommandFailed;
-
-  /// No description provided for @health.
-  ///
-  /// In en, this message translates to:
-  /// **'Health'**
-  String get health;
-
-  /// No description provided for @story.
-  ///
-  /// In en, this message translates to:
-  /// **'Story'**
-  String get story;
-
-  /// No description provided for @quran.
-  ///
-  /// In en, this message translates to:
-  /// **'Quran'**
-  String get quran;
 
   /// No description provided for @searchForAudio.
   ///
@@ -1537,6 +1459,612 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You need to be logged in.'**
   String get youNeedToBeLoggedIn;
+
+  /// No description provided for @emailAlreadyInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Email already in use'**
+  String get emailAlreadyInUse;
+
+  /// No description provided for @phoneAlreadyUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number already used'**
+  String get phoneAlreadyUsed;
+
+  /// No description provided for @accountCreatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created ✅'**
+  String get accountCreatedSuccess;
+
+  /// No description provided for @invalidEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email address.'**
+  String get invalidEmailAddress;
+
+  /// No description provided for @weakPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Weak password.'**
+  String get weakPassword;
+
+  /// No description provided for @errorPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String errorPrefix(String error);
+
+  /// No description provided for @caregiverSignUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Caregiver Sign Up'**
+  String get caregiverSignUp;
+
+  /// No description provided for @requiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get requiredField;
+
+  /// No description provided for @enterValidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email'**
+  String get enterValidEmail;
+
+  /// No description provided for @firstName.
+  ///
+  /// In en, this message translates to:
+  /// **'First name'**
+  String get firstName;
+
+  /// No description provided for @lastName.
+  ///
+  /// In en, this message translates to:
+  /// **'Last name'**
+  String get lastName;
+
+  /// No description provided for @gender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get gender;
+
+  /// No description provided for @phoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get phoneNumber;
+
+  /// No description provided for @enterValidSaudiNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid Saudi number (05XXXXXXXX)'**
+  String get enterValidSaudiNumber;
+
+  /// No description provided for @min6Chars.
+  ///
+  /// In en, this message translates to:
+  /// **'Min 6 characters'**
+  String get min6Chars;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get confirmPassword;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @elderlySignUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Elderly Sign Up'**
+  String get elderlySignUp;
+
+  /// No description provided for @invalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email.'**
+  String get invalidEmail;
+
+  /// No description provided for @networkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Network error. Check connection.'**
+  String get networkError;
+
+  /// No description provided for @stepXofY.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {total}'**
+  String stepXofY(int step, int total);
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @accountEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Email'**
+  String get accountEmail;
+
+  /// No description provided for @personalInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Info'**
+  String get personalInfo;
+
+  /// No description provided for @contactInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Info'**
+  String get contactInfo;
+
+  /// No description provided for @phoneStartWith05.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number must start with 05'**
+  String get phoneStartWith05;
+
+  /// No description provided for @accountSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Security'**
+  String get accountSecurity;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// No description provided for @emailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Email sent'**
+  String get emailSent;
+
+  /// No description provided for @passwordResetLinkSent.
+  ///
+  /// In en, this message translates to:
+  /// **'A password reset link has been sent to your email.'**
+  String get passwordResetLinkSent;
+
+  /// No description provided for @error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// No description provided for @somethingWentWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong.'**
+  String get somethingWentWrong;
+
+  /// No description provided for @resetPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get resetPassword;
+
+  /// No description provided for @willSendPasswordResetLink.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll send a password reset link to your email.'**
+  String get willSendPasswordResetLink;
+
+  /// No description provided for @emailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get emailAddress;
+
+  /// No description provided for @pleaseEnterYourEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your email'**
+  String get pleaseEnterYourEmail;
+
+  /// No description provided for @sendResetLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get sendResetLink;
+
+  /// No description provided for @lastUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Last update'**
+  String get lastUpdate;
+
+  /// No description provided for @refreshLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh location'**
+  String get refreshLocation;
+
+  /// No description provided for @videoSharedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Video shared successfully!'**
+  String get videoSharedSuccessfully;
+
+  /// No description provided for @failedToUploadVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload video'**
+  String get failedToUploadVideo;
+
+  /// No description provided for @errorSharingVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Error sharing video: {error}'**
+  String errorSharingVideo(String error);
+
+  /// No description provided for @errorStartingRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Error starting recording: {error}'**
+  String errorStartingRecording(String error);
+
+  /// No description provided for @errorStoppingRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Error stopping recording: {error}'**
+  String errorStoppingRecording(String error);
+
+  /// No description provided for @voiceMessageSharedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message shared successfully!'**
+  String get voiceMessageSharedSuccessfully;
+
+  /// No description provided for @errorSharingVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Error sharing voice: {error}'**
+  String errorSharingVoice(String error);
+
+  /// No description provided for @nameThisType.
+  ///
+  /// In en, this message translates to:
+  /// **'Name this {type}'**
+  String nameThisType(String type);
+
+  /// No description provided for @enterTitleOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter title (optional)'**
+  String get enterTitleOptional;
+
+  /// No description provided for @shareVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Video'**
+  String get shareVideo;
+
+  /// No description provided for @pickFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick from Gallery'**
+  String get pickFromGallery;
+
+  /// No description provided for @recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording...'**
+  String get recording;
+
+  /// No description provided for @voiceMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Message'**
+  String get voiceMessage;
+
+  /// No description provided for @tapToStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to Stop'**
+  String get tapToStop;
+
+  /// No description provided for @tapToRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to Record'**
+  String get tapToRecord;
+
+  /// No description provided for @recentlyShared.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently Shared'**
+  String get recentlyShared;
+
+  /// No description provided for @uploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading...'**
+  String get uploading;
+
+  /// No description provided for @noItemsSharedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No items shared yet.'**
+  String get noItemsSharedYet;
+
+  /// No description provided for @media.
+  ///
+  /// In en, this message translates to:
+  /// **'Media'**
+  String get media;
+
+  /// No description provided for @story.
+  ///
+  /// In en, this message translates to:
+  /// **'Story'**
+  String get story;
+
+  /// No description provided for @quran.
+  ///
+  /// In en, this message translates to:
+  /// **'Quran'**
+  String get quran;
+
+  /// No description provided for @health.
+  ///
+  /// In en, this message translates to:
+  /// **'Health'**
+  String get health;
+
+  /// No description provided for @favorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get favorites;
+
+  /// No description provided for @voiceCommandFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice command failed. Please try again.'**
+  String get voiceCommandFailed;
+
+  /// No description provided for @alreadyOnMediaPage.
+  ///
+  /// In en, this message translates to:
+  /// **'You are already on the media page.'**
+  String get alreadyOnMediaPage;
+
+  /// No description provided for @goingBackToHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Going back to the home page.'**
+  String get goingBackToHome;
+
+  /// No description provided for @manageMedicationsInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'To manage your medications, please go back to the home page and open the medications section.'**
+  String get manageMedicationsInstruction;
+
+  /// No description provided for @startingSosFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Here we will start the SOS emergency flow.'**
+  String get startingSosFlow;
+
+  /// No description provided for @settingsNotAvailableHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings are not available from the media page yet.'**
+  String get settingsNotAvailableHere;
+
+  /// No description provided for @mediaCategoryPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story , Caregiver or favorites'**
+  String get mediaCategoryPrompt;
+
+  /// No description provided for @stoppingVoiceAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, I will stop now.'**
+  String get stoppingVoiceAssistant;
+
+  /// No description provided for @didNotCatchThat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sorry, I didn\'t catch that.'**
+  String get didNotCatchThat;
+
+  /// No description provided for @categoryNotUnderstood.
+  ///
+  /// In en, this message translates to:
+  /// **'Sorry, I didn\'t understand that category. Please try again.'**
+  String get categoryNotUnderstood;
+
+  /// No description provided for @specificOrRandomPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, {matchedCategory}. Do you want to play something specific or random?'**
+  String specificOrRandomPrompt(String matchedCategory);
+
+  /// No description provided for @sayAudioOrVideoName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please say the name of the audio or the video that you want.'**
+  String get sayAudioOrVideoName;
+
+  /// No description provided for @didNotHearTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'I didn\'t hear a title.'**
+  String get didNotHearTitle;
+
+  /// No description provided for @playingRandomFromCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, playing something random from {matchedCategory}.'**
+  String playingRandomFromCategory(String matchedCategory);
+
+  /// No description provided for @mustBeLoggedInForFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in for favorites.'**
+  String get mustBeLoggedInForFavorites;
+
+  /// No description provided for @noAudioFoundForCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'No audio found for {category}.'**
+  String noAudioFoundForCategory(String category);
+
+  /// No description provided for @playingItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing {title}'**
+  String playingItem(String title);
+
+  /// No description provided for @couldNotFindAudioNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'I couldn\'t find any audio named {searchTitle} in {category}.'**
+  String couldNotFindAudioNamed(String searchTitle, String category);
+
+  /// No description provided for @somethingWentWrongWhileSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while searching.'**
+  String get somethingWentWrongWhileSearching;
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// No description provided for @audio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get audio;
+
+  /// No description provided for @video.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get video;
+
+  /// No description provided for @familyMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Family Media'**
+  String get familyMedia;
+
+  /// No description provided for @pleaseLogInFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in first.'**
+  String get pleaseLogInFirst;
+
+  /// No description provided for @noMediaSharedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No media shared yet.'**
+  String get noMediaSharedYet;
+
+  /// No description provided for @noMediaInThisFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'No media in this filter.'**
+  String get noMediaInThisFilter;
+
+  /// No description provided for @deleteMediaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Media?'**
+  String get deleteMediaTitle;
+
+  /// No description provided for @confirmDeleteSpecificMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this specific media?'**
+  String get confirmDeleteSpecificMedia;
+
+  /// No description provided for @mediaDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Media deleted successfully'**
+  String get mediaDeletedSuccessfully;
+
+  /// No description provided for @errorDeletingMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Error deleting media: {error}'**
+  String errorDeletingMedia(String error);
+
+  /// No description provided for @share.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get share;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @deleteItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Item?'**
+  String get deleteItem;
+
+  /// No description provided for @areYouSureDeleteSharedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this shared item?'**
+  String get areYouSureDeleteSharedItem;
+
+  /// No description provided for @itemDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Item deleted successfully'**
+  String get itemDeletedSuccessfully;
+
+  /// No description provided for @errorDeletingItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Error deleting item: {error}'**
+  String errorDeletingItem(String error);
+
+  /// No description provided for @comingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming Soon'**
+  String get comingSoon;
+
+  /// No description provided for @shortPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Min 6 characters'**
+  String get shortPassword;
+
+  /// No description provided for @name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get name;
 }
 
 class _AppLocalizationsDelegate

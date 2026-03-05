@@ -2180,7 +2180,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                       }
                     : null,
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),
@@ -2386,7 +2386,7 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
                     ? () => widget.onNext(_selectedDays)
                     : null,
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),
@@ -2467,7 +2467,7 @@ class _Step4HowManyTimesPerDayState extends State<_Step4HowManyTimesPerDay> {
                     ? () => widget.onNext(_selectedFrequency!)
                     : null,
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),
@@ -2624,7 +2624,7 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
                         );
                       },
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),
@@ -2700,7 +2700,7 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
               ElevatedButton(
                 onPressed: () => widget.onNext(_notesController.text),
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),

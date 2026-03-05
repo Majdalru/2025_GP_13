@@ -124,9 +124,6 @@
   },
   "editInfo": "تعديل المعلومات",
   "name": "الاسم",
-  "nameRequired": "الاسم مطلوب",
-  "gender": "الجنس",
-  "male": "ذكر",
   "female": "أنثى",
   "selectGender": "اختر الجنس",
   "mobile": "رقم الجوال (05XXXXXXXX)",
@@ -252,7 +249,6 @@
   "markAsTakenLate": "تحديد كمأخوذ متأخراً",
   "markAsTaken": "تحديد كمأخوذ",
   "undo": "تراجع",
-  "favorites": "المفضلة",
   "medications": "الأدوية",
   "addNewMedication": "إضافة دواء جديد",
   "errorDeletingMedication": "خطأ في حذف الدواء: {error}",
@@ -265,7 +261,6 @@
   },
   "errorLoadingMedications": "خطأ في تحميل الأدوية.",
   "edit": "تعديل",
-  "delete": "حذف",
   "errorLoadingVideo": "خطأ في تحميل الفيديو: {error}",
   "@errorLoadingVideo": {
     "placeholders": {
@@ -282,12 +277,10 @@
       }
     }
   },
-  "media": "الوسائط",
   "searchFavorites": "البحث في المفضلة...",
   "noResultsFound": "لم يتم العثور على نتائج",
   "voiceCommandFailed": "فشل الأمر الصوتي، يرجى المحاولة مرة أخرى.",
   "health": "الصحة",
-  "story": "قصة",
   "quran": "قرآن",
   "searchForAudio": "البحث عن مقطع صوتي...",
   "addedToFavorites": "تمت الإضافة إلى المفضلة بنجاح",
@@ -457,5 +450,223 @@
       }
     }
   },
-  "youNeedToBeLoggedIn": "يجب تسجيل الدخول أولاً."
+  "youNeedToBeLoggedIn": "يجب تسجيل الدخول أولاً.",
+  "emailAlreadyInUse": "البريد الإلكتروني مستخدم بالفعل",
+  "phoneAlreadyUsed": "رقم الهاتف مستخدم بالفعل",
+  "accountCreatedSuccess": "تم إنشاء الحساب بنجاح ✅",
+  "invalidEmailAddress": "عنوان البريد الإلكتروني غير صالح.",
+  "weakPassword": "كلمة المرور ضعيفة.",
+  "errorPrefix": "تفاصيل الخطأ: {error}",
+  "@errorPrefix": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "caregiverSignUp": "تسجيل مقدم الرعاية",
+  "email": "البريد الإلكتروني",
+  "requiredField": "مطلوب",
+  "enterValidEmail": "أدخل بريد إلكتروني صالح",
+  "firstName": "الاسم الأول",
+  "lastName": "الاسم الأخير",
+  "gender": "الجنس",
+  "male": "ذكر",
+  "female": "أنثى",
+  "phoneNumber": "رقم الهاتف",
+  "enterValidSaudiNumber": "أدخل رقم سعودي صحيح (05XXXXXXXX)",
+  "password": "كلمة المرور",
+  "min6Chars": "على الأقل 6 أحرف",
+  "confirmPassword": "تأكيد كلمة المرور",
+  "passwordsDoNotMatch": "كلمات المرور غير متطابقة",
+  "signUp": "تسجيل",
+  "elderlySignUp": "تسجيل كبير السن",
+  "invalidEmail": "بريد إلكتروني غير صالح.",
+  "networkError": "خطأ في الشبكة. تحقق من الاتصال.",
+  "stepXofY": "خطوة {step} من {total}",
+  "@stepXofY": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "back": "رجوع",
+  "next": "التالي",
+  "accountEmail": "البريد الإلكتروني للحساب",
+  "personalInfo": "المعلومات الشخصية",
+  "contactInfo": "معلومات الاتصال",
+  "phoneStartWith05": "يجب أن يبدأ رقم الهاتف بـ 05",
+  "accountSecurity": "أمان الحساب",
+  "confirm": "تأكيد",
+  "ok": "موافق",
+  "emailSent": "تم إرسال البريد الإلكتروني",
+  "passwordResetLinkSent": "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.",
+  "error": "خطأ",
+  "somethingWentWrong": "حدث خطأ ما",
+  "resetPassword": "إعادة تعيين كلمة المرور",
+  "willSendPasswordResetLink": "سنرسل رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.",
+  "emailAddress": "عنوان البريد الإلكتروني",
+  "pleaseEnterYourEmail": "الرجاء إدخال بريدك الإلكتروني",
+  "sendResetLink": "إرسال رابط إعادة التعيين",
+  "location": "الموقع",
+  "lastUpdate": "آخر تحديث",
+  "refreshLocation": "تحديث الموقع",
+  "videoSharedSuccessfully": "تمت مشاركة الفيديو بنجاح!",
+  "failedToUploadVideo": "فشل تحميل الفيديو",
+  "errorSharingVideo": "خطأ في مشاركة الفيديو: {error}",
+  "@errorSharingVideo": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorStartingRecording": "خطأ في بدء التسجيل: {error}",
+  "@errorStartingRecording": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorStoppingRecording": "خطأ في إيقاف التسجيل: {error}",
+  "@errorStoppingRecording": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceMessageSharedSuccessfully": "تمت مشاركة الرسالة الصوتية بنجاح!",
+  "errorSharingVoice": "خطأ في مشاركة الصوت: {error}",
+  "@errorSharingVoice": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "nameThisType": "قم بتسمية هذا الـ {type}",
+  "@nameThisType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "enterTitleOptional": "أدخل عنوانًا (اختياري)",
+  "shareWithElderly": "مشاركة مع كبير السن",
+  "whatWouldYouLikeToShare": "ماذا تود أن تشارك اليوم؟",
+  "chooseAMediaType": "اختر نوع الوسائط أدناه",
+  "shareVideo": "مشاركة فيديو",
+  "pickFromGallery": "اختيار من المعرض",
+  "recording": "جاري التسجيل...",
+  "voiceMessage": "رسالة صوتية",
+  "tapToStop": "انقر للإيقاف",
+  "tapToRecord": "انقر للتسجيل",
+  "recentlyShared": "تمت مشاركته مؤخرًا",
+  "uploading": "جاري الرفع...",
+  "noItemsSharedYet": "لا توجد عناصر مشتركة بعد.",
+  "media": "الوسائط",
+  "story": "قصص",
+  "quran": "قرآن",
+  "caregiver": "مقدم الرعاية",
+  "favorites": "المفضلة",
+  "voiceCommandFailed": "فشل الأمر الصوتي. حاول مرة أخرى.",
+  "alreadyOnMediaPage": "أنت بالفعل في صفحة الوسائط.",
+  "goingBackToHome": "العودة إلى الصفحة الرئيسية.",
+  "manageMedicationsInstruction": "لإدارة أدويتك، يرجى العودة إلى الصفحة الرئيسية وفتح قسم الأدوية.",
+  "startingSosFlow": "سنبدأ هنا بتدفق الطوارئ SOS.",
+  "settingsNotAvailableHere": "الإعدادات غير متوفرة من صفحة الوسائط بعد.",
+  "mediaCategoryPrompt": "أنت في صفحة الوسائط. من أي فئة تريدني أن أشغل شيئًا؟ اختر صحة، قرآن، قصص، مقدم الرعاية أو المفضلة.",
+  "stoppingVoiceAssistant": "حسنا، سأتوقف الآن.",
+  "didNotCatchThat": "عذراً، لم أفهم ذلك.",
+  "categoryNotUnderstood": "عذراً، لم أفهم الفئة. يرجى المحاولة مرة أخرى.",
+  "specificOrRandomPrompt": "حسنا، {matchedCategory}. هل ترغب في تشغيل شيء محدد أم عشوائي؟",
+  "@specificOrRandomPrompt": {
+    "placeholders": {
+      "matchedCategory": {
+        "type": "String"
+      }
+    }
+  },
+  "sayAudioOrVideoName": "الرجاء قول اسم المقطع الصوتي أو الفيديو الذي تريده.",
+  "didNotHearTitle": "لم أسمع عنواناً.",
+  "playingRandomFromCategory": "حسنا، أقوم بتشغيل شيء عشوائي من {matchedCategory}.",
+  "@playingRandomFromCategory": {
+    "placeholders": {
+      "matchedCategory": {
+        "type": "String"
+      }
+    }
+  },
+  "mustBeLoggedInForFavorites": "يجب تسجيل الدخول للوصول إلى المفضلة.",
+  "noAudioFoundForCategory": "لم يتم العثور على مقاطع صوتية لـ {category}.",
+  "@noAudioFoundForCategory": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "somethingWentWrong": "حدث خطأ ما.",
+  "playingItem": "تشغيل {title}",
+  "@playingItem": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "couldNotFindAudioNamed": "لم أتمكن من العثور على أي مقطع باسم {searchTitle} في {category}.",
+  "@couldNotFindAudioNamed": {
+    "placeholders": {
+      "searchTitle": {
+        "type": "String"
+      },
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "somethingWentWrongWhileSearching": "حدث خطأ أثناء البحث.",
+  "all": "الكل",
+  "audio": "صوت",
+  "video": "فيديو",
+  "familyMedia": "وسائط العائلة",
+  "pleaseLogInFirst": "الرجاء تسجيل الدخول أولاً.",
+  "noMediaSharedYet": "لا توجد وسائط مشتركة بعد.",
+  "noMediaInThisFilter": "لا توجد وسائط في هذا الفلتر.",
+  "deleteMediaTitle": "حذف الوسائط؟",
+  "confirmDeleteSpecificMedia": "هل أنت متأكد من رغبتك في حذف هذه الوسائط المحددة؟",
+  "mediaDeletedSuccessfully": "تم حذف الوسائط بنجاح",
+  "errorDeletingMedia": "خطأ في حذف الوسائط: {error}",
+  "@errorDeletingMedia": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "إلغاء",
+  "share": "مشاركة",
+  "delete": "حذف",
+  "deleteItem": "حذف العنصر؟",
+  "areYouSureDeleteSharedItem": "هل أنت متأكد أنك تريد حذف هذا العنصر المشترك؟",
+  "itemDeletedSuccessfully": "تم حذف العنصر بنجاح",
+  "errorDeletingItem": "خطأ في حذف العنصر: {error}",
+  "@errorDeletingItem": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "comingSoon": "قريباً",
+  "shortPassword": "الأدنى 6 أحرف",
+  "name": "الاسم"
 }

@@ -106,7 +106,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: const Color(0xFF1B3A52),
-        title: const Text("Media"),
+        title: Text(AppLocalizations.of(context)!.media),
         titleTextStyle: const TextStyle(
           fontSize: 34,
           color: Colors.white,
@@ -537,11 +537,15 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   Future<void> _handleGlobalCommand(VoiceCommand cmd) async {
     switch (cmd) {
       case VoiceCommand.goToMedia:
-        await _voiceService.speak('You are already on the media page.');
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.alreadyOnMediaPage,
+        );
         break;
 
       case VoiceCommand.goToHome:
-        await _voiceService.speak('Going back to the home page.');
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.goingBackToHome,
+        );
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop();
         }
@@ -552,18 +556,20 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       case VoiceCommand.editMedication:
       case VoiceCommand.deleteMedication:
         await _voiceService.speak(
-          'To manage your medications, please go back to the home page and open the medications section.',
+          AppLocalizations.of(context)!.manageMedicationsInstruction,
         );
         break;
 
       case VoiceCommand.sos:
-        await _voiceService.speak('Here we will start the SOS emergency flow.');
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.startingSosFlow,
+        );
         // TODO: استدعاء منطق الـ SOS الحقيقي
         break;
 
       case VoiceCommand.goToSettings:
         await _voiceService.speak(
-          'Settings are not available from the media page yet.',
+          AppLocalizations.of(context)!.settingsNotAvailableHere,
         );
         break;
     }
@@ -592,7 +598,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     try {
       // --- STEP 1: Ask Category ---
       await _voiceService.speak(
-        "You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story , Caregiver or favorites",
+        AppLocalizations.of(context)!.mediaCategoryPrompt,
       );
 
       String? categoryAnswer = await _voiceService.listenWhisper(seconds: 5);
@@ -600,7 +606,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       // ✅ لو قال cancel / خلاص هنا نوقف الجلسة كاملة
       if (_isCancelUtterance(categoryAnswer)) {
-        await _voiceService.speak("Okay, I will stop now.");
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.stoppingVoiceAssistant,
+        );
         _resetVoiceState();
         return;
       }
@@ -617,7 +625,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       // }
 
       if (categoryAnswer == null || categoryAnswer.trim().isEmpty) {
-        await _voiceService.speak("Sorry, I didn't catch that.");
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.didNotCatchThat,
+        );
         _resetVoiceState();
         return;
       }
@@ -626,7 +636,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       if (matchedCategory == null) {
         await _voiceService.speak(
-          "Sorry, I didn't understand that category. Please try again.",
+          AppLocalizations.of(context)!.categoryNotUnderstood,
         );
         _resetVoiceState();
         return;
@@ -634,7 +644,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       // --- STEP 2: Ask Specific vs Random ---
       await _voiceService.speak(
-        "Okay, $matchedCategory. Do you want to play something specific or random?",
+        AppLocalizations.of(context)!.specificOrRandomPrompt(matchedCategory),
       );
 
       String? modeAnswer = await _voiceService.listenWhisper(seconds: 5);
@@ -642,7 +652,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       // ✅ إلغاء في خطوة المود
       if (_isCancelUtterance(modeAnswer)) {
-        await _voiceService.speak("Okay, I will stop now.");
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.stoppingVoiceAssistant,
+        );
         _resetVoiceState();
         return;
       }
@@ -655,7 +667,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           _containsAnyNormalized(modeLower, ['معين', 'سوره', 'سورة'])) {
         // --- STEP 3A: Handle Specific ---
         await _voiceService.speak(
-          "Please say the name of the audio or the video that you want.",
+          AppLocalizations.of(context)!.sayAudioOrVideoName,
         );
 
         String? titleQuery = await _voiceService.listenWhisper(seconds: 5);
@@ -663,7 +675,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
         // ✅ إلغاء في اسم السورة / الصوت
         if (_isCancelUtterance(titleQuery)) {
-          await _voiceService.speak("Okay, I will stop now.");
+          await _voiceService.speak(
+            AppLocalizations.of(context)!.stoppingVoiceAssistant,
+          );
           _resetVoiceState();
           return;
         }
@@ -671,12 +685,16 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         if (titleQuery != null && titleQuery.isNotEmpty) {
           await _playSpecificAudio(matchedCategory, titleQuery);
         } else {
-          await _voiceService.speak("I didn't hear a title.");
+          await _voiceService.speak(
+            AppLocalizations.of(context)!.didNotHearTitle,
+          );
         }
       } else {
         // --- STEP 3B: Handle Random (Default) ---
         await _voiceService.speak(
-          "Okay, playing something random from $matchedCategory.",
+          AppLocalizations.of(
+            context,
+          )!.playingRandomFromCategory(matchedCategory),
         );
         await _playRandomForCategory(matchedCategory);
       }
@@ -791,7 +809,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       if (category == 'Favorites') {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
-          await _voiceService.speak("You must be logged in for favorites.");
+          await _voiceService.speak(
+            AppLocalizations.of(context)!.mustBeLoggedInForFavorites,
+          );
           return;
         }
         qs = await FirebaseFirestore.instance
@@ -807,7 +827,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       }
 
       if (qs.docs.isEmpty) {
-        await _voiceService.speak("No audio found for $category.");
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.noAudioFoundForCategory(category),
+        );
         return;
       }
 
@@ -816,7 +838,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       _navigateToPlayer(item);
     } catch (e) {
       debugPrint("Error playing random: $e");
-      await _voiceService.speak("Something went wrong.");
+      await _voiceService.speak(
+        AppLocalizations.of(context)!.somethingWentWrong,
+      );
     }
   }
 
@@ -829,7 +853,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       if (category == 'Favorites') {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
-          await _voiceService.speak("You need to login.");
+          await _voiceService.speak(
+            AppLocalizations.of(context)!.mustBeLoggedInForFavorites,
+          );
           return;
         }
         qs = await FirebaseFirestore.instance
@@ -860,7 +886,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       if (matchingDocs.isNotEmpty) {
         final item = AudioItem.fromDoc(matchingDocs.first);
-        await _voiceService.speak("Playing ${item.title}");
+        await _voiceService.speak(
+          AppLocalizations.of(context)!.playingItem(item.title),
+        );
         _navigateToPlayer(item);
         return;
       }
@@ -878,7 +906,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
           if (quranDocs.isNotEmpty) {
             final item = AudioItem.fromDoc(quranDocs.first);
-            await _voiceService.speak("Playing ${item.title}");
+            await _voiceService.speak(
+              AppLocalizations.of(context)!.playingItem(item.title),
+            );
             _navigateToPlayer(item);
             return;
           }
@@ -910,7 +940,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
           if (healthDocs.isNotEmpty) {
             final item = AudioItem.fromDoc(healthDocs.first);
-            await _voiceService.speak("Playing ${item.title}");
+            await _voiceService.speak(
+              AppLocalizations.of(context)!.playingItem(item.title),
+            );
             _navigateToPlayer(
               item,
             ); // لو type = youtube → يفتح YouTubePlayerPage
@@ -944,7 +976,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
           if (storyDocs.isNotEmpty) {
             final item = AudioItem.fromDoc(storyDocs.first);
-            await _voiceService.speak("Playing ${item.title}");
+            await _voiceService.speak(
+              AppLocalizations.of(context)!.playingItem(item.title),
+            );
             _navigateToPlayer(
               item,
             ); // لو type = youtube يفتح YouTubePlayerPage تلقائيًا
@@ -954,11 +988,15 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       }
       // ------ 3) لو لا عنوان ولا ملف طابقوا ------
       await _voiceService.speak(
-        "I couldn't find any audio named $searchTitle in $category.",
+        AppLocalizations.of(
+          context,
+        )!.couldNotFindAudioNamed(searchTitle, category),
       );
     } catch (e) {
       debugPrint("Error playing specific: $e");
-      await _voiceService.speak("Something went wrong while searching.");
+      await _voiceService.speak(
+        AppLocalizations.of(context)!.somethingWentWrongWhileSearching,
+      );
     }
   }
 

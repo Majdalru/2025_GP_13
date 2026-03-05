@@ -21,19 +21,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get password => 'كلمة المرور';
 
   @override
-  String get caregiver => 'مقدم رعاية';
+  String get caregiver => 'مقدم الرعاية';
 
   @override
   String get elderly => 'كبير سن';
-
-  @override
-  String get requiredField => 'مطلوب';
-
-  @override
-  String get invalidEmail => 'أدخل بريد إلكتروني صالح';
-
-  @override
-  String get shortPassword => '٦ أحرف على الأقل';
 
   @override
   String get forgotPassword => 'هل نسيت كلمة المرور؟';
@@ -45,7 +36,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dontHaveAccount => 'ليس لديك حساب؟';
 
   @override
-  String get signUp => 'إنشاء حساب';
+  String get signUp => 'تسجيل';
 
   @override
   String get signInFailed => 'فشل تسجيل الدخول';
@@ -240,15 +231,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get editInfo => 'تعديل المعلومات';
 
   @override
-  String get name => 'الاسم';
-
-  @override
-  String get nameRequired => 'الاسم مطلوب';
-
-  @override
-  String get gender => 'الجنس';
-
-  @override
   String get male => 'ذكر';
 
   @override
@@ -430,9 +412,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get undo => 'تراجع';
 
   @override
-  String get favorites => 'المفضلة';
-
-  @override
   String get medications => 'الأدوية';
 
   @override
@@ -450,9 +429,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get edit => 'تعديل';
 
   @override
-  String get delete => 'حذف';
-
-  @override
   String errorLoadingVideo(String error) {
     return 'خطأ في تحميل الفيديو: $error';
   }
@@ -463,25 +439,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get media => 'الوسائط';
-
-  @override
   String get searchFavorites => 'البحث في المفضلة...';
 
   @override
   String get noResultsFound => 'لم يتم العثور على نتائج';
-
-  @override
-  String get voiceCommandFailed => 'فشل الأمر الصوتي، يرجى المحاولة مرة أخرى.';
-
-  @override
-  String get health => 'الصحة';
-
-  @override
-  String get story => 'قصة';
-
-  @override
-  String get quran => 'قرآن';
 
   @override
   String get searchForAudio => 'البحث عن مقطع صوتي...';
@@ -804,4 +765,346 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get youNeedToBeLoggedIn => 'يجب تسجيل الدخول أولاً.';
+
+  @override
+  String get emailAlreadyInUse => 'البريد الإلكتروني مستخدم بالفعل';
+
+  @override
+  String get phoneAlreadyUsed => 'رقم الهاتف مستخدم بالفعل';
+
+  @override
+  String get accountCreatedSuccess => 'تم إنشاء الحساب بنجاح ✅';
+
+  @override
+  String get invalidEmailAddress => 'عنوان البريد الإلكتروني غير صالح.';
+
+  @override
+  String get weakPassword => 'كلمة المرور ضعيفة.';
+
+  @override
+  String errorPrefix(String error) {
+    return 'تفاصيل الخطأ: $error';
+  }
+
+  @override
+  String get caregiverSignUp => 'تسجيل مقدم الرعاية';
+
+  @override
+  String get requiredField => 'مطلوب';
+
+  @override
+  String get enterValidEmail => 'أدخل بريد إلكتروني صالح';
+
+  @override
+  String get firstName => 'الاسم الأول';
+
+  @override
+  String get lastName => 'الاسم الأخير';
+
+  @override
+  String get gender => 'الجنس';
+
+  @override
+  String get phoneNumber => 'رقم الهاتف';
+
+  @override
+  String get enterValidSaudiNumber => 'أدخل رقم سعودي صحيح (05XXXXXXXX)';
+
+  @override
+  String get min6Chars => 'على الأقل 6 أحرف';
+
+  @override
+  String get confirmPassword => 'تأكيد كلمة المرور';
+
+  @override
+  String get passwordsDoNotMatch => 'كلمات المرور غير متطابقة';
+
+  @override
+  String get elderlySignUp => 'تسجيل كبير السن';
+
+  @override
+  String get invalidEmail => 'بريد إلكتروني غير صالح.';
+
+  @override
+  String get networkError => 'خطأ في الشبكة. تحقق من الاتصال.';
+
+  @override
+  String stepXofY(int step, int total) {
+    return 'خطوة $step من $total';
+  }
+
+  @override
+  String get back => 'رجوع';
+
+  @override
+  String get accountEmail => 'البريد الإلكتروني للحساب';
+
+  @override
+  String get personalInfo => 'المعلومات الشخصية';
+
+  @override
+  String get contactInfo => 'معلومات الاتصال';
+
+  @override
+  String get phoneStartWith05 => 'يجب أن يبدأ رقم الهاتف بـ 05';
+
+  @override
+  String get accountSecurity => 'أمان الحساب';
+
+  @override
+  String get confirm => 'تأكيد';
+
+  @override
+  String get emailSent => 'تم إرسال البريد الإلكتروني';
+
+  @override
+  String get passwordResetLinkSent =>
+      'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.';
+
+  @override
+  String get error => 'خطأ';
+
+  @override
+  String get somethingWentWrong => 'حدث خطأ ما.';
+
+  @override
+  String get resetPassword => 'إعادة تعيين كلمة المرور';
+
+  @override
+  String get willSendPasswordResetLink =>
+      'سنرسل رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.';
+
+  @override
+  String get emailAddress => 'عنوان البريد الإلكتروني';
+
+  @override
+  String get pleaseEnterYourEmail => 'الرجاء إدخال بريدك الإلكتروني';
+
+  @override
+  String get sendResetLink => 'إرسال رابط إعادة التعيين';
+
+  @override
+  String get lastUpdate => 'آخر تحديث';
+
+  @override
+  String get refreshLocation => 'تحديث الموقع';
+
+  @override
+  String get videoSharedSuccessfully => 'تمت مشاركة الفيديو بنجاح!';
+
+  @override
+  String get failedToUploadVideo => 'فشل تحميل الفيديو';
+
+  @override
+  String errorSharingVideo(String error) {
+    return 'خطأ في مشاركة الفيديو: $error';
+  }
+
+  @override
+  String errorStartingRecording(String error) {
+    return 'خطأ في بدء التسجيل: $error';
+  }
+
+  @override
+  String errorStoppingRecording(String error) {
+    return 'خطأ في إيقاف التسجيل: $error';
+  }
+
+  @override
+  String get voiceMessageSharedSuccessfully =>
+      'تمت مشاركة الرسالة الصوتية بنجاح!';
+
+  @override
+  String errorSharingVoice(String error) {
+    return 'خطأ في مشاركة الصوت: $error';
+  }
+
+  @override
+  String nameThisType(String type) {
+    return 'قم بتسمية هذا الـ $type';
+  }
+
+  @override
+  String get enterTitleOptional => 'أدخل عنوانًا (اختياري)';
+
+  @override
+  String get shareVideo => 'مشاركة فيديو';
+
+  @override
+  String get pickFromGallery => 'اختيار من المعرض';
+
+  @override
+  String get recording => 'جاري التسجيل...';
+
+  @override
+  String get voiceMessage => 'رسالة صوتية';
+
+  @override
+  String get tapToStop => 'انقر للإيقاف';
+
+  @override
+  String get tapToRecord => 'انقر للتسجيل';
+
+  @override
+  String get recentlyShared => 'تمت مشاركته مؤخرًا';
+
+  @override
+  String get uploading => 'جاري الرفع...';
+
+  @override
+  String get noItemsSharedYet => 'لا توجد عناصر مشتركة بعد.';
+
+  @override
+  String get media => 'الوسائط';
+
+  @override
+  String get story => 'قصص';
+
+  @override
+  String get quran => 'قرآن';
+
+  @override
+  String get health => 'الصحة';
+
+  @override
+  String get favorites => 'المفضلة';
+
+  @override
+  String get voiceCommandFailed => 'فشل الأمر الصوتي. حاول مرة أخرى.';
+
+  @override
+  String get alreadyOnMediaPage => 'أنت بالفعل في صفحة الوسائط.';
+
+  @override
+  String get goingBackToHome => 'العودة إلى الصفحة الرئيسية.';
+
+  @override
+  String get manageMedicationsInstruction =>
+      'لإدارة أدويتك، يرجى العودة إلى الصفحة الرئيسية وفتح قسم الأدوية.';
+
+  @override
+  String get startingSosFlow => 'سنبدأ هنا بتدفق الطوارئ SOS.';
+
+  @override
+  String get settingsNotAvailableHere =>
+      'الإعدادات غير متوفرة من صفحة الوسائط بعد.';
+
+  @override
+  String get mediaCategoryPrompt =>
+      'أنت في صفحة الوسائط. من أي فئة تريدني أن أشغل شيئًا؟ اختر صحة، قرآن، قصص، مقدم الرعاية أو المفضلة.';
+
+  @override
+  String get stoppingVoiceAssistant => 'حسنا، سأتوقف الآن.';
+
+  @override
+  String get didNotCatchThat => 'عذراً، لم أفهم ذلك.';
+
+  @override
+  String get categoryNotUnderstood =>
+      'عذراً، لم أفهم الفئة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String specificOrRandomPrompt(String matchedCategory) {
+    return 'حسنا، $matchedCategory. هل ترغب في تشغيل شيء محدد أم عشوائي؟';
+  }
+
+  @override
+  String get sayAudioOrVideoName =>
+      'الرجاء قول اسم المقطع الصوتي أو الفيديو الذي تريده.';
+
+  @override
+  String get didNotHearTitle => 'لم أسمع عنواناً.';
+
+  @override
+  String playingRandomFromCategory(String matchedCategory) {
+    return 'حسنا، أقوم بتشغيل شيء عشوائي من $matchedCategory.';
+  }
+
+  @override
+  String get mustBeLoggedInForFavorites =>
+      'يجب تسجيل الدخول للوصول إلى المفضلة.';
+
+  @override
+  String noAudioFoundForCategory(String category) {
+    return 'لم يتم العثور على مقاطع صوتية لـ $category.';
+  }
+
+  @override
+  String playingItem(String title) {
+    return 'تشغيل $title';
+  }
+
+  @override
+  String couldNotFindAudioNamed(String searchTitle, String category) {
+    return 'لم أتمكن من العثور على أي مقطع باسم $searchTitle في $category.';
+  }
+
+  @override
+  String get somethingWentWrongWhileSearching => 'حدث خطأ أثناء البحث.';
+
+  @override
+  String get all => 'الكل';
+
+  @override
+  String get audio => 'صوت';
+
+  @override
+  String get video => 'فيديو';
+
+  @override
+  String get familyMedia => 'وسائط العائلة';
+
+  @override
+  String get pleaseLogInFirst => 'الرجاء تسجيل الدخول أولاً.';
+
+  @override
+  String get noMediaSharedYet => 'لا توجد وسائط مشتركة بعد.';
+
+  @override
+  String get noMediaInThisFilter => 'لا توجد وسائط في هذا الفلتر.';
+
+  @override
+  String get deleteMediaTitle => 'حذف الوسائط؟';
+
+  @override
+  String get confirmDeleteSpecificMedia =>
+      'هل أنت متأكد من رغبتك في حذف هذه الوسائط المحددة؟';
+
+  @override
+  String get mediaDeletedSuccessfully => 'تم حذف الوسائط بنجاح';
+
+  @override
+  String errorDeletingMedia(String error) {
+    return 'خطأ في حذف الوسائط: $error';
+  }
+
+  @override
+  String get share => 'مشاركة';
+
+  @override
+  String get delete => 'حذف';
+
+  @override
+  String get deleteItem => 'حذف العنصر؟';
+
+  @override
+  String get areYouSureDeleteSharedItem =>
+      'هل أنت متأكد أنك تريد حذف هذا العنصر المشترك؟';
+
+  @override
+  String get itemDeletedSuccessfully => 'تم حذف العنصر بنجاح';
+
+  @override
+  String errorDeletingItem(String error) {
+    return 'خطأ في حذف العنصر: $error';
+  }
+
+  @override
+  String get comingSoon => 'قريباً';
+
+  @override
+  String get shortPassword => 'الأدنى 6 أحرف';
+
+  @override
+  String get name => 'الاسم';
 }

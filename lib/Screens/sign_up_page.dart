@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_shell.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -115,7 +116,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
     final used = await _emailIsUsed(email);
     setState(() {
-      _emailError = used ? 'Email already in use' : null;
+      _emailError = used
+          ? AppLocalizations.of(context)!.emailAlreadyInUse
+          : null;
     });
     _emailFieldKey.currentState?.validate();
     return !used;
@@ -133,7 +136,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
     final used = await _phoneIsUsed(phone);
     setState(() {
-      _phoneError = used ? 'Phone number already used' : null;
+      _phoneError = used
+          ? AppLocalizations.of(context)!.phoneAlreadyUsed
+          : null;
     });
     _phoneFieldKey.currentState?.validate();
     return !used;
@@ -177,9 +182,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created ✅')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Account created ✅')));
 
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeShell()),
@@ -189,7 +194,7 @@ class _SignUpPageState extends State<SignUpPage> {
       if (e.code == 'email-already-in-use') {
         if (mounted) {
           setState(() {
-            _emailError = 'Email already in use';
+            _emailError = AppLocalizations.of(context)!.emailAlreadyInUse;
           });
           _emailFieldKey.currentState?.validate();
         }
@@ -197,19 +202,21 @@ class _SignUpPageState extends State<SignUpPage> {
       }
 
       final msg = switch (e.code) {
-        'invalid-email' => 'Invalid email address.',
-        'weak-password' => 'Weak password.',
-        _ => e.message ?? 'Error: ${e.code}',
+        'invalid-email' => AppLocalizations.of(context)!.invalidEmailAddress,
+        'weak-password' => AppLocalizations.of(context)!.weakPassword,
+        _ => AppLocalizations.of(context)!.errorPrefix(e.code),
       };
 
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -221,7 +228,9 @@ class _SignUpPageState extends State<SignUpPage> {
     const gap = SizedBox(height: 12);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Caregiver Sign Up')),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.caregiverSignUp),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -230,9 +239,9 @@ class _SignUpPageState extends State<SignUpPage> {
           child: ListView(
             children: [
               // ===== Email =====
-              const Text(
-                'Email',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.email,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               TextFormField(
@@ -252,9 +261,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 },
                 validator: (v) {
                   final s = (v ?? '').trim();
-                  if (s.isEmpty) return 'Required';
+                  if (s.isEmpty)
+                    return AppLocalizations.of(context)!.requiredField;
                   if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
-                    return 'Enter a valid email';
+                    return AppLocalizations.of(context)!.enterValidEmail;
                   }
                   return _emailError;
                 },
@@ -262,9 +272,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
               // ===== First name =====
               gap,
-              const Text(
-                'First name',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.firstName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               TextFormField(
@@ -278,9 +288,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
               // ===== Last name =====
               gap,
-              const Text(
-                'Last name',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.lastName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               TextFormField(
@@ -294,16 +304,22 @@ class _SignUpPageState extends State<SignUpPage> {
 
               // ===== Gender =====
               gap,
-              const Text(
-                'Gender',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.gender,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _gender,
-                items: const [
-                  DropdownMenuItem(value: 'Male', child: Text('Male')),
-                  DropdownMenuItem(value: 'Female', child: Text('Female')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'Male',
+                    child: Text(AppLocalizations.of(context)!.male),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Female',
+                    child: Text(AppLocalizations.of(context)!.female),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _gender = v ?? 'Male'),
                 decoration: const InputDecoration(
@@ -313,9 +329,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
               // ===== Phone =====
               gap,
-              const Text(
-                'Phone number',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.phoneNumber,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               TextFormField(
@@ -339,9 +355,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 },
                 validator: (v) {
                   final s = (v ?? '').trim();
-                  if (s.isEmpty) return 'Required';
+                  if (s.isEmpty)
+                    return AppLocalizations.of(context)!.requiredField;
                   if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
-                    return 'Enter a valid Saudi number (05XXXXXXXX)';
+                    return AppLocalizations.of(context)!.enterValidSaudiNumber;
                   }
                   return _phoneError;
                 },
@@ -349,9 +366,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
               // ===== Password =====
               gap,
-              const Text(
-                'Password',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.password,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               TextFormField(
@@ -364,15 +381,16 @@ class _SignUpPageState extends State<SignUpPage> {
                     icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
                   ),
                 ),
-                validator: (v) =>
-                    (v == null || v.length < 6) ? 'Min 6 characters' : null,
+                validator: (v) => (v == null || v.length < 6)
+                    ? AppLocalizations.of(context)!.min6Chars
+                    : null,
               ),
 
               // ===== Confirm Password =====
               gap,
-              const Text(
-                'Confirm password',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.confirmPassword,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               TextFormField(
@@ -381,16 +399,17 @@ class _SignUpPageState extends State<SignUpPage> {
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    onPressed: () =>
-                        setState(() => _obConfirm = !_obConfirm),
+                    onPressed: () => setState(() => _obConfirm = !_obConfirm),
                     icon: Icon(
                       _obConfirm ? Icons.visibility_off : Icons.visibility,
                     ),
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Required';
-                  if (v != _pass.text) return 'Passwords do not match';
+                  if (v == null || v.isEmpty)
+                    return AppLocalizations.of(context)!.requiredField;
+                  if (v != _pass.text)
+                    return AppLocalizations.of(context)!.passwordsDoNotMatch;
                   return null;
                 },
               ),
@@ -404,8 +423,8 @@ class _SignUpPageState extends State<SignUpPage> {
                         height: 22,
                         child: CircularProgressIndicator(),
                       )
-                    : const Text(
-                        'Sign up',
+                    : Text(
+                        AppLocalizations.of(context)!.signUp,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

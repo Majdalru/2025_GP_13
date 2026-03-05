@@ -27,15 +27,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get elderly => 'Elderly';
 
   @override
-  String get requiredField => 'Required';
-
-  @override
-  String get invalidEmail => 'Enter a valid email';
-
-  @override
-  String get shortPassword => 'Min 6 characters';
-
-  @override
   String get forgotPassword => 'Forgot password?';
 
   @override
@@ -242,15 +233,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editInfo => 'Edit Info';
 
   @override
-  String get name => 'Name';
-
-  @override
-  String get nameRequired => 'Name is required';
-
-  @override
-  String get gender => 'Gender';
-
-  @override
   String get male => 'Male';
 
   @override
@@ -433,9 +415,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get undo => 'Undo';
 
   @override
-  String get favorites => 'Favorites';
-
-  @override
   String get medications => 'Medications';
 
   @override
@@ -453,9 +432,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get edit => 'Edit';
 
   @override
-  String get delete => 'Delete';
-
-  @override
   String errorLoadingVideo(String error) {
     return 'Error loading video: $error';
   }
@@ -466,25 +442,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get media => 'Media';
-
-  @override
   String get searchFavorites => 'Search favorites...';
 
   @override
   String get noResultsFound => 'No results found';
-
-  @override
-  String get voiceCommandFailed => 'Voice command failed, please try again.';
-
-  @override
-  String get health => 'Health';
-
-  @override
-  String get story => 'Story';
-
-  @override
-  String get quran => 'Quran';
 
   @override
   String get searchForAudio => 'Search for audio...';
@@ -814,4 +775,347 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get youNeedToBeLoggedIn => 'You need to be logged in.';
+
+  @override
+  String get emailAlreadyInUse => 'Email already in use';
+
+  @override
+  String get phoneAlreadyUsed => 'Phone number already used';
+
+  @override
+  String get accountCreatedSuccess => 'Account created ✅';
+
+  @override
+  String get invalidEmailAddress => 'Invalid email address.';
+
+  @override
+  String get weakPassword => 'Weak password.';
+
+  @override
+  String errorPrefix(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get caregiverSignUp => 'Caregiver Sign Up';
+
+  @override
+  String get requiredField => 'Required';
+
+  @override
+  String get enterValidEmail => 'Enter a valid email';
+
+  @override
+  String get firstName => 'First name';
+
+  @override
+  String get lastName => 'Last name';
+
+  @override
+  String get gender => 'Gender';
+
+  @override
+  String get phoneNumber => 'Phone number';
+
+  @override
+  String get enterValidSaudiNumber => 'Enter a valid Saudi number (05XXXXXXXX)';
+
+  @override
+  String get min6Chars => 'Min 6 characters';
+
+  @override
+  String get confirmPassword => 'Confirm password';
+
+  @override
+  String get passwordsDoNotMatch => 'Passwords do not match';
+
+  @override
+  String get elderlySignUp => 'Elderly Sign Up';
+
+  @override
+  String get invalidEmail => 'Invalid email.';
+
+  @override
+  String get networkError => 'Network error. Check connection.';
+
+  @override
+  String stepXofY(int step, int total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get accountEmail => 'Account Email';
+
+  @override
+  String get personalInfo => 'Personal Info';
+
+  @override
+  String get contactInfo => 'Contact Info';
+
+  @override
+  String get phoneStartWith05 => 'Phone number must start with 05';
+
+  @override
+  String get accountSecurity => 'Account Security';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get emailSent => 'Email sent';
+
+  @override
+  String get passwordResetLinkSent =>
+      'A password reset link has been sent to your email.';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong.';
+
+  @override
+  String get resetPassword => 'Reset password';
+
+  @override
+  String get willSendPasswordResetLink =>
+      'We\'ll send a password reset link to your email.';
+
+  @override
+  String get emailAddress => 'Email address';
+
+  @override
+  String get pleaseEnterYourEmail => 'Please enter your email';
+
+  @override
+  String get sendResetLink => 'Send reset link';
+
+  @override
+  String get lastUpdate => 'Last update';
+
+  @override
+  String get refreshLocation => 'Refresh location';
+
+  @override
+  String get videoSharedSuccessfully => 'Video shared successfully!';
+
+  @override
+  String get failedToUploadVideo => 'Failed to upload video';
+
+  @override
+  String errorSharingVideo(String error) {
+    return 'Error sharing video: $error';
+  }
+
+  @override
+  String errorStartingRecording(String error) {
+    return 'Error starting recording: $error';
+  }
+
+  @override
+  String errorStoppingRecording(String error) {
+    return 'Error stopping recording: $error';
+  }
+
+  @override
+  String get voiceMessageSharedSuccessfully =>
+      'Voice message shared successfully!';
+
+  @override
+  String errorSharingVoice(String error) {
+    return 'Error sharing voice: $error';
+  }
+
+  @override
+  String nameThisType(String type) {
+    return 'Name this $type';
+  }
+
+  @override
+  String get enterTitleOptional => 'Enter title (optional)';
+
+  @override
+  String get shareVideo => 'Share Video';
+
+  @override
+  String get pickFromGallery => 'Pick from Gallery';
+
+  @override
+  String get recording => 'Recording...';
+
+  @override
+  String get voiceMessage => 'Voice Message';
+
+  @override
+  String get tapToStop => 'Tap to Stop';
+
+  @override
+  String get tapToRecord => 'Tap to Record';
+
+  @override
+  String get recentlyShared => 'Recently Shared';
+
+  @override
+  String get uploading => 'Uploading...';
+
+  @override
+  String get noItemsSharedYet => 'No items shared yet.';
+
+  @override
+  String get media => 'Media';
+
+  @override
+  String get story => 'Story';
+
+  @override
+  String get quran => 'Quran';
+
+  @override
+  String get health => 'Health';
+
+  @override
+  String get favorites => 'Favorites';
+
+  @override
+  String get voiceCommandFailed => 'Voice command failed. Please try again.';
+
+  @override
+  String get alreadyOnMediaPage => 'You are already on the media page.';
+
+  @override
+  String get goingBackToHome => 'Going back to the home page.';
+
+  @override
+  String get manageMedicationsInstruction =>
+      'To manage your medications, please go back to the home page and open the medications section.';
+
+  @override
+  String get startingSosFlow => 'Here we will start the SOS emergency flow.';
+
+  @override
+  String get settingsNotAvailableHere =>
+      'Settings are not available from the media page yet.';
+
+  @override
+  String get mediaCategoryPrompt =>
+      'You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story , Caregiver or favorites';
+
+  @override
+  String get stoppingVoiceAssistant => 'Okay, I will stop now.';
+
+  @override
+  String get didNotCatchThat => 'Sorry, I didn\'t catch that.';
+
+  @override
+  String get categoryNotUnderstood =>
+      'Sorry, I didn\'t understand that category. Please try again.';
+
+  @override
+  String specificOrRandomPrompt(String matchedCategory) {
+    return 'Okay, $matchedCategory. Do you want to play something specific or random?';
+  }
+
+  @override
+  String get sayAudioOrVideoName =>
+      'Please say the name of the audio or the video that you want.';
+
+  @override
+  String get didNotHearTitle => 'I didn\'t hear a title.';
+
+  @override
+  String playingRandomFromCategory(String matchedCategory) {
+    return 'Okay, playing something random from $matchedCategory.';
+  }
+
+  @override
+  String get mustBeLoggedInForFavorites =>
+      'You must be logged in for favorites.';
+
+  @override
+  String noAudioFoundForCategory(String category) {
+    return 'No audio found for $category.';
+  }
+
+  @override
+  String playingItem(String title) {
+    return 'Playing $title';
+  }
+
+  @override
+  String couldNotFindAudioNamed(String searchTitle, String category) {
+    return 'I couldn\'t find any audio named $searchTitle in $category.';
+  }
+
+  @override
+  String get somethingWentWrongWhileSearching =>
+      'Something went wrong while searching.';
+
+  @override
+  String get all => 'All';
+
+  @override
+  String get audio => 'Audio';
+
+  @override
+  String get video => 'Video';
+
+  @override
+  String get familyMedia => 'Family Media';
+
+  @override
+  String get pleaseLogInFirst => 'Please log in first.';
+
+  @override
+  String get noMediaSharedYet => 'No media shared yet.';
+
+  @override
+  String get noMediaInThisFilter => 'No media in this filter.';
+
+  @override
+  String get deleteMediaTitle => 'Delete Media?';
+
+  @override
+  String get confirmDeleteSpecificMedia =>
+      'Are you sure you want to delete this specific media?';
+
+  @override
+  String get mediaDeletedSuccessfully => 'Media deleted successfully';
+
+  @override
+  String errorDeletingMedia(String error) {
+    return 'Error deleting media: $error';
+  }
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteItem => 'Delete Item?';
+
+  @override
+  String get areYouSureDeleteSharedItem =>
+      'Are you sure you want to delete this shared item?';
+
+  @override
+  String get itemDeletedSuccessfully => 'Item deleted successfully';
+
+  @override
+  String errorDeletingItem(String error) {
+    return 'Error deleting item: $error';
+  }
+
+  @override
+  String get comingSoon => 'Coming Soon';
+
+  @override
+  String get shortPassword => 'Min 6 characters';
+
+  @override
+  String get name => 'Name';
 }

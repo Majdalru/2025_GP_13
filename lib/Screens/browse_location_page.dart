@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class BrowseLocationPage extends StatelessWidget {
   const BrowseLocationPage({super.key});
@@ -19,13 +20,19 @@ class BrowseLocationPage extends StatelessWidget {
             child: const Center(child: Icon(Icons.map, size: 64)),
           ),
           const SizedBox(height: 20),
-          const _KV(label: 'Location', value: 'Riyadh, KSU - Gate 3'),
-          const _KV(label: 'Last update', value: '12:45 PM'),
+          _KV(
+            label: AppLocalizations.of(context)!.location,
+            value: 'Riyadh, KSU - Gate 3',
+          ),
+          _KV(
+            label: AppLocalizations.of(context)!.lastUpdate,
+            value: '12:45 PM',
+          ),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.refresh),
-            label: const Text('Refresh location'),
+            label: Text(AppLocalizations.of(context)!.refreshLocation),
           ),
         ],
       ),

@@ -8,6 +8,7 @@ import '../../services/sharing_service.dart';
 import 'shared_audio_player_page.dart';
 import 'video_player_page.dart';
 import 'favorites_manager.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class SharedMediaListPage extends StatefulWidget {
   const SharedMediaListPage({super.key});
@@ -19,171 +20,181 @@ class SharedMediaListPage extends StatefulWidget {
 class _SharedMediaListPageState extends State<SharedMediaListPage> {
   final SharingService _sharingService = SharingService();
   static const kPrimary = Color(0xFF1B3A52);
-String _selectedFilter = 'All'; // All | Audio | Video
+  String _selectedFilter = 'All'; // All | Audio | Video
 
   @override
   void _showTopBanner(
-  String message, {
-  Color color = kPrimary,
-  int seconds = 1,
-}) {
-  if (!mounted) return;
-  final messenger = ScaffoldMessenger.of(context);
+    String message, {
+    Color color = kPrimary,
+    int seconds = 1,
+  }) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
 
-  messenger
-    ..hideCurrentMaterialBanner()
-    ..showMaterialBanner(
-      MaterialBanner(
-        backgroundColor: color,
-        elevation: 4,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        content: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+    messenger
+      ..hideCurrentMaterialBanner()
+      ..showMaterialBanner(
+        MaterialBanner(
+          backgroundColor: color,
+          elevation: 4,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
+          actions: const [SizedBox.shrink()],
         ),
-        actions: const [SizedBox.shrink()],
+      );
+
+    Future.delayed(Duration(seconds: seconds), () {
+      if (mounted) messenger.hideCurrentMaterialBanner();
+    });
+  }
+
+  Widget _buildTypeFilterChips() {
+    final options = [
+      AppLocalizations.of(context)!.all,
+      AppLocalizations.of(context)!.audio,
+      AppLocalizations.of(context)!.video,
+    ];
+
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: options.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final opt = options[index];
+          final isSelected = _selectedFilter == opt;
+
+          return ChoiceChip(
+            label: Text(opt),
+            selected: isSelected,
+            selectedColor: kPrimary,
+            backgroundColor: Colors.grey.shade200,
+            labelStyle: TextStyle(
+              color: isSelected ? Colors.white : Colors.black87,
+            ),
+            onSelected: (_) {
+              setState(() => _selectedFilter = opt);
+            },
+          );
+        },
       ),
     );
-
-  Future.delayed(Duration(seconds: seconds), () {
-    if (mounted) messenger.hideCurrentMaterialBanner();
-  });
-}
-
-Widget _buildTypeFilterChips() {
-  const options = ['All', 'Audio', 'Video'];
-
-  return SizedBox(
-    height: 46,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      itemCount: options.length,
-      separatorBuilder: (_, __) => const SizedBox(width: 8),
-      itemBuilder: (context, index) {
-        final opt = options[index];
-        final isSelected = _selectedFilter == opt;
-
-        return ChoiceChip(
-          label: Text(opt),
-          selected: isSelected,
-          selectedColor: kPrimary,
-          backgroundColor: Colors.grey.shade200,
-          labelStyle: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
-          ),
-          onSelected: (_) {
-            setState(() => _selectedFilter = opt);
-          },
-        );
-      },
-    ),
-  );
-}
-
+  }
 
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Family Media')),
-        body: const Center(child: Text('Please log in first.')),
+        appBar: AppBar(title: Text(AppLocalizations.of(context)!.familyMedia)),
+        body: Center(
+          child: Text(AppLocalizations.of(context)!.pleaseLogInFirst),
+        ),
       );
     }
 
     return Scaffold(
-  backgroundColor: Colors.white,
-  appBar: AppBar(
-    toolbarHeight: 110,
-    backgroundColor: kPrimary,
-    title: const Text("Family Media"),
-    titleTextStyle: const TextStyle(
-      fontSize: 34,
-      color: Colors.white,
-      fontWeight: FontWeight.bold,
-      letterSpacing: 0.5,
-    ),
-    centerTitle: true,
-    leading: IconButton(
-      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
-      onPressed: () => Navigator.pop(context),
-    ),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-    ),
-  ),
-  body: SafeArea(
-    child: Column(
-      children: [
-        const SizedBox(height: 12),
-        _buildTypeFilterChips(),
-        const SizedBox(height: 8),
-
-        Expanded(
-          child: StreamBuilder<List<SharedItem>>(
-            stream: _sharingService.getSharedItems(user.uid),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-
-              final items = snapshot.data ?? [];
-
-              if (items.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No media shared yet.',
-                    style: TextStyle(fontSize: 24, color: Colors.grey),
-                  ),
-                );
-              }
-
-              final filteredItems = items.where((it) {
-                if (_selectedFilter == 'All') return true;
-                if (_selectedFilter == 'Audio') {
-                  return it.type == SharedItemType.audio;
-                }
-                if (_selectedFilter == 'Video') {
-                  return it.type == SharedItemType.video;
-                }
-                return true;
-              }).toList();
-
-              if (filteredItems.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No media in this filter.',
-                    style: TextStyle(fontSize: 24, color: Colors.grey),
-                  ),
-                );
-              }
-
-              return ListView.separated(
-                padding: const EdgeInsets.all(20),
-                itemCount: filteredItems.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 16),
-                itemBuilder: (context, index) {
-                  final item = filteredItems[index];
-                  return _buildSharedItemCard(context, item);
-                },
-              );
-            },
-          ),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        toolbarHeight: 110,
+        backgroundColor: kPrimary,
+        title: Text(AppLocalizations.of(context)!.familyMedia),
+        titleTextStyle: const TextStyle(
+          fontSize: 34,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
         ),
-      ],
-    ),
-  ),
-);
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
+          onPressed: () => Navigator.pop(context),
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            _buildTypeFilterChips(),
+            const SizedBox(height: 8),
 
+            Expanded(
+              child: StreamBuilder<List<SharedItem>>(
+                stream: _sharingService.getSharedItems(user.uid),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  final items = snapshot.data ?? [];
+
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Text(
+                        AppLocalizations.of(context)!.noMediaSharedYet,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    );
+                  }
+
+                  final filteredItems = items.where((it) {
+                    if (_selectedFilter == 'All') return true;
+                    if (_selectedFilter == 'Audio') {
+                      return it.type == SharedItemType.audio;
+                    }
+                    if (_selectedFilter == 'Video') {
+                      return it.type == SharedItemType.video;
+                    }
+                    return true;
+                  }).toList();
+
+                  if (filteredItems.isEmpty) {
+                    return Center(
+                      child: Text(
+                        AppLocalizations.of(context)!.noMediaInThisFilter,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: filteredItems.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+                      return _buildSharedItemCard(context, item);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSharedItemCard(BuildContext context, SharedItem item) {
@@ -195,21 +206,21 @@ Widget _buildTypeFilterChips() {
       case SharedItemType.video:
         icon = Icons.videocam;
         color = Colors.orange;
-        typeLabel = 'Video';
+        typeLabel = AppLocalizations.of(context)!.video;
         break;
       case SharedItemType.audio:
         icon = Icons.audiotrack;
         color = Colors.blue;
-        typeLabel = 'Voice';
+        typeLabel = AppLocalizations.of(context)!.audio;
         break;
 
       default:
-         icon = Icons.perm_media;
-         color = Colors.grey;
-         typeLabel = 'Media';    }
+        icon = Icons.perm_media;
+        color = Colors.grey;
+        typeLabel = AppLocalizations.of(context)!.media;
+    }
 
-    final formattedDate =
-        DateFormat('MMM d, h:mm a').format(item.timestamp);
+    final formattedDate = DateFormat('MMM d, h:mm a').format(item.timestamp);
 
     return Card(
       elevation: 4,
@@ -245,62 +256,63 @@ Widget _buildTypeFilterChips() {
                     const SizedBox(height: 4),
                     Text(
                       formattedDate,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
-
                   ],
                 ),
               ),
               IconButton(
-  icon: Icon(
-    favoritesManager.isFavorite(item.id)
-        ? Icons.favorite
-        : Icons.favorite_border,
-    color: favoritesManager.isFavorite(item.id)
-        ? Colors.red
-        : Colors.grey,
-    size: 30,
-  ),
- onPressed: () async {
-  await favoritesManager.toggleFavorite({
-    "itemId": item.id,
-    "audioId": item.id,
-    "title": item.title,
-    "category": "Caregiver",
-    "fileName": item.fileName,
-    "image": item.type == SharedItemType.video
-        ? "assets/video.jpg"
-        : "assets/audio.jpg",
-    "type": item.type == SharedItemType.video
-        ? "shared_video"
-        : "shared_audio",
-    "url": item.url,
-  });
+                icon: Icon(
+                  favoritesManager.isFavorite(item.id)
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: favoritesManager.isFavorite(item.id)
+                      ? Colors.red
+                      : Colors.grey,
+                  size: 30,
+                ),
+                onPressed: () async {
+                  await favoritesManager.toggleFavorite({
+                    "itemId": item.id,
+                    "audioId": item.id,
+                    "title": item.title,
+                    "category": "Caregiver",
+                    "fileName": item.fileName,
+                    "image": item.type == SharedItemType.video
+                        ? "assets/video.jpg"
+                        : "assets/audio.jpg",
+                    "type": item.type == SharedItemType.video
+                        ? "shared_video"
+                        : "shared_audio",
+                    "url": item.url,
+                  });
 
-  final nowFav = favoritesManager.isFavorite(item.id);
+                  final nowFav = favoritesManager.isFavorite(item.id);
 
-  _showTopBanner(
-    nowFav ? 'Added to Favorites' : 'Removed from Favorites',
-    color: nowFav ? Colors.green.shade700 : Colors.red.shade700,
-    seconds: 1,
-  );
+                  _showTopBanner(
+                    nowFav
+                        ? AppLocalizations.of(context)!.addedToFavorites
+                        : AppLocalizations.of(context)!.removedFromFavorites,
+                    color: nowFav ? Colors.green.shade700 : Colors.red.shade700,
+                    seconds: 1,
+                  );
 
-  if (mounted) setState(() {});
-},
+                  if (mounted) setState(() {});
+                },
+              ),
 
-),
+              // 🗑 زر الحذف
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 30,
+                ),
+                onPressed: () => _confirmDelete(context, item),
+              ),
 
-// 🗑 زر الحذف
-IconButton(
-  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 30),
-  onPressed: () => _confirmDelete(context, item),
-),
-
-const SizedBox(width: 8),
-const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
             ],
           ),
         ),
@@ -312,12 +324,15 @@ const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Media?'),
-        content: const Text('Are you sure you want to delete this specific media?'),
+        title: Text(AppLocalizations.of(context)!.deleteMediaTitle),
+        content: Text(AppLocalizations.of(context)!.confirmDeleteSpecificMedia),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(fontSize: 18)),
+            child: Text(
+              AppLocalizations.of(context)!.cancel,
+              style: const TextStyle(fontSize: 18),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -325,22 +340,34 @@ const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
               try {
                 final user = FirebaseAuth.instance.currentUser;
                 if (user != null) {
-                   await _sharingService.deleteItem(
+                  await _sharingService.deleteItem(
                     elderlyId: user.uid,
                     item: item,
                   );
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Media deleted successfully')),
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(context)!.mediaDeletedSuccessfully,
+                      ),
+                    ),
                   );
                 }
-               
               } catch (e) {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error deleting media: $e')),
-                  );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.errorDeletingMedia(e.toString()),
+                    ),
+                  ),
+                );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red, fontSize: 18)),
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: const TextStyle(color: Colors.red, fontSize: 18),
+            ),
           ),
         ],
       ),
@@ -349,18 +376,14 @@ const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
 
   void _handleItemTap(BuildContext context, SharedItem item) {
     if (item.type == SharedItemType.video) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => VideoPlayerPage(item: item),
-          ),
-        );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => VideoPlayerPage(item: item)),
+      );
     } else if (item.type == SharedItemType.audio) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => SharedAudioPlayerPage(item: item),
-        ),
+        MaterialPageRoute(builder: (_) => SharedAudioPlayerPage(item: item)),
       );
     }
   }

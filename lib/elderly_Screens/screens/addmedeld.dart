@@ -126,7 +126,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to save.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.mustBeLoggedInToSave),
+        ),
       );
       return;
     }
@@ -204,7 +206,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating medication: $e')),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorUpdatingMedication(e.toString()),
+              ),
+            ),
           );
         }
       }
@@ -266,7 +274,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error saving medication: $e')),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorSavingMedication(e.toString()),
+              ),
+            ),
           );
         }
       }
@@ -1195,9 +1209,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
     } catch (e) {
       debugPrint('\u{274C} Scan failed: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Scan failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.scanFailed}: $e'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isScanning = false);
@@ -1677,7 +1693,7 @@ class _Step1MedNameState extends State<_Step1MedName> {
                   ? () => widget.onNext(_nameController.text.trim())
                   : null,
               style: widget.buttonStyle,
-              child: const Text('Next'),
+              child: Text(AppLocalizations.of(context)!.next),
             ),
           ],
         ),
@@ -1849,7 +1865,7 @@ class _Step2DoseState extends State<_Step2Dose> {
                     }
                   : null,
               style: widget.buttonStyle,
-              child: const Text('Next'),
+              child: Text(AppLocalizations.of(context)!.next),
             ),
             if (!canProceed)
               Center(
@@ -2281,7 +2297,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                     }
                   : null,
               style: widget.buttonStyle,
-              child: const Text('Next'),
+              child: Text(AppLocalizations.of(context)!.next),
             ),
           ],
         ),
@@ -2524,7 +2540,7 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
                   ? () => widget.onNext(_selectedDays)
                   : null,
               style: widget.buttonStyle,
-              child: const Text('Next'),
+              child: Text(AppLocalizations.of(context)!.next),
             ),
           ],
         ),
@@ -2660,7 +2676,7 @@ class _Step4HowManyTimesPerDayState extends State<_Step4HowManyTimesPerDay> {
                     ? () => widget.onNext(_selectedFrequency!)
                     : null,
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),
@@ -2833,7 +2849,7 @@ class _Step5SetTimesState extends State<_Step5SetTimes> {
                         );
                       },
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),
@@ -2918,7 +2934,7 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
               ElevatedButton(
                 onPressed: () => widget.onNext(_notesController.text),
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),

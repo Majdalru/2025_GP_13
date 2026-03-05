@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   final bool isElderly; // نحدد هل المستخدم ألدرلي
@@ -32,7 +33,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+            child: Text(AppLocalizations.of(context)!.ok),
           ),
         ],
       ),
@@ -44,17 +45,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     setState(() => _loading = true);
     try {
-      await FirebaseAuth.instance
-          .sendPasswordResetEmail(email: _email.text.trim());
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _email.text.trim(),
+      );
 
       await _showCenteredDialog(
-        'Email sent',
-        'A password reset link has been sent to your email.',
+        AppLocalizations.of(context)!.emailSent,
+        AppLocalizations.of(context)!.passwordResetLinkSent,
       );
 
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
-      await _showCenteredDialog('Error', e.message ?? 'Something went wrong');
+      await _showCenteredDialog(
+        AppLocalizations.of(context)!.error,
+        e.message ?? AppLocalizations.of(context)!.somethingWentWrong,
+      );
     } finally {
       setState(() => _loading = false);
     }
@@ -69,9 +74,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       fontWeight: FontWeight.bold,
     );
 
-    final textStyle = TextStyle(
-      fontSize: isElderly ? 20 : 14,
-    );
+    final textStyle = TextStyle(fontSize: isElderly ? 20 : 14);
 
     final buttonTextStyle = TextStyle(
       fontSize: isElderly ? 20 : 16,
@@ -80,7 +83,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     return Scaffold(
       resizeToAvoidBottomInset: true, // مهم جداً لمشكلة الكيبورد
-      appBar: AppBar(title: const Text('Reset password')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.resetPassword)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -98,7 +101,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               SizedBox(height: isElderly ? 18 : 24),
 
               Text(
-                "We'll send a password reset link to your email.",
+                AppLocalizations.of(context)!.willSendPasswordResetLink,
                 style: titleStyle,
               ),
 
@@ -110,16 +113,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   controller: _email,
                   style: textStyle,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email address',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.emailAddress,
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
-                      return 'Please enter your email';
+                      return AppLocalizations.of(context)!.pleaseEnterYourEmail;
                     }
                     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
-                      return 'Enter a valid email';
+                      return AppLocalizations.of(context)!.invalidEmailAddress;
                     }
                     return null;
                   },
@@ -137,7 +140,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           color: Colors.white,
                           strokeWidth: 2,
                         )
-                      : Text('Send reset link', style: buttonTextStyle),
+                      : Text(
+                          AppLocalizations.of(context)!.sendResetLink,
+                          style: buttonTextStyle,
+                        ),
                 ),
               ),
 
