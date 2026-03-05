@@ -651,4 +651,167 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get medicineName => 'Medicine Name';
+
+  @override
+  String get manageMedicationList => 'Manage medication list';
+
+  @override
+  String get manageAccess => 'Manage access';
+
+  @override
+  String get verificationCode => 'Verification Code';
+
+  @override
+  String get shareWithElderly => 'Share with Elderly';
+
+  @override
+  String get shareLifeUpdates => 'Share your life updates with your loved';
+
+  @override
+  String get pleaseSelectElderlyProfileFirst =>
+      'Please select an elderly profile from the drawer menu first.';
+
+  @override
+  String get pleaseSelectElderlyProfile =>
+      'Please select an elderly profile first.';
+
+  @override
+  String get elderlyInfo => 'Elderly Info';
+
+  @override
+  String get userFallback => 'User';
+
+  @override
+  String get na => 'N/A';
+
+  @override
+  String get newCaregiverLinked =>
+      'A new caregiver has been linked to your profile.';
+
+  @override
+  String get caregiverUnlinked =>
+      'A caregiver has been unlinked from your profile.';
+
+  @override
+  String errorLoadingProfile(String error) {
+    return 'Error loading profile: $error';
+  }
+
+  @override
+  String get informationUpdatedSuccessfully =>
+      'Information updated successfully';
+
+  @override
+  String get voiceOpeningMedications => 'Opening your medications page.';
+
+  @override
+  String get voiceAccountNotFound =>
+      'I could not find your account. Please log in again.';
+
+  @override
+  String get voiceAddMedication =>
+      'Okay, I will help you add a new medication.';
+
+  @override
+  String get voiceEditMedication =>
+      'Okay, let us edit one of your medications.';
+
+  @override
+  String get voiceDeleteMedication =>
+      'Okay, let us choose which medication to delete.';
+
+  @override
+  String get voiceOpeningMedia => 'Opening your media page.';
+
+  @override
+  String get voiceAlreadyHome => 'You are already on the home page.';
+
+  @override
+  String get voiceSosPreamble =>
+      'Emergency mode. Here we will trigger the SOS flow.';
+
+  @override
+  String get emergencyTitle => 'Emergency';
+
+  @override
+  String get emergencyFlowDesc =>
+      'Here we will trigger the SOS flow (calling caregiver, sending alert, etc.).';
+
+  @override
+  String get voiceSettingsNotReady =>
+      'Settings page is not ready yet. In the future, I will open it for you from here.';
+
+  @override
+  String helloUser(String name) {
+    return 'Hello $name';
+  }
+
+  @override
+  String get sos => 'SOS';
+
+  @override
+  String get errorNotLoggedIn2 => 'Error: Not logged in.';
+
+  @override
+  String get everyDay => 'Every day';
+
+  @override
+  String get mustBeLoggedInToSave => 'You must be logged in to save.';
+
+  @override
+  String errorUpdatingMedication(String error) {
+    return 'Error updating medication: $error';
+  }
+
+  @override
+  String errorSavingMedication(String error) {
+    return 'Error saving medication: $error';
+  }
+
+  @override
+  String get change => 'Change';
+
+  @override
+  String get addAnotherTime => 'Add another time';
+
+  @override
+  String get clearAllTimes => 'Clear All Times';
+
+  @override
+  String get pleaseSelectAllRequiredTimes =>
+      'Please select all required times.';
+
+  @override
+  String get egPanadol => 'e.g. Panadol';
+
+  @override
+  String get optionalInstructions => 'Optional instructions...';
+
+  @override
+  String timeNumber(int index) {
+    return 'Time $index';
+  }
+
+  @override
+  String get location => 'Location';
+
+  @override
+  String get liveLocation => 'Live location & last seen';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get caregivers => 'Caregivers';
+
+  @override
+  String get generateCode => 'Generate Code';
+
+  @override
+  String errorGeneratingCode(String error) {
+    return 'Error generating code: $error';
+  }
+
+  @override
+  String get youNeedToBeLoggedIn => 'You need to be logged in.';
 }

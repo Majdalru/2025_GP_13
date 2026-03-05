@@ -8,14 +8,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'media_page.dart';
 import 'elderly_med.dart';
-import 'addmedeld.dart';
+
 import 'favorites_manager.dart';
 import '../../Screens/login_page.dart';
 
 import '../../widgets/floating_voice_button.dart';
 import '../../services/voice_assistant_service.dart';
 import 'package:flutter_application_1/models/voice_command.dart';
-import 'package:flutter_application_1/models/medication.dart';
+
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 /// =====================
 ///  Styles (Unified)
@@ -195,16 +196,18 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               _prevCaregiverCount = newCount;
               _initialCaregiverLoaded = true;
             } else {
-              if (newCount > _prevCaregiverCount) {
-                _showTopBanner(
-                  'A new caregiver has been linked to your profile.',
-                  color: Colors.green.shade700,
-                );
-              } else if (newCount < _prevCaregiverCount) {
-                _showTopBanner(
-                  'A caregiver has been unlinked from your profile.',
-                  color: kAccentRed,
-                );
+              if (mounted) {
+                if (newCount > _prevCaregiverCount) {
+                  _showTopBanner(
+                    AppLocalizations.of(context)!.newCaregiverLinked,
+                    color: Colors.green.shade700,
+                  );
+                } else if (newCount < _prevCaregiverCount) {
+                  _showTopBanner(
+                    AppLocalizations.of(context)!.caregiverUnlinked,
+                    color: kAccentRed,
+                  );
+                }
               }
               _prevCaregiverCount = newCount;
             }
@@ -223,7 +226,13 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             if (mounted) {
               setState(() => loading = false);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error loading profile: $e')),
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.errorLoadingProfile(e.toString()),
+                  ),
+                ),
               );
             }
           },
@@ -258,7 +267,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               child: Padding(
                 padding: const EdgeInsets.only(left: 4),
                 child: Text(
-                  (fullName?.isNotEmpty ?? false) ? fullName! : "User",
+                  (fullName?.isNotEmpty ?? false)
+                      ? fullName!
+                      : AppLocalizations.of(context)!.userFallback,
                   textAlign: TextAlign.left,
                   style: const TextStyle(
                     fontSize: 28,
@@ -284,7 +295,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text("Elderly Info", style: kTitleText),
+                        Text(
+                          AppLocalizations.of(context)!.elderlyInfo,
+                          style: kTitleText,
+                        ),
                         IconButton(
                           iconSize: 32,
                           splashRadius: 28,
@@ -327,10 +341,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                                     if (context.mounted) {
                                       Navigator.pop(context);
-                                      _showTopBanner(
-                                        'Information updated successfully',
-                                        color: Colors.green.shade700,
-                                      );
+                                      if (context.mounted) {
+                                        _showTopBanner(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.informationUpdatedSuccessfully,
+                                          color: Colors.green.shade700,
+                                        );
+                                      }
                                     }
                                   }
                                 },
@@ -342,15 +360,21 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     ),
                     const SizedBox(height: 14),
                     _InfoBox(
-                      label: "Name",
+                      label: AppLocalizations.of(context)!.name,
                       value: (fullName?.isNotEmpty ?? false)
                           ? fullName!
-                          : "N/A",
+                          : AppLocalizations.of(context)!.na,
                     ),
                     const SizedBox(height: 14),
-                    _InfoBox(label: "Gender", value: gender ?? "N/A"),
+                    _InfoBox(
+                      label: AppLocalizations.of(context)!.gender,
+                      value: gender ?? AppLocalizations.of(context)!.na,
+                    ),
                     const SizedBox(height: 14),
-                    _InfoBox(label: "Mobile", value: phone ?? "N/A"),
+                    _InfoBox(
+                      label: AppLocalizations.of(context)!.mobile,
+                      value: phone ?? AppLocalizations.of(context)!.na,
+                    ),
                   ],
                 ),
               ),
@@ -376,14 +400,17 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(kCardRadius),
               ),
-              child: const Padding(
-                padding: EdgeInsets.all(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text("Verification Code", style: kTitleText),
-                    SizedBox(height: 12),
-                    _PairingCodeBox(),
+                    Text(
+                      AppLocalizations.of(context)!.verificationCode,
+                      style: kTitleText,
+                    ),
+                    const SizedBox(height: 12),
+                    const _PairingCodeBox(),
                   ],
                 ),
               ),
@@ -537,20 +564,26 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                         case VoiceCommand.sos:
                           if (!mounted) return;
                           await _voice.speak(
-                            "Emergency mode. Here we will trigger the SOS flow.",
+                            AppLocalizations.of(context)!.voiceSosPreamble,
                           );
                           showDialog(
                             context: context,
                             builder: (context) {
                               return AlertDialog(
-                                title: const Text('Emergency'),
-                                content: const Text(
-                                  'Here we will trigger the SOS flow (calling caregiver, sending alert, etc.).',
+                                title: Text(
+                                  AppLocalizations.of(context)!.emergencyTitle,
+                                ),
+                                content: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.emergencyFlowDesc,
                                 ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text('OK'),
+                                    child: Text(
+                                      AppLocalizations.of(context)!.ok,
+                                    ),
                                   ),
                                 ],
                               );
@@ -730,8 +763,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Error: Not logged in."),
+                            SnackBar(
+                              content: Text(
+                                AppLocalizations.of(context)!.errorNotLoggedIn2,
+                              ),
                             ),
                           );
                         }
@@ -793,7 +828,7 @@ class _CaregiversBox extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Caregivers', style: kTitleText),
+        Text(AppLocalizations.of(context)!.caregivers, style: kTitleText),
         const SizedBox(height: 8),
         if (names.isEmpty)
           Container(
@@ -900,7 +935,9 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("You need to be logged in.")),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.youNeedToBeLoggedIn),
+        ),
       );
       setState(() => _isLoading = false);
       return;
@@ -932,9 +969,13 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error generating code: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.errorGeneratingCode(e.toString()),
+            ),
+          ),
+        );
       }
     }
   }
@@ -990,7 +1031,10 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
                     color: Colors.white,
                   ),
                 )
-              : const Text("Generate Code", style: kButtonText),
+              : Text(
+                  AppLocalizations.of(context)!.generateCode,
+                  style: kButtonText,
+                ),
         ),
       ],
     );
@@ -1159,9 +1203,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
                   style: kBodyText,
-                  decoration: kInput("Name").copyWith(
-                    errorStyle: const TextStyle(fontSize: 18),
-                  ),
+                  decoration: kInput(
+                    "Name",
+                  ).copyWith(errorStyle: const TextStyle(fontSize: 18)),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? "Name is required"
                       : null,
@@ -1171,23 +1215,27 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                 // Gender Dropdown
                 DropdownButtonFormField<String>(
                   value: _selectedGender,
-                  decoration: kInput(
-                    "Gender",
-                  ).copyWith(
+                  decoration: kInput("Gender").copyWith(
                     filled: true,
                     fillColor: Colors.white,
                     errorStyle: const TextStyle(fontSize: 18),
                   ),
                   dropdownColor: Colors.white,
                   style: kBodyText,
-                  items: const [
+                  items: [
                     DropdownMenuItem(
                       value: "male",
-                      child: Text("Male", style: kBodyText),
+                      child: Text(
+                        AppLocalizations.of(context)!.male,
+                        style: kBodyText,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: "female",
-                      child: Text("Female", style: kBodyText),
+                      child: Text(
+                        AppLocalizations.of(context)!.female,
+                        style: kBodyText,
+                      ),
                     ),
                   ],
                   onChanged: (val) {
@@ -1209,9 +1257,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(10),
                   ],
-                  decoration: kInput("Mobile (05XXXXXXXX)").copyWith(
-                    errorStyle: const TextStyle(fontSize: 18),
-                  ),
+                  decoration: kInput(
+                    "Mobile (05XXXXXXXX)",
+                  ).copyWith(errorStyle: const TextStyle(fontSize: 18)),
                   validator: (v) {
                     final txt = (v ?? "").trim();
                     if (txt.isEmpty) return "Required";
@@ -1298,7 +1346,10 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                       phone,
                     );
                   },
-                  child: const Text("Save", style: kButtonText),
+                  child: Text(
+                    AppLocalizations.of(context)!.save,
+                    style: kButtonText,
+                  ),
                 ),
               ),
             ),

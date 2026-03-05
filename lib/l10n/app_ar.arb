@@ -369,5 +369,93 @@
   "editMedication": "تعديل الدواء",
   "step1MedicineName": "الخطوة ١: اسم الدواء",
   "whatMedicationDoYouNeedToTake": "ما هو الدواء الذي تحتاج إلى تناوله؟",
-  "medicineName": "اسم الدواء"
+  "medicineName": "اسم الدواء",
+  "manageMedicationList": "إدارة قائمة الأدوية",
+  "manageAccess": "إدارة الوصول",
+  "verificationCode": "رمز التحقق",
+  "shareWithElderly": "مشاركة مع كبير السن",
+  "shareLifeUpdates": "شارك تحديثات حياتك مع من تحب",
+  "pleaseSelectElderlyProfileFirst": "يرجى تحديد ملف شخصي لكبير السن من القائمة الجانبية أولاً.",
+  "pleaseSelectElderlyProfile": "يرجى تحديد ملف شخصي لكبير السن أولاً.",
+  "elderlyInfo": "معلومات كبير السن",
+  "userFallback": "مستخدم",
+  "na": "غير متوفر",
+  "newCaregiverLinked": "تم ربط مقدم رعاية جديد بحسابك.",
+  "caregiverUnlinked": "تم إلغاء ربط مقدم رعاية من حسابك.",
+  "errorLoadingProfile": "خطأ في تحميل الحساب: {error}",
+  "@errorLoadingProfile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "informationUpdatedSuccessfully": "تم تحديث المعلومات بنجاح",
+  "voiceOpeningMedications": "جاري فتح صفحة الأدوية الخاصة بك.",
+  "voiceAccountNotFound": "لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.",
+  "voiceAddMedication": "حسنًا، سأساعدك في إضافة دواء جديد.",
+  "voiceEditMedication": "حسنًا، لنقم بتعديل أحد أدويتك.",
+  "voiceDeleteMedication": "حسنًا، لنختر الدواء الذي تريد حذفه.",
+  "voiceOpeningMedia": "جاري فتح صفحة الوسائط الخاصة بك.",
+  "voiceAlreadyHome": "أنت بالفعل في الصفحة الرئيسية.",
+  "voiceSosPreamble": "وضع الطوارئ. هنا سنقوم بتفعيل خطوات الطوارئ.",
+  "emergencyTitle": "طوارئ",
+  "emergencyFlowDesc": "هنا سنقوم بتفعيل خطوات الطوارئ (الاتصال بمقدم الرعاية، إرسال تنبيه، إلخ).",
+  "voiceSettingsNotReady": "صفحة الإعدادات غير جاهزة بعد. في المستقبل، سأفتحها لك من هنا.",
+  "helloUser": "مرحباً {name}",
+  "@helloUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sos": "طوارئ",
+  "errorNotLoggedIn2": "خطأ: لم تقم بتسجيل الدخول.",
+  "everyDay": "كل يوم",
+  "mustBeLoggedInToSave": "يجب تسجيل الدخول للحفظ.",
+  "errorUpdatingMedication": "خطأ في تحديث الدواء: {error}",
+  "@errorUpdatingMedication": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorSavingMedication": "خطأ في حفظ الدواء: {error}",
+  "@errorSavingMedication": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "change": "تغيير",
+  "addAnotherTime": "إضافة وقت آخر",
+  "clearAllTimes": "مسح كل الأوقات",
+  "pleaseSelectAllRequiredTimes": "يرجى تحديد كافة الأوقات المطلوبة.",
+  "egPanadol": "مثال: بنادول",
+  "optionalInstructions": "تعليمات اختيارية...",
+  "timeNumber": "الوقت {index}",
+  "@timeNumber": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "location": "الموقع",
+  "liveLocation": "الموقع المباشر وآخر ظهور",
+  "save": "حفظ",
+  "caregivers": "مقدمي الرعاية",
+  "generateCode": "إنشاء رمز",
+  "errorGeneratingCode": "خطأ في إنشاء الرمز: {error}",
+  "@errorGeneratingCode": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "youNeedToBeLoggedIn": "يجب تسجيل الدخول أولاً."
 }

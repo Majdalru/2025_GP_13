@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 import '../medmain.dart'; // Corrected import
 import 'meds_summary_page.dart';
 import 'location_page.dart';
@@ -17,8 +18,8 @@ class BrowsePage extends StatelessWidget {
 
     final items = <_BrowseItem>[
       _BrowseItem(
-        title: 'Medication',
-        subtitle: 'Manage medication list',
+        title: AppLocalizations.of(context)!.medications,
+        subtitle: AppLocalizations.of(context)!.manageMedicationList,
         icon: Icons.medication,
         color: cs.secondary,
         onTap: () {
@@ -32,9 +33,9 @@ class BrowsePage extends StatelessWidget {
           } else {
             // Show a message if no profile is selected
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text(
-                  'Please select an elderly profile from the drawer menu first.',
+                  AppLocalizations.of(context)!.pleaseSelectElderlyProfileFirst,
                 ),
                 backgroundColor: Colors.orange,
               ),
@@ -43,25 +44,23 @@ class BrowsePage extends StatelessWidget {
         },
       ),
       _BrowseItem(
-        title: 'Summary',
-        subtitle: 'Monthly overview',
+        title: AppLocalizations.of(context)!.summary,
+        subtitle: AppLocalizations.of(context)!.monthlyOverview,
         icon: Icons.assignment_outlined,
         color: cs.primary,
         onTap: () {
           if (selectedProfile != null) {
-          
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => MedsSummaryPage(
-                  elderlyId: selectedProfile!.uid,
-                ),
+                builder: (_) =>
+                    MedsSummaryPage(elderlyId: selectedProfile!.uid),
               ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text(
-                  'Please select an elderly profile from the drawer menu first.',
+                  AppLocalizations.of(context)!.pleaseSelectElderlyProfileFirst,
                 ),
                 backgroundColor: Colors.orange,
               ),
@@ -70,8 +69,8 @@ class BrowsePage extends StatelessWidget {
         },
       ),
       _BrowseItem(
-        title: 'Location',
-        subtitle: 'Live location & last seen',
+        title: AppLocalizations.of(context)!.location,
+        subtitle: AppLocalizations.of(context)!.liveLocation,
         icon: Icons.location_on,
         color: Colors.teal,
         onTap: () => Navigator.of(
@@ -79,30 +78,31 @@ class BrowsePage extends StatelessWidget {
         ).push(MaterialPageRoute(builder: (_) => const LocationPage())),
       ),
       _BrowseItem(
-        title: 'Manage access',
+        title: AppLocalizations.of(context)!.manageAccess,
         subtitle: '',
         icon: Icons.manage_accounts_rounded,
         color: Colors.indigo,
         onTap: null, // Not tappable
       ),
       _BrowseItem(
-        title: 'Share with Elderly',
-        subtitle: 'Share your life updates with your loved',
+        title: AppLocalizations.of(context)!.shareWithElderly,
+        subtitle: AppLocalizations.of(context)!.shareLifeUpdates,
         icon: Icons.share,
         color: const Color(0xFF2A4D69),
         onTap: () {
           if (selectedProfile != null) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => ShareContentPage(
-                  elderlyId: selectedProfile!.uid,
-                ),
+                builder: (_) =>
+                    ShareContentPage(elderlyId: selectedProfile!.uid),
               ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Please select an elderly profile first.'),
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context)!.pleaseSelectElderlyProfile,
+                ),
               ),
             );
           }
@@ -172,8 +172,9 @@ class _BrowseCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        splashFactory:
-            tappable ? InkRipple.splashFactory : NoSplash.splashFactory,
+        splashFactory: tappable
+            ? InkRipple.splashFactory
+            : NoSplash.splashFactory,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

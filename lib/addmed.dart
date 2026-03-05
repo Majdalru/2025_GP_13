@@ -340,7 +340,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
+                                child: Text(
+                                  AppLocalizations.of(context)!.cancel,
+                                ),
                               ),
                             ],
                           ),
@@ -793,7 +795,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     children: [
                                       if (!isLimited)
                                         FilterChip(
-                                          label: const Text('Every day'),
+                                          label: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.everyDay,
+                                          ),
                                           selected: selectedDays.contains(
                                             'Every day',
                                           ),
@@ -1024,7 +1030,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to save.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.mustBeLoggedInToSave),
+        ),
       );
       return;
     }
@@ -1097,7 +1105,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
         debugPrint('❌ Error updating medication: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating medication: $e')),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorUpdatingMedication(e.toString()),
+              ),
+            ),
           );
         }
       }
@@ -1155,7 +1169,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
         debugPrint('❌ Error saving medication: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error saving medication: $e')),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorSavingMedication(e.toString()),
+              ),
+            ),
           );
         }
       }
@@ -1763,7 +1783,7 @@ class _Step2DoseState extends State<_Step2Dose> {
                       }
                     : null,
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
 
               // Hint
@@ -2088,7 +2108,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                       if (_mode == 'custom' && _customDate != null)
                         TextButton(
                           onPressed: _pickCustomDate,
-                          child: const Text('Change'),
+                          child: Text(AppLocalizations.of(context)!.change),
                         ),
                     ],
                   ),
@@ -2578,14 +2598,14 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
                   child: TextButton.icon(
                     onPressed: widget.onAddTime,
                     icon: const Icon(Icons.add_circle_outline),
-                    label: const Text('Add another time'),
+                    label: Text(AppLocalizations.of(context)!.addAnotherTime),
                   ),
                 ),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: widget.onClearTimes,
-                  child: const Text('Clear All Times'),
+                  child: Text(AppLocalizations.of(context)!.clearAllTimes),
                 ),
               ),
               const SizedBox(height: 16),
@@ -2594,8 +2614,12 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
                     ? widget.onNext
                     : () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select all required times.'),
+                          SnackBar(
+                            content: Text(
+                              AppLocalizations.of(
+                                context,
+                              )!.pleaseSelectAllRequiredTimes,
+                            ),
                           ),
                         );
                       },

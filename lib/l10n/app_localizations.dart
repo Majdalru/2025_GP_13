@@ -1261,6 +1261,282 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Medicine Name'**
   String get medicineName;
+
+  /// No description provided for @manageMedicationList.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage medication list'**
+  String get manageMedicationList;
+
+  /// No description provided for @manageAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage access'**
+  String get manageAccess;
+
+  /// Verification Code label
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Code'**
+  String get verificationCode;
+
+  /// No description provided for @shareWithElderly.
+  ///
+  /// In en, this message translates to:
+  /// **'Share with Elderly'**
+  String get shareWithElderly;
+
+  /// No description provided for @shareLifeUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your life updates with your loved'**
+  String get shareLifeUpdates;
+
+  /// No description provided for @pleaseSelectElderlyProfileFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an elderly profile from the drawer menu first.'**
+  String get pleaseSelectElderlyProfileFirst;
+
+  /// No description provided for @pleaseSelectElderlyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an elderly profile first.'**
+  String get pleaseSelectElderlyProfile;
+
+  /// No description provided for @elderlyInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Elderly Info'**
+  String get elderlyInfo;
+
+  /// No description provided for @userFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get userFallback;
+
+  /// No description provided for @na.
+  ///
+  /// In en, this message translates to:
+  /// **'N/A'**
+  String get na;
+
+  /// No description provided for @newCaregiverLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'A new caregiver has been linked to your profile.'**
+  String get newCaregiverLinked;
+
+  /// No description provided for @caregiverUnlinked.
+  ///
+  /// In en, this message translates to:
+  /// **'A caregiver has been unlinked from your profile.'**
+  String get caregiverUnlinked;
+
+  /// No description provided for @errorLoadingProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading profile: {error}'**
+  String errorLoadingProfile(String error);
+
+  /// No description provided for @informationUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Information updated successfully'**
+  String get informationUpdatedSuccessfully;
+
+  /// No description provided for @voiceOpeningMedications.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening your medications page.'**
+  String get voiceOpeningMedications;
+
+  /// No description provided for @voiceAccountNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'I could not find your account. Please log in again.'**
+  String get voiceAccountNotFound;
+
+  /// No description provided for @voiceAddMedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, I will help you add a new medication.'**
+  String get voiceAddMedication;
+
+  /// No description provided for @voiceEditMedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, let us edit one of your medications.'**
+  String get voiceEditMedication;
+
+  /// No description provided for @voiceDeleteMedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, let us choose which medication to delete.'**
+  String get voiceDeleteMedication;
+
+  /// No description provided for @voiceOpeningMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening your media page.'**
+  String get voiceOpeningMedia;
+
+  /// No description provided for @voiceAlreadyHome.
+  ///
+  /// In en, this message translates to:
+  /// **'You are already on the home page.'**
+  String get voiceAlreadyHome;
+
+  /// No description provided for @voiceSosPreamble.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency mode. Here we will trigger the SOS flow.'**
+  String get voiceSosPreamble;
+
+  /// No description provided for @emergencyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency'**
+  String get emergencyTitle;
+
+  /// No description provided for @emergencyFlowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Here we will trigger the SOS flow (calling caregiver, sending alert, etc.).'**
+  String get emergencyFlowDesc;
+
+  /// No description provided for @voiceSettingsNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings page is not ready yet. In the future, I will open it for you from here.'**
+  String get voiceSettingsNotReady;
+
+  /// No description provided for @helloUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello {name}'**
+  String helloUser(String name);
+
+  /// No description provided for @sos.
+  ///
+  /// In en, this message translates to:
+  /// **'SOS'**
+  String get sos;
+
+  /// No description provided for @errorNotLoggedIn2.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: Not logged in.'**
+  String get errorNotLoggedIn2;
+
+  /// No description provided for @everyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get everyDay;
+
+  /// No description provided for @mustBeLoggedInToSave.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in to save.'**
+  String get mustBeLoggedInToSave;
+
+  /// No description provided for @errorUpdatingMedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Error updating medication: {error}'**
+  String errorUpdatingMedication(String error);
+
+  /// No description provided for @errorSavingMedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Error saving medication: {error}'**
+  String errorSavingMedication(String error);
+
+  /// No description provided for @change.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get change;
+
+  /// No description provided for @addAnotherTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another time'**
+  String get addAnotherTime;
+
+  /// No description provided for @clearAllTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All Times'**
+  String get clearAllTimes;
+
+  /// No description provided for @pleaseSelectAllRequiredTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select all required times.'**
+  String get pleaseSelectAllRequiredTimes;
+
+  /// No description provided for @egPanadol.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Panadol'**
+  String get egPanadol;
+
+  /// No description provided for @optionalInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional instructions...'**
+  String get optionalInstructions;
+
+  /// No description provided for @timeNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Time {index}'**
+  String timeNumber(int index);
+
+  /// No description provided for @location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get location;
+
+  /// No description provided for @liveLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Live location & last seen'**
+  String get liveLocation;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @caregivers.
+  ///
+  /// In en, this message translates to:
+  /// **'Caregivers'**
+  String get caregivers;
+
+  /// No description provided for @generateCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Code'**
+  String get generateCode;
+
+  /// No description provided for @errorGeneratingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Error generating code: {error}'**
+  String errorGeneratingCode(String error);
+
+  /// No description provided for @youNeedToBeLoggedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to be logged in.'**
+  String get youNeedToBeLoggedIn;
 }
 
 class _AppLocalizationsDelegate

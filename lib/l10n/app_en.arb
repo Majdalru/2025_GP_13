@@ -372,5 +372,96 @@
   "editMedication": "Edit Medication",
   "step1MedicineName": "Step 1: Medicine Name",
   "whatMedicationDoYouNeedToTake": "What medication do you need to take?",
-  "medicineName": "Medicine Name"
+  "medicineName": "Medicine Name",
+  "manageMedicationList": "Manage medication list",
+  "manageAccess": "Manage access",
+  "verificationCode": "Verification Code",
+  "@verificationCode": {
+    "description": "Verification Code label"
+  },
+  "shareWithElderly": "Share with Elderly",
+  "shareLifeUpdates": "Share your life updates with your loved",
+  "pleaseSelectElderlyProfileFirst": "Please select an elderly profile from the drawer menu first.",
+  "pleaseSelectElderlyProfile": "Please select an elderly profile first.",
+  "elderlyInfo": "Elderly Info",
+  "userFallback": "User",
+  "na": "N/A",
+  "newCaregiverLinked": "A new caregiver has been linked to your profile.",
+  "caregiverUnlinked": "A caregiver has been unlinked from your profile.",
+  "errorLoadingProfile": "Error loading profile: {error}",
+  "@errorLoadingProfile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "informationUpdatedSuccessfully": "Information updated successfully",
+  "voiceOpeningMedications": "Opening your medications page.",
+  "voiceAccountNotFound": "I could not find your account. Please log in again.",
+  "voiceAddMedication": "Okay, I will help you add a new medication.",
+  "voiceEditMedication": "Okay, let us edit one of your medications.",
+  "voiceDeleteMedication": "Okay, let us choose which medication to delete.",
+  "voiceOpeningMedia": "Opening your media page.",
+  "voiceAlreadyHome": "You are already on the home page.",
+  "voiceSosPreamble": "Emergency mode. Here we will trigger the SOS flow.",
+  "emergencyTitle": "Emergency",
+  "emergencyFlowDesc": "Here we will trigger the SOS flow (calling caregiver, sending alert, etc.).",
+  "voiceSettingsNotReady": "Settings page is not ready yet. In the future, I will open it for you from here.",
+  "helloUser": "Hello {name}",
+  "@helloUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sos": "SOS",
+  "errorNotLoggedIn2": "Error: Not logged in.",
+  "everyDay": "Every day",
+  "mustBeLoggedInToSave": "You must be logged in to save.",
+  "errorUpdatingMedication": "Error updating medication: {error}",
+  "@errorUpdatingMedication": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorSavingMedication": "Error saving medication: {error}",
+  "@errorSavingMedication": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "change": "Change",
+  "addAnotherTime": "Add another time",
+  "clearAllTimes": "Clear All Times",
+  "pleaseSelectAllRequiredTimes": "Please select all required times.",
+  "egPanadol": "e.g. Panadol",
+  "optionalInstructions": "Optional instructions...",
+  "timeNumber": "Time {index}",
+  "@timeNumber": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "location": "Location",
+  "liveLocation": "Live location & last seen",
+  "save": "Save",
+  "caregivers": "Caregivers",
+  "generateCode": "Generate Code",
+  "errorGeneratingCode": "Error generating code: {error}",
+  "@errorGeneratingCode": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "youNeedToBeLoggedIn": "You need to be logged in."
 }

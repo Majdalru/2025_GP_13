@@ -648,4 +648,160 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get medicineName => 'اسم الدواء';
+
+  @override
+  String get manageMedicationList => 'إدارة قائمة الأدوية';
+
+  @override
+  String get manageAccess => 'إدارة الوصول';
+
+  @override
+  String get verificationCode => 'رمز التحقق';
+
+  @override
+  String get shareWithElderly => 'مشاركة مع كبير السن';
+
+  @override
+  String get shareLifeUpdates => 'شارك تحديثات حياتك مع من تحب';
+
+  @override
+  String get pleaseSelectElderlyProfileFirst =>
+      'يرجى تحديد ملف شخصي لكبير السن من القائمة الجانبية أولاً.';
+
+  @override
+  String get pleaseSelectElderlyProfile =>
+      'يرجى تحديد ملف شخصي لكبير السن أولاً.';
+
+  @override
+  String get elderlyInfo => 'معلومات كبير السن';
+
+  @override
+  String get userFallback => 'مستخدم';
+
+  @override
+  String get na => 'غير متوفر';
+
+  @override
+  String get newCaregiverLinked => 'تم ربط مقدم رعاية جديد بحسابك.';
+
+  @override
+  String get caregiverUnlinked => 'تم إلغاء ربط مقدم رعاية من حسابك.';
+
+  @override
+  String errorLoadingProfile(String error) {
+    return 'خطأ في تحميل الحساب: $error';
+  }
+
+  @override
+  String get informationUpdatedSuccessfully => 'تم تحديث المعلومات بنجاح';
+
+  @override
+  String get voiceOpeningMedications => 'جاري فتح صفحة الأدوية الخاصة بك.';
+
+  @override
+  String get voiceAccountNotFound =>
+      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.';
+
+  @override
+  String get voiceAddMedication => 'حسنًا، سأساعدك في إضافة دواء جديد.';
+
+  @override
+  String get voiceEditMedication => 'حسنًا، لنقم بتعديل أحد أدويتك.';
+
+  @override
+  String get voiceDeleteMedication => 'حسنًا، لنختر الدواء الذي تريد حذفه.';
+
+  @override
+  String get voiceOpeningMedia => 'جاري فتح صفحة الوسائط الخاصة بك.';
+
+  @override
+  String get voiceAlreadyHome => 'أنت بالفعل في الصفحة الرئيسية.';
+
+  @override
+  String get voiceSosPreamble => 'وضع الطوارئ. هنا سنقوم بتفعيل خطوات الطوارئ.';
+
+  @override
+  String get emergencyTitle => 'طوارئ';
+
+  @override
+  String get emergencyFlowDesc =>
+      'هنا سنقوم بتفعيل خطوات الطوارئ (الاتصال بمقدم الرعاية، إرسال تنبيه، إلخ).';
+
+  @override
+  String get voiceSettingsNotReady =>
+      'صفحة الإعدادات غير جاهزة بعد. في المستقبل، سأفتحها لك من هنا.';
+
+  @override
+  String helloUser(String name) {
+    return 'مرحباً $name';
+  }
+
+  @override
+  String get sos => 'طوارئ';
+
+  @override
+  String get errorNotLoggedIn2 => 'خطأ: لم تقم بتسجيل الدخول.';
+
+  @override
+  String get everyDay => 'كل يوم';
+
+  @override
+  String get mustBeLoggedInToSave => 'يجب تسجيل الدخول للحفظ.';
+
+  @override
+  String errorUpdatingMedication(String error) {
+    return 'خطأ في تحديث الدواء: $error';
+  }
+
+  @override
+  String errorSavingMedication(String error) {
+    return 'خطأ في حفظ الدواء: $error';
+  }
+
+  @override
+  String get change => 'تغيير';
+
+  @override
+  String get addAnotherTime => 'إضافة وقت آخر';
+
+  @override
+  String get clearAllTimes => 'مسح كل الأوقات';
+
+  @override
+  String get pleaseSelectAllRequiredTimes =>
+      'يرجى تحديد كافة الأوقات المطلوبة.';
+
+  @override
+  String get egPanadol => 'مثال: بنادول';
+
+  @override
+  String get optionalInstructions => 'تعليمات اختيارية...';
+
+  @override
+  String timeNumber(int index) {
+    return 'الوقت $index';
+  }
+
+  @override
+  String get location => 'الموقع';
+
+  @override
+  String get liveLocation => 'الموقع المباشر وآخر ظهور';
+
+  @override
+  String get save => 'حفظ';
+
+  @override
+  String get caregivers => 'مقدمي الرعاية';
+
+  @override
+  String get generateCode => 'إنشاء رمز';
+
+  @override
+  String errorGeneratingCode(String error) {
+    return 'خطأ في إنشاء الرمز: $error';
+  }
+
+  @override
+  String get youNeedToBeLoggedIn => 'يجب تسجيل الدخول أولاً.';
 }

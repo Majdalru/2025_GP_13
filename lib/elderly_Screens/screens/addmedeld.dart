@@ -8,6 +8,7 @@ import '../../models/medication.dart';
 import '../../services/medication_scheduler.dart';
 import '../../services/medication_scan_service.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 // --- Main Stateful Widget for AddMedScreen ---
 class AddMedScreen extends StatefulWidget {
@@ -627,7 +628,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             onChanged: (_) => setSheetState(() {}),
                             style: const TextStyle(fontSize: 22),
                             decoration: InputDecoration(
-                              hintText: 'e.g. Panadol',
+                              hintText: AppLocalizations.of(context)!.egPanadol,
                               hintStyle: const TextStyle(fontSize: 20),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -1017,7 +1018,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             maxLines: 3,
                             style: const TextStyle(fontSize: 20),
                             decoration: InputDecoration(
-                              hintText: 'Optional instructions...',
+                              hintText: AppLocalizations.of(
+                                context,
+                              )!.optionalInstructions,
                               hintStyle: const TextStyle(fontSize: 18),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -1655,7 +1658,7 @@ class _Step1MedNameState extends State<_Step1MedName> {
               controller: _nameController,
               style: const TextStyle(fontSize: 22),
               decoration: InputDecoration(
-                labelText: 'Medicine Name',
+                labelText: AppLocalizations.of(context)!.medicineName,
                 labelStyle: const TextStyle(fontSize: 20),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -2753,7 +2756,9 @@ class _Step5SetTimesState extends State<_Step5SetTimes> {
                           onTap: () => _pickTime(index),
                           child: InputDecorator(
                             decoration: InputDecoration(
-                              labelText: 'Time ${index + 1}',
+                              labelText: AppLocalizations.of(
+                                context,
+                              )!.timeNumber(index + 1),
                               labelStyle: const TextStyle(fontSize: 20),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -2900,7 +2905,7 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
                 maxLines: 5,
                 style: const TextStyle(fontSize: 22),
                 decoration: InputDecoration(
-                  labelText: 'Notes',
+                  labelText: AppLocalizations.of(context)!.notes,
                   labelStyle: const TextStyle(fontSize: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
