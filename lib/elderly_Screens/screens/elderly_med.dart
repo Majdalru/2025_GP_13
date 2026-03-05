@@ -9,10 +9,10 @@ import '../../widgets/todays_meds_tab.dart';
 import '../../services/medication_history_service.dart';
 import '../../widgets/medication_history_page.dart';
 
-// Voice imports
 import '../../widgets/floating_voice_button.dart';
 import '../../services/voice_assistant_service.dart';
 import '../../models/voice_command.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 // --- Main Page Widget ---
 class ElderlyMedicationPage extends StatefulWidget {
@@ -120,8 +120,8 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Medication deleted',
+          content: Text(
+            AppLocalizations.of(context)!.deleted,
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
@@ -166,7 +166,13 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       // Show error if something went wrong
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting medication: $e')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.errorDeletingMedication(e.toString()),
+            ),
+          ),
         );
       }
     }
@@ -214,7 +220,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: const Color(0xFF1B3A52),
-        title: const Text("Medications"),
+        title: Text(AppLocalizations.of(context)!.medications),
         titleTextStyle: const TextStyle(
           fontSize: 34,
           color: Colors.white,
@@ -255,7 +261,9 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                       ElevatedButton.icon(
                         onPressed: () => _navigateAndAddMedication(context),
                         icon: const Icon(Icons.add, size: 32),
-                        label: const Text('Add New Medication'),
+                        label: Text(
+                          AppLocalizations.of(context)!.addNewMedication,
+                        ),
                         style: ElevatedButton.styleFrom(
                           foregroundColor: Colors.white,
                           backgroundColor: const Color(0xFF5FA5A0),
@@ -275,8 +283,8 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Medication List',
+                          Text(
+                            AppLocalizations.of(context)!.medications,
                             style: TextStyle(
                               fontSize: 30,
                               fontWeight: FontWeight.bold,
@@ -337,17 +345,23 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                                 if (!snapshot.hasData ||
                                     !snapshot.data!.exists) {
                                   _currentMeds = [];
-                                  return const Center(
+                                  return Center(
                                     child: Text(
-                                      "No medications added yet.",
-                                      style: TextStyle(fontSize: 18),
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.noMedicationsFound,
+                                      style: const TextStyle(fontSize: 18),
                                     ),
                                   );
                                 }
                                 if (snapshot.hasError) {
                                   _currentMeds = [];
-                                  return const Center(
-                                    child: Text("Error loading medications."),
+                                  return Center(
+                                    child: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.errorLoadingMedications,
+                                    ),
                                   );
                                 }
 
@@ -365,10 +379,12 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                                 _currentMeds = medsList;
 
                                 if (medsList.isEmpty) {
-                                  return const Center(
+                                  return Center(
                                     child: Text(
-                                      "No medications added yet.",
-                                      style: TextStyle(fontSize: 18),
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.noMedicationsFound,
+                                      style: const TextStyle(fontSize: 18),
                                     ),
                                   );
                                 }
@@ -499,7 +515,10 @@ class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
         ],
       ),
       child: Row(
-        children: [_buildTab(0, "Today's Meds"), _buildTab(1, "Med list")],
+        children: [
+          _buildTab(0, "Today's Meds"),
+          _buildTab(1, AppLocalizations.of(context)!.medications),
+        ],
       ),
     );
   }
@@ -569,21 +588,26 @@ class MedicationCard extends StatelessWidget {
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           content: Text(
-            'Are you sure you want to delete "${medication.name}"?',
+            AppLocalizations.of(
+              context,
+            )!.confirmRemoveFromHistory(medication.name),
             style: const TextStyle(fontSize: 20),
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text(
-                'Cancel',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              child: Text(
+                AppLocalizations.of(context)!.cancel,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
-              child: const Text(
-                'Delete',
-                style: TextStyle(
+              child: Text(
+                AppLocalizations.of(context)!.delete,
+                style: const TextStyle(
                   color: Colors.red,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -736,7 +760,10 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
-                        TextSpan(text: 'Frequency: ', style: labelStyle),
+                        TextSpan(
+                          text: '${AppLocalizations.of(context)!.frequency}: ',
+                          style: labelStyle,
+                        ),
                         TextSpan(text: medication.frequency ?? 'N/A'),
                       ],
                     ),
@@ -745,7 +772,10 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
-                        TextSpan(text: 'Days: ', style: labelStyle),
+                        TextSpan(
+                          text: '${AppLocalizations.of(context)!.days}: ',
+                          style: labelStyle,
+                        ),
                         TextSpan(text: medication.days.join(', ')),
                       ],
                     ),
@@ -755,7 +785,10 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
-                        TextSpan(text: 'Times: ', style: labelStyle),
+                        TextSpan(
+                          text: '${AppLocalizations.of(context)!.times}: ',
+                          style: labelStyle,
+                        ),
                         TextSpan(text: timeString),
                       ],
                     ),
@@ -766,7 +799,10 @@ class MedicationCard extends StatelessWidget {
                       text: TextSpan(
                         style: valueStyle,
                         children: <TextSpan>[
-                          TextSpan(text: 'Notes: ', style: labelStyle),
+                          TextSpan(
+                            text: '${AppLocalizations.of(context)!.notes}: ',
+                            style: labelStyle,
+                          ),
                           TextSpan(text: medication.notes!),
                         ],
                       ),
@@ -781,7 +817,7 @@ class MedicationCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit, size: 28),
-                    label: const Text('Edit'),
+                    label: Text(AppLocalizations.of(context)!.edit),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: const Color(0xFF5FA5A0),
@@ -803,7 +839,7 @@ class MedicationCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: () => _showDeleteConfirmation(context),
                     icon: const Icon(Icons.delete, size: 28),
-                    label: const Text('Delete'),
+                    label: Text(AppLocalizations.of(context)!.delete),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: const Color(0xFFC62828),

@@ -3,6 +3,10 @@ import 'package:firebase_core/firebase_core.dart'; //   Firebase Core
 import 'firebase_options.dart';
 import 'Screens/login_page.dart';
 import 'services/notification_service.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
+import 'providers/locale_provider.dart';
 
 // This is the custom navy color from your addmed.dart file (revert)
 const Color customNavyColor = Color.fromRGBO(13, 45, 93, 1);
@@ -17,7 +21,12 @@ void main() async {
 
   await NotificationService().initialize();
 
-  runApp(const CaregiverApp());
+  runApp(
+    MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => LocaleProvider())],
+      child: const CaregiverApp(),
+    ),
+  );
 }
 
 class CaregiverApp extends StatelessWidget {
@@ -25,9 +34,19 @@ class CaregiverApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var localeProvider = Provider.of<LocaleProvider>(context);
+
     return MaterialApp(
       title: 'Caregiver',
       debugShowCheckedModeBanner: false,
+      locale: localeProvider.locale,
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en'), Locale('ar')],
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

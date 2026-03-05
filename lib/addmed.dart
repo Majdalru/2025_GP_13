@@ -10,6 +10,7 @@ import 'models/medication.dart';
 import 'services/medication_scheduler.dart';
 import 'services/medication_scan_service.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 // ===============================
 //  CAREGIVER Add/Edit Medication
@@ -842,7 +843,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                 child: OutlinedButton.icon(
                                   onPressed: () => Navigator.pop(context, null),
                                   icon: const Icon(Icons.refresh),
-                                  label: const Text('Rescan'),
+                                  label: Text(
+                                    AppLocalizations.of(context)!.rescan,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -1003,9 +1006,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
     } catch (e) {
       debugPrint('❌ Scan failed: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Scan failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.scanFailed}: $e'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isScanning = false);
@@ -1276,7 +1281,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 90,
-        title: Text(_isEditing ? 'Edit Medication' : 'Add Medication'),
+        title: Text(
+          _isEditing
+              ? AppLocalizations.of(context)!.editMedication
+              : AppLocalizations.of(context)!.addNewMedication,
+        ),
         titleTextStyle: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
@@ -1301,9 +1310,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white, fontSize: 18),
+            child: Text(
+              AppLocalizations.of(context)!.cancel,
+              style: const TextStyle(color: Colors.white, fontSize: 18),
             ),
           ),
         ],
@@ -1558,15 +1567,17 @@ class _Step1MedNameState extends State<_Step1MedName> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _StepHeader(
-                title: 'Step 1: Medicine Name',
-                subtitle: 'What medication do you need to take?',
+              _StepHeader(
+                title: AppLocalizations.of(context)!.step1MedicineName,
+                subtitle: AppLocalizations.of(
+                  context,
+                )!.whatMedicationDoYouNeedToTake,
               ),
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Medicine Name',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.medicineName,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -1576,7 +1587,7 @@ class _Step1MedNameState extends State<_Step1MedName> {
                     ? () => widget.onNext(_nameController.text.trim())
                     : null,
                 style: widget.buttonStyle,
-                child: const Text('Next'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),

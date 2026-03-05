@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../models/audio_item.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class YouTubePlayerPage extends StatefulWidget {
   final AudioItem item;
 
-  const YouTubePlayerPage({
-    Key? key,
-    required this.item,
-  }) : super(key: key);
+  const YouTubePlayerPage({Key? key, required this.item}) : super(key: key);
 
   @override
   State<YouTubePlayerPage> createState() => _YouTubePlayerPageState();
@@ -35,7 +33,8 @@ class _YouTubePlayerPageState extends State<YouTubePlayerPage> {
       return;
     }
 
-    final html = '''
+    final html =
+        '''
 <!DOCTYPE html>
 <html>
   <head>
@@ -87,27 +86,27 @@ class _YouTubePlayerPageState extends State<YouTubePlayerPage> {
 
     return Scaffold(
       appBar: AppBar(
-  backgroundColor: const Color(0xFF1B3A52), // نفس الأزرق المستخدم عندكم
-  iconTheme: const IconThemeData(
-    color: Colors.white, // لون سهم الرجوع
-    size: 32,
-  ),
-  title: Text(
-    widget.item.title,
-    style: const TextStyle(
-      color: Colors.white,      // لون العنوان
-      fontSize: 26,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-  centerTitle: true,
-),
+        backgroundColor: const Color(0xFF1B3A52), // نفس الأزرق المستخدم عندكم
+        iconTheme: const IconThemeData(
+          color: Colors.white, // لون سهم الرجوع
+          size: 32,
+        ),
+        title: Text(
+          widget.item.title,
+          style: const TextStyle(
+            color: Colors.white, // لون العنوان
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
 
       body: (url == null || url.isEmpty)
-          ? const Center(
+          ? Center(
               child: Text(
-                'No valid YouTube URL provided.',
-                style: TextStyle(fontSize: 18),
+                AppLocalizations.of(context)!.noValidYoutubeUrl,
+                style: const TextStyle(fontSize: 18),
               ),
             )
           : WebViewWidget(controller: _controller),

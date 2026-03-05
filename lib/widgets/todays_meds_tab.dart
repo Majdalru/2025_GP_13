@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import '../models/medication.dart'; // Make sure DoseStatus is defined here
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 import '../services/medication_scheduler.dart';
-import 'package:collection/collection.dart';
 
 // Combined data class for display
 class MedicationDose {
@@ -432,7 +432,9 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Undo successful for ${dose.medication.name}. Notifications rescheduled.',
+              AppLocalizations.of(
+                context,
+              )!.undoSuccessful(dose.medication.name),
             ),
             backgroundColor: Colors.orangeAccent, // Feedback color
           ),
@@ -604,7 +606,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Reminder!',
+                            AppLocalizations.of(context)!.reminder,
                             style: TextStyle(
                               color: Colors.red.shade900,
                               fontSize: 20,
@@ -615,8 +617,15 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                           Text(
                             // Dynamic message based on view type
                             widget.isCaregiverView
-                                ? '$_elderlyName has missed ${missed.length} missed dose${missed.length > 1 ? 's' : ''}!'
-                                : 'You have ${missed.length} missed medication${missed.length > 1 ? 's' : ''}!',
+                                ? AppLocalizations.of(
+                                    context,
+                                  )!.elderlyMissedDoses(
+                                    _elderlyName,
+                                    missed.length,
+                                  )
+                                : AppLocalizations.of(
+                                    context,
+                                  )!.youMissedDoses(missed.length),
                             style: TextStyle(
                               color: Colors.red.shade800,
                               fontSize: 18,
@@ -631,7 +640,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
               ),
             // --- Container 1: Upcoming (Next Up, Past Due, Later Today) ---
             _buildStatusContainer(
-              title: 'Upcoming',
+              title: AppLocalizations.of(context)!.upcoming,
               icon: Icons.notifications_active, // Or choose a better icon
               color: Colors.blue.shade700,
 
@@ -639,7 +648,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                 // Next Up (Show header only if items exist)
                 if (nextUpDoses.isNotEmpty) ...[
                   _buildSectionHeader(
-                    'Next Up',
+                    AppLocalizations.of(context)!.nextUp,
                     Icons.notification_important,
                     Colors.blue.shade700,
                     showHeader: false,
@@ -658,7 +667,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                 // Past Due (Show header only if items exist)
                 if (pastDueUpcoming.isNotEmpty) ...[
                   _buildSectionHeader(
-                    'Past Due',
+                    AppLocalizations.of(context)!.pastDue,
                     Icons.hourglass_bottom,
                     Colors.orange.shade700,
                     showHeader: false,
@@ -677,7 +686,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                 // Later Today (Show header only if items exist)
                 if (laterTodayDoses.isNotEmpty) ...[
                   _buildSectionHeader(
-                    'Later Today',
+                    AppLocalizations.of(context)!.laterToday,
                     Icons.update,
                     Colors.grey.shade600,
                     showHeader: false,
@@ -703,7 +712,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
 
             // --- Container 2: Taken (On Time + Late) ---
             _buildStatusContainer(
-              title: 'Taken',
+              title: AppLocalizations.of(context)!.taken,
               icon: Icons.check_circle,
               color: Colors.green.shade700,
               children: [
@@ -725,7 +734,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
 
             // --- Container 3: Missed ---
             _buildStatusContainer(
-              title: 'Missed',
+              title: AppLocalizations.of(context)!.missedTitle,
               icon: Icons.cancel,
               color: Colors.red.shade700,
               children: [
@@ -797,12 +806,12 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
 
   // Placeholder widget for empty sections within containers
   Widget _buildEmptyPlaceholder() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 20.0),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Center(
         child: Text(
-          'No medications in this category today.',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+          AppLocalizations.of(context)!.noMedicationsInCategory,
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
         ),
       ),
     );
@@ -929,7 +938,7 @@ class _TodayMedicationCard extends StatelessWidget {
         ); // Light green
         headerColor = Colors.green.shade700;
         headerIcon = Icons.check_circle;
-        statusText = 'Taken on time';
+        statusText = AppLocalizations.of(context)!.takenOnTime;
         statusColor = Colors.green;
         break;
       case DoseStatus.takenLate:
@@ -942,7 +951,7 @@ class _TodayMedicationCard extends StatelessWidget {
         ); // Light orange
         headerColor = Colors.orange.shade800;
         headerIcon = Icons.check_circle;
-        statusText = 'Taken late';
+        statusText = AppLocalizations.of(context)!.takenLate;
         statusColor = Colors.orange.shade800;
         break;
       case DoseStatus.missed:
@@ -955,7 +964,7 @@ class _TodayMedicationCard extends StatelessWidget {
         ); // Light red
         headerColor = Colors.red.shade700;
         headerIcon = Icons.cancel;
-        statusText = 'Missed';
+        statusText = AppLocalizations.of(context)!.missed;
         statusColor = Colors.red.shade700;
         break;
       case DoseStatus.upcoming:
@@ -969,7 +978,7 @@ class _TodayMedicationCard extends StatelessWidget {
           ); // Light orange
           headerColor = Colors.orange.shade700;
           headerIcon = Icons.hourglass_bottom;
-          statusText = 'Past due';
+          statusText = AppLocalizations.of(context)!.pastDue;
           statusColor = Colors.orange.shade700;
         } else if (shouldHighlight) {
           baseBorderColor = Colors.blue;
@@ -982,12 +991,12 @@ class _TodayMedicationCard extends StatelessWidget {
           headerColor = Colors.blue.shade700;
           headerIcon = Icons.notification_important;
           statusText = dose.scheduledDateTime.isAfter(now)
-              ? 'Next up'
-              : 'Due now';
+              ? AppLocalizations.of(context)!.nextUp
+              : AppLocalizations.of(context)!.dueNow;
           statusColor = Colors.blue.shade700;
         } else {
           headerIcon = Icons.update;
-          statusText = 'Upcoming';
+          statusText = AppLocalizations.of(context)!.upcoming;
           statusColor = Colors.grey.shade600;
           baseBorderColor = Colors.grey.shade300;
           statusBackgroundColor = Colors.grey.shade100; // Dimmed background
@@ -1071,7 +1080,7 @@ class _TodayMedicationCard extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(top: 2.0),
                           child: Text(
-                            'at ${DateFormat('h:mm a').format(takenTime.toDate())}',
+                            '${AppLocalizations.of(context)!.at} ${DateFormat('h:mm a').format(takenTime.toDate())}',
                             style: TextStyle(
                               fontSize: takenAtFontSize,
                               color: statusColor.withOpacity(0.8),
@@ -1102,7 +1111,7 @@ class _TodayMedicationCard extends StatelessWidget {
             // Frequency
             if (med.frequency != null)
               Text(
-                'Frequency: ${med.frequency}',
+                '${AppLocalizations.of(context)!.frequency}: ${med.frequency}',
                 style: TextStyle(
                   fontSize: frequencyFontSize,
                   color: const Color.fromARGB(255, 41, 40, 40),
@@ -1114,7 +1123,7 @@ class _TodayMedicationCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Notes: ${med.notes}',
+                  '${AppLocalizations.of(context)!.notes}: ${med.notes}',
                   style: TextStyle(
                     fontSize: notesFontSize,
                     color: const Color.fromARGB(
@@ -1141,8 +1150,8 @@ class _TodayMedicationCard extends StatelessWidget {
                     ),
                     label: Text(
                       isStrictlyPastDue || status == DoseStatus.missed
-                          ? 'Mark as Taken Late'
-                          : 'Mark as Taken',
+                          ? AppLocalizations.of(context)!.markAsTakenLate
+                          : AppLocalizations.of(context)!.markAsTaken,
                       style: TextStyle(
                         fontSize: buttonFontSize,
                         fontWeight: FontWeight.bold,
@@ -1188,9 +1197,9 @@ class _TodayMedicationCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onUndoPressed,
                       icon: Icon(Icons.undo, size: undoIconSize),
-                      label: const Text(
-                        'Undo',
-                        style: TextStyle(
+                      label: Text(
+                        AppLocalizations.of(context)!.undo,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),

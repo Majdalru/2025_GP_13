@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 import '/medmain.dart';
 import 'meds_summary_page.dart';
@@ -253,20 +254,20 @@ class HomePage extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               child: Row(
-                children: const [
-                  Icon(Icons.sos, color: Colors.white, size: 22),
-                  SizedBox(width: 12),
+                children: [
+                  const Icon(Icons.sos, color: Colors.white, size: 22),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Emergency alert',
-                      style: TextStyle(
+                      AppLocalizations.of(context)!.emergencyAlert,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
                       ),
                     ),
                   ),
-                  Icon(Icons.arrow_forward, color: Colors.white),
+                  const Icon(Icons.arrow_forward, color: Colors.white),
                 ],
               ),
             ),
@@ -286,14 +287,14 @@ class HomePage extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'Today • $formattedDate',
+                      AppLocalizations.of(context)!.todayLabel(formattedDate),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const Spacer(),
                     IconButton.filledTonal(
-                      tooltip: 'Go to Medications',
+                      tooltip: AppLocalizations.of(context)!.goToMedications,
                       style: IconButton.styleFrom(
                         backgroundColor: cs.primary.withOpacity(.10),
                       ),
@@ -336,8 +337,10 @@ class HomePage extends StatelessWidget {
                             final nexts = snapNext.data ?? const <_NextDose>[];
 
                             if (nexts.isEmpty) {
-                              return const _NextMedicationCardReal(
-                                medName: 'No upcoming meds',
+                              return _NextMedicationCardReal(
+                                medName: AppLocalizations.of(
+                                  context,
+                                )!.noUpcomingMeds,
                                 timeText: '--',
                               );
                             }
@@ -370,9 +373,9 @@ class HomePage extends StatelessWidget {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: onTapArrowToMedsSummary,
-                            child: const Text(
-                              'Monthly Overview',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context)!.monthlyOverview,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Color.fromARGB(255, 1, 42, 76),
                               ),
@@ -393,7 +396,7 @@ class HomePage extends StatelessWidget {
             Icon(Icons.info_outline, size: 18, color: cs.primary),
             const SizedBox(width: 6),
             Text(
-              'You are viewing $elderlyName daily meds.',
+              AppLocalizations.of(context)!.viewingDailyMeds(elderlyName),
               style: TextStyle(color: Colors.grey.shade700),
             ),
           ],
@@ -432,7 +435,10 @@ class _NextMedicationCardReal extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Next Up", style: TextStyle(color: Colors.grey)),
+                Text(
+                  AppLocalizations.of(context)!.nextUp,
+                  style: const TextStyle(color: Colors.grey),
+                ),
                 Text(
                   medName,
                   style: const TextStyle(
@@ -474,19 +480,19 @@ class _MedicationStatusSummaryRow extends StatelessWidget {
       children: [
         _StatusItem(
           count: taken,
-          label: 'On time',
+          label: AppLocalizations.of(context)!.onTimeStatus,
           color: Colors.green.shade700,
           icon: Icons.check_circle_outline,
         ),
         _StatusItem(
           count: late,
-          label: 'Late',
+          label: AppLocalizations.of(context)!.takenLate,
           color: Colors.orange.shade800,
           icon: Icons.warning_amber_rounded,
         ),
         _StatusItem(
           count: missed,
-          label: 'Missed',
+          label: AppLocalizations.of(context)!.missedStatus,
           color: Colors.red.shade700,
           icon: Icons.cancel_outlined,
         ),

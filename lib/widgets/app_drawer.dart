@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../Screens/login_page.dart';
 import '../Screens/home_shell.dart'; // Import ElderlyProfile model
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class AppDrawer extends StatelessWidget {
   final List<ElderlyProfile> linkedProfiles;
@@ -47,13 +48,15 @@ class AppDrawer extends StatelessWidget {
                 stream: (FirebaseAuth.instance.currentUser == null)
                     ? null
                     : FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(FirebaseAuth.instance.currentUser!.uid)
-                        .snapshots(),
+                          .collection('users')
+                          .doc(FirebaseAuth.instance.currentUser!.uid)
+                          .snapshots(),
                 builder: (context, snap) {
                   // القيم الافتراضية
-                  String displayName = 'Guest';
-                  String roleLabel = 'Caregiver';
+                  String displayName = AppLocalizations.of(context)!.guest;
+                  String roleLabel = AppLocalizations.of(
+                    context,
+                  )!.caregiverRole;
 
                   if (snap.hasData && snap.data!.exists) {
                     final data = snap.data!.data()!;
@@ -62,13 +65,18 @@ class AppDrawer extends StatelessWidget {
                     final email = (data['email'] ?? '').toString().trim();
                     final role = (data['role'] ?? '').toString().toLowerCase();
 
-                    final name = [first, last]
-                        .where((s) => s.isNotEmpty)
-                        .join(' ');
+                    final name = [
+                      first,
+                      last,
+                    ].where((s) => s.isNotEmpty).join(' ');
                     displayName = name.isNotEmpty
                         ? name
-                        : (email.isNotEmpty ? email : 'Guest');
-                    roleLabel = (role == 'elderly') ? 'Elderly' : 'Caregiver';
+                        : (email.isNotEmpty
+                              ? email
+                              : AppLocalizations.of(context)!.guest);
+                    roleLabel = (role == 'elderly')
+                        ? AppLocalizations.of(context)!.elderlyRole
+                        : AppLocalizations.of(context)!.caregiverRole;
                   }
 
                   // ← زر الإعدادات
@@ -106,7 +114,7 @@ class AppDrawer extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Settings',
+                        tooltip: AppLocalizations.of(context)!.settings,
                         icon: const Icon(
                           Icons.settings,
                           color: Color.fromARGB(255, 255, 255, 255),
@@ -127,16 +135,18 @@ class AppDrawer extends StatelessWidget {
                 children: [
                   const Icon(Icons.groups_2_outlined, size: 18),
                   const SizedBox(width: 6),
-                  const Text(
-                    'Linked Profiles',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  Text(
+                    AppLocalizations.of(context)!.linkedProfiles,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
                   ),
                   const Spacer(),
                   FilledButton.tonalIcon(
                     onPressed: () => _showAddProfileDialog(context),
                     icon: const Icon(Icons.add),
-                    label: const Text('Link'),
+                    label: Text(AppLocalizations.of(context)!.link),
                   ),
                 ],
               ),
@@ -145,7 +155,11 @@ class AppDrawer extends StatelessWidget {
             // ===== قائمة البروفايلات =====
             Expanded(
               child: linkedProfiles.isEmpty
-                  ? const Center(child: Text("No profiles linked yet."))
+                  ? Center(
+                      child: Text(
+                        AppLocalizations.of(context)!.noProfilesLinkedYet,
+                      ),
+                    )
                   : ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       children: linkedProfiles.map((profile) {
@@ -166,9 +180,12 @@ class AppDrawer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: FilledButton.tonalIcon(
                 icon: const Icon(Icons.logout),
-                label: const Text(
-                  'Log out',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                label: Text(
+                  AppLocalizations.of(context)!.logOut,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 onPressed: () async {
                   final yes = await _confirmLogout(context);
@@ -185,8 +202,7 @@ class AppDrawer extends StatelessWidget {
                   }
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor:
-                      const Color.fromARGB(255, 255, 193, 190),
+                  backgroundColor: const Color.fromARGB(255, 255, 193, 190),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 14,
@@ -243,7 +259,7 @@ class AppDrawer extends StatelessWidget {
             const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              tooltip: 'Unlink',
+              tooltip: AppLocalizations.of(context)!.unlink,
               onPressed: onDelete,
             ),
           ],
@@ -298,8 +314,9 @@ class AppDrawer extends StatelessWidget {
                     : () async {
                         if (formKey.currentState!.validate()) {
                           setStateInDialog(() => isLoading = true);
-                          final enteredCode =
-                              controller.text.trim().toUpperCase();
+                          final enteredCode = controller.text
+                              .trim()
+                              .toUpperCase();
                           final caregiverUid =
                               FirebaseAuth.instance.currentUser?.uid;
 
@@ -364,22 +381,22 @@ class AppDrawer extends StatelessWidget {
                                       .collection('users')
                                       .doc(caregiverUid);
 
-                                  await firestore.runTransaction(
-                                    (transaction) async {
-                                      transaction.update(caregiverDocRef, {
-                                        'elderlyIds': FieldValue.arrayUnion(
-                                          [elderlyUid],
-                                        ),
-                                      });
-                                      transaction.update(elderlyDoc.reference, {
-                                        'caregiverIds': FieldValue.arrayUnion(
-                                          [caregiverUid],
-                                        ),
-                                        'pairingCode': null,
-                                        'pairingCodeCreatedAt': null,
-                                      });
-                                    },
-                                  );
+                                  await firestore.runTransaction((
+                                    transaction,
+                                  ) async {
+                                    transaction.update(caregiverDocRef, {
+                                      'elderlyIds': FieldValue.arrayUnion([
+                                        elderlyUid,
+                                      ]),
+                                    });
+                                    transaction.update(elderlyDoc.reference, {
+                                      'caregiverIds': FieldValue.arrayUnion([
+                                        caregiverUid,
+                                      ]),
+                                      'pairingCode': null,
+                                      'pairingCodeCreatedAt': null,
+                                    });
+                                  });
 
                                   Navigator.pop(ctx);
                                   // ✅ Dialog أنيق لنجاح الربط
@@ -390,9 +407,7 @@ class AppDrawer extends StatelessWidget {
                             }
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('An error occurred: $e'),
-                              ),
+                              SnackBar(content: Text('An error occurred: $e')),
                             );
                           } finally {
                             if (context.mounted) {
@@ -423,16 +438,16 @@ class AppDrawer extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Are you sure?'),
-        content: const Text('Do you really want to log out?'),
+        title: Text(AppLocalizations.of(context)!.areYouSure),
+        content: Text(AppLocalizations.of(context)!.doYouReallyWantToLogOut),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('No'),
+            child: Text(AppLocalizations.of(context)!.no),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes'),
+            child: Text(AppLocalizations.of(context)!.yes),
           ),
         ],
       ),
@@ -447,18 +462,18 @@ class AppDrawer extends StatelessWidget {
     final yes = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete profile'),
+        title: Text(AppLocalizations.of(context)!.deleteProfile),
         content: Text(
-          'Do you want to Delete ${profile.name} from your account?',
+          AppLocalizations.of(context)!.confirmDeleteProfile(profile.name),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -476,7 +491,7 @@ class AppDrawer extends StatelessWidget {
     final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
     if (caregiverUid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: You are not logged in.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.errorNotLoggedIn)),
       );
       return;
     }
@@ -497,11 +512,19 @@ class AppDrawer extends StatelessWidget {
 
       onProfileLinked(); // تحديث القائمة في الأب
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profile ${profile.name} unlinked')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.profileUnlinked(profile.name),
+          ),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error unlinking profile: $e')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.errorUnlinkingProfile(e.toString()),
+          ),
+        ),
       );
     }
   }
@@ -512,8 +535,10 @@ class AppDrawer extends StatelessWidget {
     if (uid == null) return;
 
     // جلب القيم الحالية لتهيئة الحقول
-    final snap =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
     final data = snap.data() ?? {};
     final first = (data['firstName'] ?? '').toString().trim();
     final last = (data['lastName'] ?? '').toString().trim();
@@ -549,13 +574,14 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Name',
                   border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 style: const TextStyle(fontSize: 16),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Name is required'
-                    : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
               ),
               const SizedBox(height: 12),
 
@@ -565,8 +591,10 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Gender',
                   border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'male', child: Text('Male')),
@@ -589,8 +617,10 @@ class AppDrawer extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Mobile (05XXXXXXXX)',
                   border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 style: const TextStyle(fontSize: 16),
                 validator: (v) {
@@ -616,8 +646,9 @@ class AppDrawer extends StatelessWidget {
               final newName = nameCtrl.text.trim();
               final parts = newName.split(RegExp(r'\s+'));
               final firstName = parts.isNotEmpty ? parts.first : '';
-              final lastName =
-                  parts.length > 1 ? parts.sublist(1).join(' ') : '';
+              final lastName = parts.length > 1
+                  ? parts.sublist(1).join(' ')
+                  : '';
               final newGender = genderCtrl.text;
               final newPhone = phoneCtrl.text.trim();
 
@@ -641,9 +672,7 @@ class AppDrawer extends StatelessWidget {
                           ),
                           title: const Text(
                             'Mobile in use',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w800),
                           ),
                           content: const Text(
                             'This mobile number is already in use.',
@@ -667,11 +696,11 @@ class AppDrawer extends StatelessWidget {
                     .collection('users')
                     .doc(uid)
                     .update({
-                  'firstName': firstName,
-                  'lastName': lastName,
-                  'gender': newGender,
-                  'phone': newPhone,
-                });
+                      'firstName': firstName,
+                      'lastName': lastName,
+                      'gender': newGender,
+                      'phone': newPhone,
+                    });
 
                 if (!context.mounted) return;
                 Navigator.pop(ctx);
@@ -716,39 +745,26 @@ class AppDrawer extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: cs.primary.withOpacity(0.12),
                   ),
-                  child: Icon(
-                    Icons.check_circle,
-                    color: cs.primary,
-                    size: 60,
-                  ),
+                  child: Icon(Icons.check_circle, color: cs.primary, size: 60),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   'Profile linked!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   'Profile linked successfully. You can now manage this elderly user from your dashboard.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black54,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.black54),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    child: const Text('OK', style: TextStyle(fontSize: 18)),
                   ),
                 ),
               ],

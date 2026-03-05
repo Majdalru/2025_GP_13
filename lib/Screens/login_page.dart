@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
+import '../providers/locale_provider.dart';
 import 'forgot_password_page.dart';
 import 'sign_up_page.dart';
 import 'elderly_sign_up_page.dart';
@@ -18,13 +21,13 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _auth = FirebaseAuth.instance;
-  final _db   = FirebaseFirestore.instance;
+  final _db = FirebaseFirestore.instance;
 
   UserRole _role = UserRole.caregiver;
 
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
-  final _pass  = TextEditingController();
+  final _pass = TextEditingController();
   bool _ob = true, _loading = false;
 
   @override
@@ -50,19 +53,29 @@ class _LoginPageState extends State<LoginPage> {
           child: Text(message),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocalizations.of(context)!.ok),
+          ),
         ],
       ),
     );
   }
 
   String _prettyAuthError(FirebaseAuthException e) {
+    if (!mounted) return '';
+    final loc = AppLocalizations.of(context)!;
     switch (e.code) {
-      case 'invalid-email':  return 'Invalid email address.';
-      case 'too-many-requests': return 'Too many attempts. Please try again later.';
-      case 'user-disabled':  return 'This account has been disabled.';
-      case 'network-request-failed': return 'Network error. Check your internet connection.';
-      default: return 'Unable to sign in. Please check your email, password, or account type.';
+      case 'invalid-email':
+        return loc.invalidEmailAuth;
+      case 'too-many-requests':
+        return loc.tooManyRequestsAuth;
+      case 'user-disabled':
+        return loc.accountDisabledAuth;
+      case 'network-request-failed':
+        return loc.networkErrorAuth;
+      default:
+        return loc.signInGenericError;
     }
   }
 
@@ -71,11 +84,14 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _loading = true);
 
     try {
-      final email    = _email.text.trim();
+      final email = _email.text.trim();
       final password = _pass.text.trim();
 
       // 1) Auth
-      final cred = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
       final uid = cred.user!.uid;
 
       // 2) Fetch profile
@@ -83,21 +99,26 @@ class _LoginPageState extends State<LoginPage> {
       if (!snap.exists || snap.data() == null) {
         await _auth.signOut();
         await _showCenteredDialog(
-          'Sign-in failed',
-          'Unable to sign in. Please check your email, password, or account type.',
+          AppLocalizations.of(context)!.signInFailed,
+          AppLocalizations.of(context)!.signInGenericError,
         );
         return;
       }
 
       // 3) Role gating
-      final roleStr = (snap.data()!['role'] ?? '').toString().toLowerCase().trim();
-      final actualRole = roleStr == 'elderly' ? UserRole.elderly : UserRole.caregiver;
+      final roleStr = (snap.data()!['role'] ?? '')
+          .toString()
+          .toLowerCase()
+          .trim();
+      final actualRole = roleStr == 'elderly'
+          ? UserRole.elderly
+          : UserRole.caregiver;
 
       if (actualRole != _role) {
         await _auth.signOut();
         await _showCenteredDialog(
-          'Sign-in failed',
-          'Unable to sign in. Please check your email, password, or account type.',
+          AppLocalizations.of(context)!.signInFailed,
+          AppLocalizations.of(context)!.signInGenericError,
         );
         return;
       }
@@ -109,9 +130,9 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => const ElderlyHomePage()),
         );
       } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeShell()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeShell()));
       }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -119,8 +140,8 @@ class _LoginPageState extends State<LoginPage> {
     } catch (_) {
       if (!mounted) return;
       await _showCenteredDialog(
-        'Sign-in failed',
-        'Unable to sign in. Please check your email, password, or account type.',
+        AppLocalizations.of(context)!.signInFailed,
+        AppLocalizations.of(context)!.signInGenericError,
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -129,26 +150,44 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cs   = Theme.of(context).colorScheme;
+    final loc = AppLocalizations.of(context)!;
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final cs = Theme.of(context).colorScheme;
     final size = MediaQuery.of(context).size;
-    final w    = size.width;
+    final w = size.width;
 
     const maxContentWidth = 480.0;
     final logoH = (w * 0.22).clamp(80, 140);
 
-    final isElderly      = _role == UserRole.elderly;
+    final isElderly = _role == UserRole.elderly;
 
     // أحجام Elderly أكبر للوضوح
-    final titleStyle     = TextStyle(fontWeight: FontWeight.w900, fontSize: isElderly ? 34 : 24);
+    final titleStyle = TextStyle(
+      fontWeight: FontWeight.w900,
+      fontSize: isElderly ? 34 : 24,
+    );
     final inputTextStyle = TextStyle(fontSize: isElderly ? 20 : 15);
-    final labelTextStyle = TextStyle(fontSize: isElderly ? 28 : 14, fontWeight: FontWeight.w600);
+    final labelTextStyle = TextStyle(
+      fontSize: isElderly ? 28 : 14,
+      fontWeight: FontWeight.w600,
+    );
     final helperErrStyle = TextStyle(fontSize: isElderly ? 16 : 12);
-    final fieldPadding   = EdgeInsets.symmetric(vertical: isElderly ? 22 : 16, horizontal: 14);
-    final linkTextStyle  = TextStyle(fontSize: isElderly ? 18 : 14, color: cs.primary, fontWeight: FontWeight.w600);
+    final fieldPadding = EdgeInsets.symmetric(
+      vertical: isElderly ? 22 : 16,
+      horizontal: 14,
+    );
+    final linkTextStyle = TextStyle(
+      fontSize: isElderly ? 18 : 14,
+      color: cs.primary,
+      fontWeight: FontWeight.w600,
+    );
 
-    final buttonStyle    = FilledButton.styleFrom(
+    final buttonStyle = FilledButton.styleFrom(
       minimumSize: Size.fromHeight(isElderly ? 60 : 56),
-      textStyle: TextStyle(fontSize: isElderly ? 20 : 16, fontWeight: FontWeight.w700),
+      textStyle: TextStyle(
+        fontSize: isElderly ? 20 : 16,
+        fontWeight: FontWeight.w700,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
 
@@ -162,12 +201,31 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.language),
+            tooltip: localeProvider.locale?.languageCode == 'ar'
+                ? 'English'
+                : 'العربية',
+            onPressed: () {
+              final newLocale = localeProvider.locale?.languageCode == 'ar'
+                  ? const Locale('en')
+                  : const Locale('ar');
+              localeProvider.setLocale(newLocale);
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: maxContentWidth),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               children: [
                 // Logo
                 Center(
@@ -184,7 +242,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 8),
 
-                Center(child: Text('Log in', style: titleStyle)),
+                Center(child: Text(loc.login, style: titleStyle)),
                 const SizedBox(height: 14),
 
                 // Role chips
@@ -196,11 +254,17 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: Row(
                     children: [
-                      _roleChip('Caregiver', _role == UserRole.caregiver,
-                        () => setState(() => _role = UserRole.caregiver)),
+                      _roleChip(
+                        loc.caregiver,
+                        _role == UserRole.caregiver,
+                        () => setState(() => _role = UserRole.caregiver),
+                      ),
                       const SizedBox(width: 8),
-                      _roleChip('Elderly', _role == UserRole.elderly,
-                        () => setState(() => _role = UserRole.elderly)),
+                      _roleChip(
+                        loc.elderly,
+                        _role == UserRole.elderly,
+                        () => setState(() => _role = UserRole.elderly),
+                      ),
                     ],
                   ),
                 ),
@@ -209,11 +273,10 @@ class _LoginPageState extends State<LoginPage> {
                 // ===== Form =====
                 Form(
                   key: _formKey,
-                  //  شلنا autovalidateMode عشان ما يحمر كل شيء من أول لمسة
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Email', style: labelTextStyle),
+                      Text(loc.email, style: labelTextStyle),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _email,
@@ -222,15 +285,16 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: _dec(icon: Icons.email_outlined),
                         validator: (v) {
                           final s = (v ?? '').trim();
-                          if (s.isEmpty) return 'Required';
-                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) return 'Enter a valid email';
+                          if (s.isEmpty) return loc.requiredField;
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s))
+                            return loc.invalidEmail;
                           return null;
                         },
                       ),
 
                       const SizedBox(height: 14),
 
-                      Text('Password', style: labelTextStyle),
+                      Text(loc.password, style: labelTextStyle),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _pass,
@@ -239,14 +303,18 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: _dec(icon: Icons.lock_outline).copyWith(
                           suffixIcon: IconButton(
                             onPressed: () => setState(() => _ob = !_ob),
-                            icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
+                            icon: Icon(
+                              _ob ? Icons.visibility_off : Icons.visibility,
+                            ),
                           ),
                         ),
-                        validator: (v) => (v == null || v.length < 6) ? 'Min 6 characters' : null,
+                        validator: (v) => (v == null || v.length < 6)
+                            ? loc.shortPassword
+                            : null,
                       ),
 
                       Align(
-                        alignment: Alignment.centerRight,
+                        alignment: AlignmentDirectional.centerEnd,
                         child: TextButton(
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(
@@ -255,7 +323,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                           ),
-                          child: Text('Forgot password?', style: linkTextStyle),
+                          child: Text(loc.forgotPassword, style: linkTextStyle),
                         ),
                       ),
                     ],
@@ -269,9 +337,12 @@ class _LoginPageState extends State<LoginPage> {
                       ? const SizedBox(
                           width: 22,
                           height: 22,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
-                      : const Text('Next'),
+                      : Text(loc.next),
                 ),
 
                 const SizedBox(height: 16),
@@ -280,18 +351,29 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don’t have an account?",
-                      style: TextStyle(color: Colors.grey.shade700, fontSize: isElderly ? 18 : 14),
+                      loc.dontHaveAccount,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: isElderly ? 18 : 14,
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
                         if (_role == UserRole.elderly) {
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ElderlySignUpPage()));
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ElderlySignUpPage(),
+                            ),
+                          );
                         } else {
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignUpPage()));
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SignUpPage(),
+                            ),
+                          );
                         }
                       },
-                      child: Text('Sign up', style: linkTextStyle),
+                      child: Text(loc.signUp, style: linkTextStyle),
                     ),
                   ],
                 ),

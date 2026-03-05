@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../models/shared_item.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class SharedAudioPlayerPage extends StatefulWidget {
   final SharedItem item;
@@ -51,10 +52,14 @@ class _SharedAudioPlayerPageState extends State<SharedAudioPlayerPage> {
     } catch (e) {
       debugPrint('Error loading audio: $e');
       if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error loading audio: $e')),
-          );
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.errorLoadingAudio(e.toString()),
+            ),
+          ),
+        );
       }
     }
   }
@@ -82,8 +87,9 @@ class _SharedAudioPlayerPageState extends State<SharedAudioPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final maxSeconds =
-        _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0;
+    final maxSeconds = _duration.inSeconds > 0
+        ? _duration.inSeconds.toDouble()
+        : 1.0;
     final sliderValue = _position.inSeconds.toDouble().clamp(0.0, maxSeconds);
 
     return Scaffold(
@@ -92,7 +98,7 @@ class _SharedAudioPlayerPageState extends State<SharedAudioPlayerPage> {
         toolbarHeight: 110,
         backgroundColor: SharedAudioPlayerPage.kPrimary,
         title: Text(widget.item.title),
-         titleTextStyle: const TextStyle(
+        titleTextStyle: const TextStyle(
           fontSize: 28,
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -129,7 +135,7 @@ class _SharedAudioPlayerPageState extends State<SharedAudioPlayerPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                         const Icon(
+                          const Icon(
                             Icons.audiotrack,
                             size: 80,
                             color: SharedAudioPlayerPage.kPrimary,
@@ -145,7 +151,9 @@ class _SharedAudioPlayerPageState extends State<SharedAudioPlayerPage> {
                                   max: maxSeconds,
                                   value: sliderValue,
                                   onChanged: (value) {
-                                    _player.seek(Duration(seconds: value.toInt()));
+                                    _player.seek(
+                                      Duration(seconds: value.toInt()),
+                                    );
                                   },
                                   activeColor: SharedAudioPlayerPage.kPrimary,
                                 ),
@@ -185,8 +193,8 @@ class _SharedAudioPlayerPageState extends State<SharedAudioPlayerPage> {
                                     onPressed: _isLoading
                                         ? null
                                         : () => playing
-                                            ? _player.pause()
-                                            : _player.play(),
+                                              ? _player.pause()
+                                              : _player.play(),
                                     child: Icon(
                                       playing ? Icons.pause : Icons.play_arrow,
                                       color: Colors.white,

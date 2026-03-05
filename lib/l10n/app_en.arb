@@ -1,0 +1,376 @@
+{
+  "@@locale": "en",
+  "appTitle": "Caregiver",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "login": "Log in",
+  "email": "Email",
+  "password": "Password",
+  "caregiver": "Caregiver",
+  "elderly": "Elderly",
+  "requiredField": "Required",
+  "invalidEmail": "Enter a valid email",
+  "shortPassword": "Min 6 characters",
+  "forgotPassword": "Forgot password?",
+  "next": "Next",
+  "dontHaveAccount": "Don’t have an account?",
+  "signUp": "Sign up",
+  "signInFailed": "Sign-in failed",
+  "signInGenericError": "Unable to sign in. Please check your email, password, or account type.",
+  "invalidEmailAuth": "Invalid email address.",
+  "tooManyRequestsAuth": "Too many attempts. Please try again later.",
+  "accountDisabledAuth": "This account has been disabled.",
+  "networkErrorAuth": "Network error. Check your internet connection.",
+  "ok": "OK",
+  "noProfileSelected": "No elderly profile selected.\n\nPlease link a profile using the drawer menu.",
+  "dashboard": "Dashboard",
+  "browse": "Browse",
+  "home": "Home",
+  "medicationHistory": "Medication History",
+  "clearAllHistory": "Clear All History?",
+  "confirmClearHistory": "This will permanently remove all medication history records.",
+  "cancel": "Cancel",
+  "clearAll": "Clear All",
+  "historyClearedToast": "History cleared",
+  "clearAllHistoryMenu": "Clear All History",
+  "noMedicationHistory": "No medication history",
+  "noMedicationHistoryDesc": "Deleted and expired medications\nwill appear here",
+  "removeFromHistory": "Remove from History?",
+  "confirmRemoveFromHistory": "Remove \"{medName}\" from history?",
+  "@confirmRemoveFromHistory": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "Remove",
+  "recoverMedication": "Recover Medication?",
+  "confirmRecoverMedication": "Add \"{medName}\" back to your active medications?",
+  "@confirmRecoverMedication": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "recover": "Recover",
+  "recoveredSuccessfully": "\"{medName}\" recovered successfully",
+  "@recoveredSuccessfully": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToRecover": "Failed to recover medication",
+  "expired": "Expired",
+  "deleted": "Deleted",
+  "unknownDate": "Unknown date",
+  "frequency": "Frequency",
+  "dose": "Dose",
+  "days": "Days",
+  "times": "Times",
+  "endDate": "End Date",
+  "notes": "Notes",
+  "recoverMedicationButton": "Recover Medication",
+  "actionOnDate": "{action} on {date}",
+  "@actionOnDate": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "guest": "Guest",
+  "caregiverRole": "Caregiver",
+  "elderlyRole": "Elderly",
+  "settings": "Settings",
+  "linkedProfiles": "Linked Profiles",
+  "link": "Link",
+  "noProfilesLinkedYet": "No profiles linked yet.",
+  "logOut": "Log out",
+  "areYouSure": "Are you sure?",
+  "doYouReallyWantToLogOut": "Do you really want to log out?",
+  "yes": "Yes",
+  "no": "No",
+  "unlink": "Unlink",
+  "deleteProfile": "Delete profile",
+  "confirmDeleteProfile": "Do you want to Delete {profileName} from your account?",
+  "@confirmDeleteProfile": {
+    "placeholders": {
+      "profileName": {
+        "type": "String"
+      }
+    }
+  },
+  "errorNotLoggedIn": "Error: You are not logged in.",
+  "profileUnlinked": "Profile {profileName} unlinked",
+  "@profileUnlinked": {
+    "placeholders": {
+      "profileName": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnlinkingProfile": "Error unlinking profile: {error}",
+  "@errorUnlinkingProfile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editInfo": "Edit Info",
+  "name": "Name",
+  "nameRequired": "Name is required",
+  "gender": "Gender",
+  "male": "Male",
+  "female": "Female",
+  "selectGender": "Select gender",
+  "mobile": "Mobile (05XXXXXXXX)",
+  "requiredError": "Required",
+  "mustStartWith05": "Must start with 05",
+  "mustBe10Digits": "Must be 10 digits",
+  "mobileInUse": "Mobile in use",
+  "mobileInUseMsg": "This mobile number is already in use.",
+  "informationUpdated": "Information updated",
+  "errorUpdatingInfo": "Error updating info: {error}",
+  "@errorUpdatingInfo": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileLinked": "Profile linked!",
+  "profileLinkedMsg": "Profile linked successfully. You can now manage this elderly user from your dashboard.",
+  "linkElderlyViaCode": "Link Elderly via Code",
+  "enter6Characters": "Enter 6 characters",
+  "invalidOrExpiredCode": "Invalid or expired code.",
+  "invalidCodeData": "Invalid code data.",
+  "codeHasExpired": "Code has expired.",
+  "anErrorOccurred": "An error occurred: {error}",
+  "@anErrorOccurred": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "summary": "Summary",
+  "errorLoading": "Error: {error}",
+  "@errorLoading": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noMedicationsFound": "No medications found",
+  "onTimeLateMissed": "On time: {onTime}   Late: {late}   Missed: {missed}",
+  "@onTimeLateMissed": {
+    "placeholders": {
+      "onTime": {
+        "type": "int"
+      },
+      "late": {
+        "type": "int"
+      },
+      "missed": {
+        "type": "int"
+      }
+    }
+  },
+  "noDosesForThisMonthYet": "No doses for this month yet",
+  "medicationsForThisElderly": "Medications for this elderly",
+  "byDay": "By day",
+  "byMedication": "By medication",
+  "scheduledTime": "Scheduled {time}",
+  "@scheduledTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "takenTime": " • Taken {time}",
+  "@takenTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "missedOverdue": " • Missed (>10m overdue)",
+  "takenLateStatus": " • Taken late",
+  "noLogsForThisDay": "No logs for this day",
+  "selectDayToViewDetails": "Select a day to view details",
+  "reminder": "Reminder!",
+  "elderlyMissedDoses": "{name} has missed {count} missed dose(s)!",
+  "@elderlyMissedDoses": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "youMissedDoses": "You have {count} missed medication(s)!",
+  "@youMissedDoses": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upcoming": "Upcoming",
+  "nextUp": "Next Up",
+  "laterToday": "Later Today",
+  "taken": "Taken",
+  "missedTitle": "Missed",
+  "medicationTakenOnTime": "The medication was taken on time ✓",
+  "medicationTakenLate": "The medication was taken late",
+  "undoSuccessful": "Undo successful for {medName}. Notifications rescheduled.",
+  "@undoSuccessful": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "noMedicationsInCategory": "No medications in this category today.",
+  "takenOnTime": "Taken on time",
+  "takenLate": "Taken late",
+  "missed": "Missed",
+  "pastDue": "Past due",
+  "dueNow": "Due now",
+  "at": "at",
+  "markAsTakenLate": "Mark as Taken Late",
+  "markAsTaken": "Mark as Taken",
+  "undo": "Undo",
+  "favorites": "Favorites",
+  "medications": "Medications",
+  "addNewMedication": "Add New Medication",
+  "errorDeletingMedication": "Error deleting medication: {error}",
+  "@errorDeletingMedication": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingMedications": "Error loading medications.",
+  "edit": "Edit",
+  "delete": "Delete",
+  "errorLoadingVideo": "Error loading video: {error}",
+  "@errorLoadingVideo": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingAudio": "Error loading audio: {error}",
+  "@errorLoadingAudio": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "media": "Media",
+  "searchFavorites": "Search favorites...",
+  "noResultsFound": "No results found",
+  "voiceCommandFailed": "Voice command failed, please try again.",
+  "health": "Health",
+  "story": "Story",
+  "quran": "Quran",
+  "searchForAudio": "Search for audio...",
+  "addedToFavorites": "Added to Favorites successfully",
+  "removedFromFavorites": "Removed from Favorites",
+  "noValidYoutubeUrl": "No valid YouTube URL provided.",
+  "emergencyAlert": "Emergency alert",
+  "todayLabel": "Today • {date}",
+  "@todayLabel": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "goToMedications": "Go to Medications",
+  "noUpcomingMeds": "No upcoming meds",
+  "monthlyOverview": "Monthly Overview",
+  "viewingDailyMeds": "You are viewing {name}'s daily meds.",
+  "@viewingDailyMeds": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "onTimeStatus": "On time",
+  "missedStatus": "Missed",
+  "howToReadPieChart": "How to read this pie chart?",
+  "pieChartHelpBody": "• Each slice = group of doses this month\n• Green: doses taken on time\n• Yellow: doses taken late\n• Red: doses that were missed completely\n\nThe size of each slice shows its percentage from ALL doses.",
+  "howToReadBarChart": "How to read this daily bar chart?",
+  "barChartHelpBody": "• Each bar = one day of this month\n• Bar height = total number of doses that day\n• Green part = doses taken on time\n• Yellow part = doses taken late\n• Red part = missed doses\n\nThis helps you see which days had more missed or late doses.",
+  "howToReadWeeklyTrend": "How to read weekly trend?",
+  "weeklyTrendHelpBody": "• Each card = one week in this month\n• It shows how many doses were on time, late, or missed\n• The percentage on the right is overall adherence for that week.\n\nGreen weeks = very good adherence, red weeks = need attention.",
+  "gotIt": "Got it",
+  "summaryForMed": "Summary • {medName}",
+  "@summaryForMed": {
+    "placeholders": {
+      "medName": {}
+    }
+  },
+  "noDosesThisMonth": "No doses for this month yet.",
+  "statusPie": "Status pie",
+  "dailyBar": "Daily bar",
+  "weeklyTrend": "Weekly trend",
+  "monthlyAdherence": "Monthly adherence",
+  "doseStatusThisMonth": "Dose status (this month)",
+  "dailyDosesByStatus": "Daily doses by status (stacked bar)",
+  "noDailyData": "No daily data available for this month.",
+  "noDataWeeklyTrend": "No data available for weekly trend.",
+  "notEnoughDataWeekly": "Not enough data for weekly trend.",
+  "weeklyAdherenceTrend": "Weekly adherence trend",
+  "weekNumber": "Week {week}",
+  "@weekNumber": {
+    "placeholders": {
+      "week": {}
+    }
+  },
+  "dayLabel": "Day: {day}",
+  "@dayLabel": {
+    "placeholders": {
+      "day": {}
+    }
+  },
+  "daysRangeLabel": "Days: {startDay}–{endDay}",
+  "@daysRangeLabel": {
+    "placeholders": {
+      "startDay": {},
+      "endDay": {}
+    }
+  },
+  "greatAdherence": "Great adherence 👏",
+  "moderateAdherence": "Moderate adherence – can be improved 🙂",
+  "lowAdherence": "Low adherence – needs attention ⚠️",
+  "medicationDeletedSuccessfully": "Medication deleted successfully",
+  "medsFor": "Meds for",
+  "medicationList": "Medication List",
+  "todaysMeds": "Today's Meds",
+  "medList": "Med list",
+  "confirmDeletion": "Confirm Deletion",
+  "areYouSureToDelete": "Are you sure you want to delete",
+  "rescan": "Rescan",
+  "scanFailed": "Scan failed",
+  "editMedication": "Edit Medication",
+  "step1MedicineName": "Step 1: Medicine Name",
+  "whatMedicationDoYouNeedToTake": "What medication do you need to take?",
+  "medicineName": "Medicine Name"
+}

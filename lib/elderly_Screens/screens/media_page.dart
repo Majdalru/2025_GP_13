@@ -11,8 +11,9 @@ import 'audio_player_page.dart';
 import '../../models/audio_item.dart';
 import '../../services/voice_assistant_service.dart';
 import 'package:flutter_application_1/models/voice_command.dart'; //  NEW
-import 'youtube_player_page.dart'; 
-import 'shared_media_list_page.dart'; 
+import 'package:flutter_application_1/l10n/app_localizations.dart';
+import 'youtube_player_page.dart';
+import 'shared_media_list_page.dart';
 
 class MediaPage extends StatefulWidget {
   const MediaPage({super.key});
@@ -142,10 +143,26 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                     ? 0.68
                     : 0.8,
                 children: [
-                  _buildMediaCard(context, Icons.library_music, "Story"),
-                  _buildMediaCard(context, Icons.menu_book, "Quran"),
-                  _buildMediaCard(context, Icons.upload_file, "Caregiver"),
-                  _buildMediaCard(context, Icons.favorite, "Health"),
+                  _buildMediaCard(
+                    context,
+                    Icons.library_music,
+                    AppLocalizations.of(context)!.story,
+                  ),
+                  _buildMediaCard(
+                    context,
+                    Icons.menu_book,
+                    AppLocalizations.of(context)!.quran,
+                  ),
+                  _buildMediaCard(
+                    context,
+                    Icons.upload_file,
+                    AppLocalizations.of(context)!.caregiver,
+                  ),
+                  _buildMediaCard(
+                    context,
+                    Icons.favorite,
+                    AppLocalizations.of(context)!.health,
+                  ),
                 ],
               ),
 
@@ -167,8 +184,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                     size: 45,
                     color: Colors.white,
                   ),
-                  label: const Text(
-                    "Favorites",
+                  label: Text(
+                    AppLocalizations.of(context)!.favorites,
                     style: TextStyle(
                       fontFamily: 'NotoSansArabic',
                       fontSize: 32,
@@ -410,89 +427,88 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   }
 
   String? _healthFileKeywordFromUtterance(String normalizedUtter) {
-  // 🏃 Exercises
-  if (_containsAnyNormalized(normalizedUtter, [
-    'exercise',
-    'exercises',
-    'Five Exercises in Home',
-    'رياضه',
-    'رياضة',
-    'تحرك',
-    'حركه',
-    'movement',
-  ])) {
-    return 'Exercises';
+    // 🏃 Exercises
+    if (_containsAnyNormalized(normalizedUtter, [
+      'exercise',
+      'exercises',
+      'Five Exercises in Home',
+      'رياضه',
+      'رياضة',
+      'تحرك',
+      'حركه',
+      'movement',
+    ])) {
+      return 'Exercises';
+    }
+
+    // 🛏 Sleep
+    if (_containsAnyNormalized(normalizedUtter, [
+      'sleep',
+      'sleeping',
+      'نوم',
+      'وضعية نوم',
+      'وضعية النوم',
+      'النوم',
+    ])) {
+      return 'sleep';
+    }
+
+    // 💆 Self care
+    if (_containsAnyNormalized(normalizedUtter, [
+      'self care',
+      'care',
+      'العنايه',
+      'العناية',
+      'نفسي',
+      'صحه نفسيه',
+    ])) {
+      return 'self care';
+    }
+
+    // 🥗 Diet
+    if (_containsAnyNormalized(normalizedUtter, [
+      'diet',
+      'food',
+      'nutrition',
+      'The Ideal Diet for Senior',
+      'غذاء',
+      'حمية',
+      'رجيم',
+      'كبار السن',
+      'senior',
+    ])) {
+      return 'diet';
+    }
+
+    return null;
   }
 
-  // 🛏 Sleep
-  if (_containsAnyNormalized(normalizedUtter, [
-    'sleep',
-    'sleeping',
-    'نوم',
-    'وضعية نوم',
-    'وضعية النوم',
-    'النوم',
-  ])) {
-    return 'sleep';
+  /// يرجع كلمة مفتاحية من كلام المستخدم عشان نعرف القصة (  )
+  String? _storyFileKeywordFromUtterance(String normalizedUtter) {
+    if (_containsAnyNormalized(normalizedUtter, [
+      'muhammad',
+      'النبي محمد',
+      'رسول الله',
+      'سيدنا محمد',
+      'prophet muhammad',
+      'Muhammad',
+      'محمد',
+    ])) {
+      return 'muhammad';
+    }
+
+    if (_containsAnyNormalized(normalizedUtter, [
+      'noah',
+      'النبي نوح',
+      'سيدنا نوح',
+      'prophet noah',
+      'Noah',
+    ])) {
+      return 'noah';
+    }
+
+    return null;
   }
-
-  // 💆 Self care
-  if (_containsAnyNormalized(normalizedUtter, [
-    'self care',
-    'care',
-    'العنايه',
-    'العناية',
-    'نفسي',
-    'صحه نفسيه',
-  ])) {
-    return 'self care';
-  }
-
-  // 🥗 Diet
-  if (_containsAnyNormalized(normalizedUtter, [
-    'diet',
-    'food',
-    'nutrition',
-    'The Ideal Diet for Senior',
-    'غذاء',
-    'حمية',
-    'رجيم',
-    'كبار السن',
-    'senior',
-  ])) {
-    return 'diet';
-  }
-
-  return null;
-}
-
-
-/// يرجع كلمة مفتاحية من كلام المستخدم عشان نعرف القصة (  )
-String? _storyFileKeywordFromUtterance(String normalizedUtter) {
-  if (_containsAnyNormalized(normalizedUtter, [
-    'muhammad',
-    'النبي محمد',
-    'رسول الله',
-    'سيدنا محمد',
-    'prophet muhammad',
-    'Muhammad',
-    'محمد',
-  ])) {
-    return 'muhammad';
-  }
-
-  if (_containsAnyNormalized(normalizedUtter, [
-    'noah',
-    'النبي نوح',
-    'سيدنا نوح',
-    'prophet noah',
-    'Noah',
-  ])) {
-    return 'noah';
-  }
-
-  return null;
-}
 
   /// ✅ هل الكلام يعتبر إلغاء للجلسة؟
   bool _isCancelUtterance(String? answer) {
@@ -667,8 +683,8 @@ String? _storyFileKeywordFromUtterance(String normalizedUtter) {
     } catch (e) {
       debugPrint("Voice Error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Voice command failed, please try again."),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.voiceCommandFailed),
         ),
       );
     } finally {
@@ -868,72 +884,75 @@ String? _storyFileKeywordFromUtterance(String normalizedUtter) {
           }
         }
       }
-     // ------ 2) لو category = Health نطيح على  بالكلمة المفتاحية ------
-  if (category == 'Health') {
-  String? keyword = _healthFileKeywordFromUtterance(searchNorm);
-  if (keyword != null) {
-    keyword = keyword.toLowerCase();
+      // ------ 2) لو category = Health نطيح على  بالكلمة المفتاحية ------
+      if (category == 'Health') {
+        String? keyword = _healthFileKeywordFromUtterance(searchNorm);
+        if (keyword != null) {
+          keyword = keyword.toLowerCase();
 
-    final healthDocs = qs.docs.where((doc) {
-      final data = doc.data();
+          final healthDocs = qs.docs.where((doc) {
+            final data = doc.data();
 
-      final rawTitle = (data['title'] ?? '').toString();
-      final titleLower = rawTitle.toLowerCase();
-      final titleNorm = _normalizeArabic(titleLower);
+            final rawTitle = (data['title'] ?? '').toString();
+            final titleLower = rawTitle.toLowerCase();
+            final titleNorm = _normalizeArabic(titleLower);
 
-      final rawTag = (data['tag'] ?? '').toString();
-      final tagLower = rawTag.toLowerCase();
-      final tagNorm = _normalizeArabic(tagLower);
+            final rawTag = (data['tag'] ?? '').toString();
+            final tagLower = rawTag.toLowerCase();
+            final tagNorm = _normalizeArabic(tagLower);
 
-      // نطابق الكلمة الأساسية مع العنوان أو التاق
-      return titleLower.contains(keyword!) ||
-             titleNorm.contains(keyword)   ||
-             tagLower.contains(keyword)    ||
-             tagNorm.contains(keyword);
-    }).toList();
+            // نطابق الكلمة الأساسية مع العنوان أو التاق
+            return titleLower.contains(keyword!) ||
+                titleNorm.contains(keyword) ||
+                tagLower.contains(keyword) ||
+                tagNorm.contains(keyword);
+          }).toList();
 
-    if (healthDocs.isNotEmpty) {
-      final item = AudioItem.fromDoc(healthDocs.first);
-      await _voiceService.speak("Playing ${item.title}");
-      _navigateToPlayer(item);   // لو type = youtube → يفتح YouTubePlayerPage
-      return;
-    }
-  }
-} 
+          if (healthDocs.isNotEmpty) {
+            final item = AudioItem.fromDoc(healthDocs.first);
+            await _voiceService.speak("Playing ${item.title}");
+            _navigateToPlayer(
+              item,
+            ); // لو type = youtube → يفتح YouTubePlayerPage
+            return;
+          }
+        }
+      }
 
+      // ------ لو category = Story نطابق الكلمة على العنوان أو التاق ------
+      if (category == 'Story') {
+        String? keyword = _storyFileKeywordFromUtterance(searchNorm);
+        if (keyword != null) {
+          keyword = keyword.toLowerCase();
 
-// ------ لو category = Story نطابق الكلمة على العنوان أو التاق ------
-if (category == 'Story') {
-  String? keyword = _storyFileKeywordFromUtterance(searchNorm);
-  if (keyword != null) {
-    keyword = keyword.toLowerCase();
+          final storyDocs = qs.docs.where((doc) {
+            final data = doc.data();
 
-    final storyDocs = qs.docs.where((doc) {
-      final data = doc.data();
+            final rawTitle = (data['title'] ?? '').toString();
+            final titleLower = rawTitle.toLowerCase();
+            final titleNorm = _normalizeArabic(titleLower);
 
-      final rawTitle = (data['title'] ?? '').toString();
-      final titleLower = rawTitle.toLowerCase();
-      final titleNorm = _normalizeArabic(titleLower);
+            final rawTag = (data['tag'] ?? '').toString();
+            final tagLower = rawTag.toLowerCase();
+            final tagNorm = _normalizeArabic(tagLower);
 
-      final rawTag = (data['tag'] ?? '').toString();
-      final tagLower = rawTag.toLowerCase();
-      final tagNorm = _normalizeArabic(tagLower);
+            return titleLower.contains(keyword!) ||
+                titleNorm.contains(keyword) ||
+                tagLower.contains(keyword) ||
+                tagNorm.contains(keyword);
+          }).toList();
 
-      return titleLower.contains(keyword!) ||
-             titleNorm.contains(keyword)   ||
-             tagLower.contains(keyword)    ||
-             tagNorm.contains(keyword);
-    }).toList();
-
-    if (storyDocs.isNotEmpty) {
-      final item = AudioItem.fromDoc(storyDocs.first);
-      await _voiceService.speak("Playing ${item.title}");
-      _navigateToPlayer(item);   // لو type = youtube يفتح YouTubePlayerPage تلقائيًا
-      return;
-    }
-  }
-}
-     // ------ 3) لو لا عنوان ولا ملف طابقوا ------
+          if (storyDocs.isNotEmpty) {
+            final item = AudioItem.fromDoc(storyDocs.first);
+            await _voiceService.speak("Playing ${item.title}");
+            _navigateToPlayer(
+              item,
+            ); // لو type = youtube يفتح YouTubePlayerPage تلقائيًا
+            return;
+          }
+        }
+      }
+      // ------ 3) لو لا عنوان ولا ملف طابقوا ------
       await _voiceService.speak(
         "I couldn't find any audio named $searchTitle in $category.",
       );
@@ -944,26 +963,22 @@ if (category == 'Story') {
   }
 
   void _navigateToPlayer(AudioItem item) {
-  if (!mounted) return;
+    if (!mounted) return;
 
-  // لو الميديا من نوع يوتيوب → افتح صفحة اليوتيوب
-  if (item.type == 'youtube' && item.url != null && item.url!.isNotEmpty) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => YouTubePlayerPage(item: item),
-      ),
-    );
-  } else {
-    // غير كذا → افتح مشغّل الصوت العادي
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AudioPlayerPage(item: item),
-      ),
-    );
+    // لو الميديا من نوع يوتيوب → افتح صفحة اليوتيوب
+    if (item.type == 'youtube' && item.url != null && item.url!.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => YouTubePlayerPage(item: item)),
+      );
+    } else {
+      // غير كذا → افتح مشغّل الصوت العادي
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => AudioPlayerPage(item: item)),
+      );
+    }
   }
-}
 }
 
 // 🖌️ PAINTER FOR THE RIPPLES

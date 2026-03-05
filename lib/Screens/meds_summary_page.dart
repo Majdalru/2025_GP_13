@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 import 'med_chart_page.dart';
 
@@ -367,12 +368,18 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
     final monthName = DateFormat('MMMM yyyy').format(_current);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Summary')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.summary)),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _monthLogsStream(),
         builder: (context, logsSnap) {
           if (logsSnap.hasError) {
-            return Center(child: Text('Error: ${logsSnap.error}'));
+            return Center(
+              child: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorLoading(logsSnap.error.toString()),
+              ),
+            );
           }
           if (!logsSnap.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -471,7 +478,11 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                         ).format(_selectedDay!);
                         final doses = [...(monthData[key] ?? const [])];
                         if (doses.isEmpty) {
-                          return const [Text('No logs for this day')];
+                          return [
+                            Text(
+                              AppLocalizations.of(context)!.noLogsForThisDay,
+                            ),
+                          ];
                         }
 
                         doses.sort((a, b) {
@@ -496,10 +507,13 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                           final sched = (m['scheduledTime'] ?? '').toString();
                           final takenAt = _toDateTime(m['takenAt']);
 
-                          String timeLabel = 'Scheduled $sched';
+                          String timeLabel = AppLocalizations.of(
+                            context,
+                          )!.scheduledTime(sched);
                           if (takenAt != null) {
-                            timeLabel +=
-                                ' • Taken ${DateFormat('hh:mm a').format(takenAt)}';
+                            timeLabel += AppLocalizations.of(
+                              context,
+                            )!.takenTime(DateFormat('hh:mm a').format(takenAt));
                           }
 
                           DoseTone tone;
@@ -510,13 +524,19 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                                     _selectedDay!,
                                   ))) {
                             tone = DoseTone.missed;
-                            if (!timeLabel.contains('Missed')) {
-                              timeLabel += ' • Missed (>10m overdue)';
+                            if (!timeLabel.contains('Missed') &&
+                                !timeLabel.contains('مفوت')) {
+                              timeLabel += AppLocalizations.of(
+                                context,
+                              )!.missedOverdue;
                             }
                           } else if (status == 'taken_late') {
                             tone = DoseTone.late;
-                            if (!timeLabel.contains('Taken late')) {
-                              timeLabel += ' • Taken late';
+                            if (!timeLabel.contains('Taken late') &&
+                                !timeLabel.contains('متأخر')) {
+                              timeLabel += AppLocalizations.of(
+                                context,
+                              )!.takenLateStatus;
                             }
                           } else if (status == 'taken_on_time') {
                             tone = DoseTone.onTime;
@@ -532,7 +552,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                         }).toList();
                       })(),
                     ] else
-                      const Text('Select a day to view details'),
+                      Text(
+                        AppLocalizations.of(context)!.selectDayToViewDetails,
+                      ),
                   ],
                 );
               } else {
@@ -581,14 +603,14 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                     const SizedBox(height: 16),
 
                     Text(
-                      'Medications for this elderly',
+                      AppLocalizations.of(context)!.medicationsForThisElderly,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     if (medsData == null ||
                         medsData['medsList'] == null ||
                         (medsData['medsList'] as List).isEmpty)
-                      const Text('No medications found')
+                      Text(AppLocalizations.of(context)!.noMedicationsFound)
                     else ...[
                       ...((medsData['medsList'] as List).map((raw) {
                         if (raw is! Map) return const SizedBox.shrink();
@@ -617,9 +639,13 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                                 if (dosage.isNotEmpty) Text(dosage),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'On time: ${agg['onTime']}   '
-                                  'Late: ${agg['late']}   '
-                                  'Missed: ${agg['missed']}',
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.onTimeLateMissed(
+                                    agg['onTime']!,
+                                    agg['late']!,
+                                    agg['missed']!,
+                                  ),
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Colors.grey.shade700,
@@ -627,7 +653,9 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                                 ),
                                 if (totalTaken == 0)
                                   Text(
-                                    'No doses for this month yet',
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.noDosesForThisMonthYet,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey.shade500,
@@ -674,7 +702,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
       child: Row(
         children: [
           _ModeToggleButton(
-            label: 'By day',
+            label: AppLocalizations.of(context)!.byDay,
             selected: _mode == SummaryViewMode.byDay,
             onTap: () {
               if (_mode != SummaryViewMode.byDay) {
@@ -683,7 +711,7 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
             },
           ),
           _ModeToggleButton(
-            label: 'By medication',
+            label: AppLocalizations.of(context)!.byMedication,
             selected: _mode == SummaryViewMode.byMed,
             onTap: () {
               if (_mode != SummaryViewMode.byMed) {

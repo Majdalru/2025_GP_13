@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // ← NEW: for duration display
+import 'package:intl/intl.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 import 'addmed.dart';
 import 'models/medication.dart'; // Import the new model
 import 'Screens/home_shell.dart'; // Import ElderlyProfile to get UID and name
@@ -98,9 +99,10 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
               children: [
                 const Icon(Icons.check_circle, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
-                const Text(
-                  'Medication deleted successfully',
-                  style: TextStyle(fontSize: 14),
+                Text(
+                  AppLocalizations.of(context)!.medicationDeletedSuccessfully ??
+                      'Medication deleted successfully',
+                  style: const TextStyle(fontSize: 14),
                 ),
               ],
             ),
@@ -166,7 +168,9 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
       appBar: AppBar(
         toolbarHeight: 90,
         backgroundColor: const Color.fromRGBO(12, 45, 93, 1),
-        title: Text("Meds for ${widget.elderlyProfile.name}"),
+        title: Text(
+          '${AppLocalizations.of(context)!.medsFor} ${widget.elderlyProfile.name}',
+        ),
         titleTextStyle: const TextStyle(
           fontSize: 22,
           color: Colors.white,
@@ -200,7 +204,9 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
                       ElevatedButton.icon(
                         onPressed: () => _navigateAndAddMedication(context),
                         icon: const Icon(Icons.add),
-                        label: const Text('Add New Medication'),
+                        label: Text(
+                          AppLocalizations.of(context)!.addNewMedication,
+                        ),
                         style: ElevatedButton.styleFrom(
                           foregroundColor: Colors.white,
                           backgroundColor: Colors.teal,
@@ -218,9 +224,10 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Medication List',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.medicationList ??
+                                'Medication List',
+                            style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -235,7 +242,9 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
                               ),
                             ),
                             icon: const Icon(Icons.history, size: 20),
-                            label: const Text('History'),
+                            label: Text(
+                              AppLocalizations.of(context)!.medicationHistory,
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.teal,
                               side: const BorderSide(
@@ -268,13 +277,21 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
                                 }
                                 if (!snapshot.hasData ||
                                     !snapshot.data!.exists) {
-                                  return const Center(
-                                    child: Text("No medications added yet."),
+                                  return Center(
+                                    child: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.noMedicationsFound,
+                                    ),
                                   );
                                 }
                                 if (snapshot.hasError) {
-                                  return const Center(
-                                    child: Text("Error loading medications."),
+                                  return Center(
+                                    child: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.errorLoadingMedications,
+                                    ),
                                   );
                                 }
 
@@ -290,8 +307,12 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
                                     [];
 
                                 if (medsList.isEmpty) {
-                                  return const Center(
-                                    child: Text("No medications added yet."),
+                                  return Center(
+                                    child: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.noMedicationsFound,
+                                    ),
                                   );
                                 }
 
@@ -366,7 +387,13 @@ class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        children: [_buildTab(0, "Today's Meds"), _buildTab(1, "Med list")],
+        children: [
+          _buildTab(
+            0,
+            AppLocalizations.of(context)!.todaysMeds ?? "Today's Meds",
+          ),
+          _buildTab(1, AppLocalizations.of(context)!.medList ?? "Med list"),
+        ],
       ),
     );
   }
@@ -429,17 +456,22 @@ class MedicationCard extends StatelessWidget {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Confirm Deletion'),
+          title: Text(
+            AppLocalizations.of(context)!.confirmDeletion ?? 'Confirm Deletion',
+          ),
           content: Text(
-            'Are you sure you want to delete "${medication.name}"?',
+            '${AppLocalizations.of(context)!.areYouSureToDelete ?? "Are you sure you want to delete"} "${medication.name}"?',
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              child: Text(
+                AppLocalizations.of(context)!.delete,
+                style: const TextStyle(color: Colors.red),
+              ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 onDelete();

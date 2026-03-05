@@ -2,6 +2,7 @@ import 'dart:async'; //  جديد
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 import '../widgets/app_drawer.dart';
 import 'home_page.dart';
@@ -180,13 +181,13 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       _selectedProfile != null
           ? HomePage(
-              elderlyId: _selectedProfile!.uid, // <<   
+              elderlyId: _selectedProfile!.uid, // <<
               elderlyName: _selectedProfile!.name,
               onTapArrowToMedsSummary: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => MedsSummaryPage(
-                      elderlyId: _selectedProfile!.uid, //   
+                      elderlyId: _selectedProfile!.uid, //
                     ),
                   ),
                 );
@@ -206,17 +207,21 @@ class _HomeShellState extends State<HomeShell> {
                 ).push(MaterialPageRoute(builder: (_) => const LocationPage()));
               },
             )
-          : const Center(
+          : Center(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    Icon(Icons.info_outline, size: 48, color: Colors.grey),
-                    SizedBox(height: 16),
+                    const Icon(
+                      Icons.info_outline,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      'No elderly profile selected.\n\nPlease link a profile using the drawer menu.',
+                      AppLocalizations.of(context)!.noProfileSelected,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -246,8 +251,9 @@ class _HomeShellState extends State<HomeShell> {
 
         title: Text(
           _bottomNavIndex == 0
-              ? (_selectedProfile?.name ?? 'Dashboard')
-              : 'Browse',
+              ? (_selectedProfile?.name ??
+                    AppLocalizations.of(context)!.dashboard)
+              : AppLocalizations.of(context)!.browse,
         ),
       ),
       body: _isLoading
@@ -285,24 +291,27 @@ class _HomeShellState extends State<HomeShell> {
           height: 80,
           elevation: 2, // A subtle shadow
           // --- End Style Properties ---
-          destinations: const [
+          destinations: [
             NavigationDestination(
               // 3. Unselected icon
-              icon: Icon(
+              icon: const Icon(
                 Icons.home_outlined,
                 color: Colors.grey, // Dark grey for unselected
               ),
               // 4. Selected icon
-              selectedIcon: Icon(
+              selectedIcon: const Icon(
                 Icons.home,
                 color: Colors.white, // White icon on the teal bubble
               ),
-              label: 'Home',
+              label: AppLocalizations.of(context)!.home,
             ),
             NavigationDestination(
-              icon: Icon(Icons.apps, color: Colors.grey),
-              selectedIcon: Icon(Icons.apps_outlined, color: Colors.white),
-              label: 'Browse',
+              icon: const Icon(Icons.apps, color: Colors.grey),
+              selectedIcon: const Icon(
+                Icons.apps_outlined,
+                color: Colors.white,
+              ),
+              label: AppLocalizations.of(context)!.browse,
             ),
           ],
         ),

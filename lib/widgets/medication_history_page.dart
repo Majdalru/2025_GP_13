@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 import '../models/medication.dart';
 import '../services/medication_history_service.dart';
 import '../services/medication_scheduler.dart';
@@ -28,7 +29,7 @@ class MedicationHistoryPage extends StatelessWidget {
         backgroundColor: isElderlyView
             ? const Color(0xFF1B3A52)
             : const Color.fromRGBO(12, 45, 93, 1),
-        title: const Text('Medication History'),
+        title: Text(AppLocalizations.of(context)!.medicationHistory),
         titleTextStyle: TextStyle(
           fontSize: isElderlyView ? 32 : 24,
           fontWeight: FontWeight.bold,
@@ -62,28 +63,28 @@ class MedicationHistoryPage extends StatelessWidget {
                       ),
                     ),
                     title: Text(
-                      'Clear All History?',
+                      AppLocalizations.of(context)!.clearAllHistory,
                       style: TextStyle(
                         fontSize: isElderlyView ? 26 : 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     content: Text(
-                      'This will permanently remove all medication history records.',
+                      AppLocalizations.of(context)!.confirmClearHistory,
                       style: TextStyle(fontSize: isElderlyView ? 20 : 16),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
                         child: Text(
-                          'Cancel',
+                          AppLocalizations.of(context)!.cancel,
                           style: TextStyle(fontSize: isElderlyView ? 20 : 16),
                         ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, true),
                         child: Text(
-                          'Clear All',
+                          AppLocalizations.of(context)!.clearAll,
                           style: TextStyle(
                             color: Colors.red,
                             fontSize: isElderlyView ? 20 : 16,
@@ -98,7 +99,11 @@ class MedicationHistoryPage extends StatelessWidget {
                   await historyService.clearHistory(elderlyId);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('History cleared')),
+                      SnackBar(
+                        content: Text(
+                          AppLocalizations.of(context)!.historyClearedToast,
+                        ),
+                      ),
                     );
                   }
                 }
@@ -112,7 +117,7 @@ class MedicationHistoryPage extends StatelessWidget {
                     const Icon(Icons.delete_sweep, color: Colors.red),
                     const SizedBox(width: 8),
                     Text(
-                      'Clear All History',
+                      AppLocalizations.of(context)!.clearAllHistoryMenu,
                       style: TextStyle(fontSize: isElderlyView ? 20 : 16),
                     ),
                   ],
@@ -144,7 +149,7 @@ class MedicationHistoryPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No medication history',
+                    AppLocalizations.of(context)!.noMedicationHistory,
                     style: TextStyle(
                       fontSize: isElderlyView ? 24 : 18,
                       color: Colors.grey.shade600,
@@ -152,7 +157,7 @@ class MedicationHistoryPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Deleted and expired medications\nwill appear here',
+                    AppLocalizations.of(context)!.noMedicationHistoryDesc,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: isElderlyView ? 18 : 14,
@@ -191,28 +196,30 @@ class MedicationHistoryPage extends StatelessWidget {
                         ),
                       ),
                       title: Text(
-                        'Remove from History?',
+                        AppLocalizations.of(context)!.removeFromHistory,
                         style: TextStyle(
                           fontSize: isElderlyView ? 24 : 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       content: Text(
-                        'Remove "${med.name}" from history?',
+                        AppLocalizations.of(
+                          context,
+                        )!.confirmRemoveFromHistory(med.name),
                         style: TextStyle(fontSize: isElderlyView ? 20 : 16),
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
                           child: Text(
-                            'Cancel',
+                            AppLocalizations.of(context)!.cancel,
                             style: TextStyle(fontSize: isElderlyView ? 20 : 16),
                           ),
                         ),
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, true),
                           child: Text(
-                            'Remove',
+                            AppLocalizations.of(context)!.remove,
                             style: TextStyle(
                               color: Colors.red,
                               fontSize: isElderlyView ? 20 : 16,
@@ -237,28 +244,30 @@ class MedicationHistoryPage extends StatelessWidget {
                         ),
                       ),
                       title: Text(
-                        'Recover Medication?',
+                        AppLocalizations.of(context)!.recoverMedication,
                         style: TextStyle(
                           fontSize: isElderlyView ? 24 : 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       content: Text(
-                        'Add "${med.name}" back to your active medications?',
+                        AppLocalizations.of(
+                          context,
+                        )!.confirmRecoverMedication(med.name),
                         style: TextStyle(fontSize: isElderlyView ? 20 : 16),
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
                           child: Text(
-                            'Cancel',
+                            AppLocalizations.of(context)!.cancel,
                             style: TextStyle(fontSize: isElderlyView ? 20 : 16),
                           ),
                         ),
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, true),
                           child: Text(
-                            'Recover',
+                            AppLocalizations.of(context)!.recover,
                             style: TextStyle(
                               color: Colors.green.shade700,
                               fontSize: isElderlyView ? 20 : 16,
@@ -292,7 +301,9 @@ class MedicationHistoryPage extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    '"${recovered.name}" recovered successfully',
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.recoveredSuccessfully(recovered.name),
                                     style: TextStyle(
                                       fontSize: isElderlyView ? 20 : 14,
                                     ),
@@ -314,7 +325,7 @@ class MedicationHistoryPage extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              'Failed to recover medication',
+                              AppLocalizations.of(context)!.failedToRecover,
                               style: TextStyle(
                                 fontSize: isElderlyView ? 20 : 14,
                               ),
@@ -359,10 +370,12 @@ class _HistoryCard extends StatelessWidget {
         ? Colors.orange.shade700
         : Colors.red.shade600;
     final reasonIcon = isExpired ? Icons.timer_off : Icons.delete_outline;
-    final reasonLabel = isExpired ? 'Expired' : 'Deleted';
+    final reasonLabel = isExpired
+        ? AppLocalizations.of(context)!.expired
+        : AppLocalizations.of(context)!.deleted;
     final dateStr = deletedAt != null
         ? DateFormat('MMM d, yyyy – h:mm a').format(deletedAt!)
-        : 'Unknown date';
+        : AppLocalizations.of(context)!.unknownDate;
 
     final timeString = medication.times
         .map((t) => t.format(context))
@@ -471,7 +484,7 @@ class _HistoryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _detailRow(
-                    'Frequency',
+                    AppLocalizations.of(context)!.frequency,
                     medication.frequency ?? 'N/A',
                     fontSize,
                   ),
@@ -480,7 +493,7 @@ class _HistoryCard extends StatelessWidget {
                       (medication.doseStrength != null &&
                           medication.doseStrength!.isNotEmpty)) ...[
                     _detailRow(
-                      'Dose',
+                      AppLocalizations.of(context)!.dose,
                       [
                         if (medication.doseForm != null) medication.doseForm!,
                         if (medication.doseStrength != null &&
@@ -491,17 +504,21 @@ class _HistoryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                   ],
-                  _detailRow('Days', medication.days.join(', '), fontSize),
+                  _detailRow(
+                    AppLocalizations.of(context)!.days,
+                    medication.days.join(', '),
+                    fontSize,
+                  ),
                   const SizedBox(height: 4),
                   _detailRow(
-                    'Times',
+                    AppLocalizations.of(context)!.times,
                     timeString.isNotEmpty ? timeString : 'N/A',
                     fontSize,
                   ),
                   if (medication.endDate != null) ...[
                     const SizedBox(height: 4),
                     _detailRow(
-                      'End Date',
+                      AppLocalizations.of(context)!.endDate,
                       DateFormat(
                         'MMM d, yyyy',
                       ).format(medication.endDate!.toDate()),
@@ -511,7 +528,11 @@ class _HistoryCard extends StatelessWidget {
                   if (medication.notes != null &&
                       medication.notes!.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    _detailRow('Notes', medication.notes!, fontSize),
+                    _detailRow(
+                      AppLocalizations.of(context)!.notes,
+                      medication.notes!,
+                      fontSize,
+                    ),
                   ],
                 ],
               ),
@@ -529,7 +550,7 @@ class _HistoryCard extends StatelessWidget {
                   color: Colors.green.shade700,
                 ),
                 label: Text(
-                  'Recover Medication',
+                  AppLocalizations.of(context)!.recoverMedicationButton,
                   style: TextStyle(
                     fontSize: isElderlyView ? 20 : 15,
                     fontWeight: FontWeight.w600,
@@ -561,7 +582,9 @@ class _HistoryCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  '$reasonLabel on $dateStr',
+                  AppLocalizations.of(
+                    context,
+                  )!.actionOnDate(reasonLabel, dateStr),
                   style: TextStyle(
                     fontSize: smallSize,
                     color: Colors.grey.shade500,

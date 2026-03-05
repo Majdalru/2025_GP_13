@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class MedChartPage extends StatefulWidget {
   final String elderlyId;
@@ -352,31 +353,16 @@ class _MedChartPageState extends State<MedChartPage> {
 
     switch (mode) {
       case ChartViewMode.pie:
-        title = 'How to read this pie chart?';
-        body =
-            '• Each slice = group of doses this month\n'
-            '• Green: doses taken on time\n'
-            '• Yellow: doses taken late\n'
-            '• Red: doses that were missed completely\n\n'
-            'The size of each slice shows its percentage from ALL doses.';
+        title = AppLocalizations.of(context)!.howToReadPieChart;
+        body = AppLocalizations.of(context)!.pieChartHelpBody;
         break;
       case ChartViewMode.bar:
-        title = 'How to read this daily bar chart?';
-        body =
-            '• Each bar = one day of this month\n'
-            '• Bar height = total number of doses that day\n'
-            '• Green part = doses taken on time\n'
-            '• Yellow part = doses taken late\n'
-            '• Red part = missed doses\n\n'
-            'This helps you see which days had more missed or late doses.';
+        title = AppLocalizations.of(context)!.howToReadBarChart;
+        body = AppLocalizations.of(context)!.barChartHelpBody;
         break;
       case ChartViewMode.weekly:
-        title = 'How to read weekly trend?';
-        body =
-            '• Each card = one week in this month\n'
-            '• It shows how many doses were on time, late, or missed\n'
-            '• The percentage on the right is overall adherence for that week.\n\n'
-            'Green weeks = very good adherence, red weeks = need attention.';
+        title = AppLocalizations.of(context)!.howToReadWeeklyTrend;
+        body = AppLocalizations.of(context)!.weeklyTrendHelpBody;
         break;
     }
 
@@ -389,7 +375,7 @@ class _MedChartPageState extends State<MedChartPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Got it'),
+            child: Text(AppLocalizations.of(context)!.gotIt),
           ),
         ],
       ),
@@ -403,12 +389,22 @@ class _MedChartPageState extends State<MedChartPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Summary • ${widget.medName}')),
+      appBar: AppBar(
+        title: Text(
+          AppLocalizations.of(context)!.summaryForMed(widget.medName),
+        ),
+      ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _monthLogsStream(),
         builder: (context, snap) {
           if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
+            return Center(
+              child: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorLoading(snap.error.toString()),
+              ),
+            );
           }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -462,7 +458,7 @@ class _MedChartPageState extends State<MedChartPage> {
                     const SizedBox(height: 16),
                     if (total == 0) ...[
                       Text(
-                        'No doses for this month yet.',
+                        AppLocalizations.of(context)!.noDosesThisMonth,
                         style: TextStyle(color: Colors.grey.shade700),
                       ),
                     ] else ...[
@@ -537,17 +533,17 @@ class _MedChartPageState extends State<MedChartPage> {
       child: Row(
         children: [
           _ChartToggleButton(
-            label: 'Status pie',
+            label: AppLocalizations.of(context)!.statusPie,
             selected: _chartMode == ChartViewMode.pie,
             onTap: () => setState(() => _chartMode = ChartViewMode.pie),
           ),
           _ChartToggleButton(
-            label: 'Daily bar',
+            label: AppLocalizations.of(context)!.dailyBar,
             selected: _chartMode == ChartViewMode.bar,
             onTap: () => setState(() => _chartMode = ChartViewMode.bar),
           ),
           _ChartToggleButton(
-            label: 'Weekly trend',
+            label: AppLocalizations.of(context)!.weeklyTrend,
             selected: _chartMode == ChartViewMode.weekly,
             onTap: () => setState(() => _chartMode = ChartViewMode.weekly),
           ),
@@ -603,18 +599,21 @@ class _MedChartPageState extends State<MedChartPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Monthly adherence',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  Text(
+                    AppLocalizations.of(context)!.monthlyAdherence,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'On time: $onTime   •   Late: $late   •   Missed: $missed',
+                    '${AppLocalizations.of(context)!.onTimeStatus}: $onTime   •   ${AppLocalizations.of(context)!.takenLate}: $late   •   ${AppLocalizations.of(context)!.missedStatus}: $missed',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _adherenceMessage(total, adherencePercent),
+                    _adherenceMessage(total, adherencePercent, context),
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
                   ),
                 ],
@@ -662,7 +661,7 @@ class _MedChartPageState extends State<MedChartPage> {
           children: [
             Expanded(
               child: Text(
-                'Dose status (this month)',
+                AppLocalizations.of(context)!.doseStatusThisMonth,
                 style: theme.textTheme.titleMedium,
               ),
             ),
@@ -712,7 +711,7 @@ class _MedChartPageState extends State<MedChartPage> {
             style: const TextStyle(fontSize: 13),
           ),
         const SizedBox(height: 12),
-        _buildPieLegend(),
+        _buildPieLegend(context),
       ],
     );
   }
@@ -778,15 +777,24 @@ class _MedChartPageState extends State<MedChartPage> {
     return sections;
   }
 
-  Widget _buildPieLegend() {
+  Widget _buildPieLegend(BuildContext context) {
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 16,
       runSpacing: 8,
-      children: const [
-        _ChartLegendItem(color: Color(0xFF2E7D32), label: 'On time'),
-        _ChartLegendItem(color: Color(0xFFF9A825), label: 'Late'),
-        _ChartLegendItem(color: Color(0xFFD32F2F), label: 'Missed'),
+      children: [
+        _ChartLegendItem(
+          color: const Color(0xFF2E7D32),
+          label: AppLocalizations.of(context)!.onTimeStatus,
+        ),
+        _ChartLegendItem(
+          color: const Color(0xFFF9A825),
+          label: AppLocalizations.of(context)!.takenLate,
+        ),
+        _ChartLegendItem(
+          color: const Color(0xFFD32F2F),
+          label: AppLocalizations.of(context)!.missedStatus,
+        ),
       ],
     );
   }
@@ -812,7 +820,7 @@ class _MedChartPageState extends State<MedChartPage> {
           children: [
             Expanded(
               child: Text(
-                'Daily doses by status (stacked bar)',
+                AppLocalizations.of(context)!.dailyDosesByStatus,
                 style: theme.textTheme.titleMedium,
               ),
             ),
@@ -850,10 +858,19 @@ class _MedChartPageState extends State<MedChartPage> {
           alignment: WrapAlignment.center,
           spacing: 16,
           runSpacing: 8,
-          children: const [
-            _ChartLegendItem(color: Color(0xFF2E7D32), label: 'On time'),
-            _ChartLegendItem(color: Color(0xFFF9A825), label: 'Late'),
-            _ChartLegendItem(color: Color(0xFFD32F2F), label: 'Missed'),
+          children: [
+            _ChartLegendItem(
+              color: const Color(0xFF2E7D32),
+              label: AppLocalizations.of(context)!.onTimeStatus,
+            ),
+            _ChartLegendItem(
+              color: const Color(0xFFF9A825),
+              label: AppLocalizations.of(context)!.takenLate,
+            ),
+            _ChartLegendItem(
+              color: const Color(0xFFD32F2F),
+              label: AppLocalizations.of(context)!.missedStatus,
+            ),
           ],
         ),
       ],
@@ -1092,7 +1109,7 @@ class _MedChartPageState extends State<MedChartPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Weekly adherence trend',
+          AppLocalizations.of(context)!.weeklyAdherenceTrend,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
@@ -1107,7 +1124,7 @@ class _MedChartPageState extends State<MedChartPage> {
             color: color.withOpacity(.08),
             child: ListTile(
               title: Text(
-                'Week ${w.week}',
+                AppLocalizations.of(context)!.weekNumber(w.week),
                 style: TextStyle(fontWeight: FontWeight.w700, color: color),
               ),
               subtitle: Column(
@@ -1115,13 +1132,15 @@ class _MedChartPageState extends State<MedChartPage> {
                 children: [
                   Text(
                     w.startDay == w.endDay
-                        ? 'Day: ${w.startDay}'
-                        : 'Days: ${w.startDay}–${w.endDay}',
+                        ? AppLocalizations.of(context)!.dayLabel(w.startDay)
+                        : AppLocalizations.of(
+                            context,
+                          )!.daysRangeLabel(w.startDay, w.endDay),
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'On time: ${w.onTime}   •   Late: ${w.late}   •   Missed: ${w.missed}',
+                    '${AppLocalizations.of(context)!.onTimeStatus}: ${w.onTime}   •   ${AppLocalizations.of(context)!.takenLate}: ${w.late}   •   ${AppLocalizations.of(context)!.missedStatus}: ${w.missed}',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
                   ),
                 ],
@@ -1149,14 +1168,14 @@ class _MedChartPageState extends State<MedChartPage> {
     return const Color(0xFFD32F2F);
   }
 
-  String _adherenceMessage(int total, double pct) {
-    if (total == 0) return 'No data yet for this month.';
+  String _adherenceMessage(int total, double pct, BuildContext context) {
+    if (total == 0) return AppLocalizations.of(context)!.noDosesThisMonth;
     if (pct >= 80) {
-      return 'Great adherence 👏';
+      return AppLocalizations.of(context)!.greatAdherence;
     } else if (pct >= 50) {
-      return 'Moderate adherence – can be improved 🙂';
+      return AppLocalizations.of(context)!.moderateAdherence;
     } else {
-      return 'Low adherence – needs attention ⚠️';
+      return AppLocalizations.of(context)!.lowAdherence;
     }
   }
 }

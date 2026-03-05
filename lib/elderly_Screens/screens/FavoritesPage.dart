@@ -6,7 +6,7 @@ import 'youtube_player_page.dart';
 import '../../models/shared_item.dart';
 import 'video_player_page.dart';
 import 'shared_audio_player_page.dart';
-
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -88,7 +88,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: kPrimary,
-        title: const Text("Favorites"),
+        title: Text(AppLocalizations.of(context)!.favorites),
         titleTextStyle: const TextStyle(
           fontSize: 34,
           color: Colors.white,
@@ -114,7 +114,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: 'Search favorites...',
+                hintText: AppLocalizations.of(context)!.searchFavorites,
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 contentPadding: const EdgeInsets.symmetric(
                   vertical: 15,
@@ -131,19 +131,19 @@ class _FavoritesPageState extends State<FavoritesPage> {
           // محتوى الصفحة
           Expanded(
             child: filteredFavorites.isEmpty
-                ? const Center(
+                ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.favorite_border,
                           size: 100,
                           color: Colors.grey,
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         Text(
-                          "No results found",
-                          style: TextStyle(
+                          AppLocalizations.of(context)!.noResultsFound,
+                          style: const TextStyle(
                             fontSize: 24,
                             color: Colors.grey,
                           ),
@@ -179,12 +179,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
                           // عناصر الفيفورت في هذا القسم
                           ...items.map((audio) {
                             final title = audio["title"] ?? "";
-                            final image =
-                                audio["image"] ?? 'assets/audio.jpg';
+                            final image = audio["image"] ?? 'assets/audio.jpg';
 
                             return Card(
-                              margin:
-                                  const EdgeInsets.symmetric(vertical: 8),
+                              margin: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
                                 side: BorderSide(
@@ -222,8 +220,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                     size: 36,
                                   ),
                                   onPressed: () async {
-                                    await favoritesManager
-                                        .toggleFavorite(audio);
+                                    await favoritesManager.toggleFavorite(
+                                      audio,
+                                    );
 
                                     _showTopBanner(
                                       "Removed from Favorites",
@@ -237,42 +236,63 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                   final type =
                                       (audio["type"] ?? 'audio') as String;
                                   final url = audio["url"] as String?;
-                                    // ✅ إضافة فقط: تشغيل مقاطع/أصوات الكيرقفر (shared)
-  if (type == "shared_video" || type == "shared_audio") {
-    if (url == null || url.isEmpty) {
-      _showTopBanner("Media link is missing", color: Colors.red.shade700);
-      return;
-    }
+                                  // ✅ إضافة فقط: تشغيل مقاطع/أصوات الكيرقفر (shared)
+                                  if (type == "shared_video" ||
+                                      type == "shared_audio") {
+                                    if (url == null || url.isEmpty) {
+                                      _showTopBanner(
+                                        "Media link is missing",
+                                        color: Colors.red.shade700,
+                                      );
+                                      return;
+                                    }
 
-    final sharedItem = SharedItem(
-      id: (audio["itemId"] ?? audio["audioId"] ?? '').toString(),
-      type: type == "shared_video" ? SharedItemType.video : SharedItemType.audio,
-      title: title,
-      url: url,
-      fileName: (audio["fileName"] ?? '').toString(),
-      senderId: (audio["senderId"] ?? 'caregiver').toString(),
-      timestamp: DateTime.now(), // إذا ما عندك timestamp محفوظ في favorites
-    );
+                                    final sharedItem = SharedItem(
+                                      id:
+                                          (audio["itemId"] ??
+                                                  audio["audioId"] ??
+                                                  '')
+                                              .toString(),
+                                      type: type == "shared_video"
+                                          ? SharedItemType.video
+                                          : SharedItemType.audio,
+                                      title: title,
+                                      url: url,
+                                      fileName: (audio["fileName"] ?? '')
+                                          .toString(),
+                                      senderId:
+                                          (audio["senderId"] ?? 'caregiver')
+                                              .toString(),
+                                      timestamp:
+                                          DateTime.now(), // إذا ما عندك timestamp محفوظ في favorites
+                                    );
 
-    if (sharedItem.type == SharedItemType.video) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => VideoPlayerPage(item: sharedItem)),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => SharedAudioPlayerPage(item: sharedItem)),
-      );
-    }
-    return; // مهم جدًا عشان ما يكمل على منطق AudioItem
-  }
+                                    if (sharedItem.type ==
+                                        SharedItemType.video) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              VideoPlayerPage(item: sharedItem),
+                                        ),
+                                      );
+                                    } else {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => SharedAudioPlayerPage(
+                                            item: sharedItem,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return; // مهم جدًا عشان ما يكمل على منطق AudioItem
+                                  }
                                   final item = AudioItem(
                                     id: audio["audioId"] ?? '',
                                     title: title,
                                     category: category,
-                                    fileName:
-                                        audio["fileName"] ?? '',
+                                    fileName: audio["fileName"] ?? '',
                                     tag: audio["tag"] ?? '',
                                     imageAsset: image,
                                     type: type,

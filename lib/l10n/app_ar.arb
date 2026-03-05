@@ -1,0 +1,373 @@
+{
+  "@@locale": "ar",
+  "appTitle": "مقدم الرعاية",
+  "login": "تسجيل الدخول",
+  "email": "البريد الإلكتروني",
+  "password": "كلمة المرور",
+  "caregiver": "مقدم رعاية",
+  "elderly": "كبير سن",
+  "requiredField": "مطلوب",
+  "invalidEmail": "أدخل بريد إلكتروني صالح",
+  "shortPassword": "٦ أحرف على الأقل",
+  "forgotPassword": "هل نسيت كلمة المرور؟",
+  "next": "التالي",
+  "dontHaveAccount": "ليس لديك حساب؟",
+  "signUp": "إنشاء حساب",
+  "signInFailed": "فشل تسجيل الدخول",
+  "signInGenericError": "تعذر تسجيل الدخول. يرجى التحقق من البريد الإلكتروني أو كلمة المرور أو نوع الحساب.",
+  "invalidEmailAuth": "عنوان بريد إلكتروني غير صالح.",
+  "tooManyRequestsAuth": "محاولات كثيرة. يرجى المحاولة مرة أخرى لاحقًا.",
+  "accountDisabledAuth": "تم تعطيل هذا الحساب.",
+  "networkErrorAuth": "خطأ في الشبكة. تحقق من اتصالك بالإنترنت.",
+  "ok": "موافق",
+  "noProfileSelected": "لم يتم تحديد أي ملف شخصي لكبار السن.\n\nيرجى ربط ملف شخصي باستخدام القائمة الجانبية.",
+  "dashboard": "لوحة التحكم",
+  "browse": "تصفح",
+  "home": "الرئيسية",
+  "medicationHistory": "سجل الأدوية",
+  "clearAllHistory": "مسح كل السجل؟",
+  "confirmClearHistory": "سيؤدي هذا إلى إزالة جميع سجلات الأدوية بشكل دائم.",
+  "cancel": "إلغاء",
+  "clearAll": "مسح الكل",
+  "historyClearedToast": "تم مسح السجل",
+  "clearAllHistoryMenu": "مسح كل السجل",
+  "noMedicationHistory": "لا يوجد سجل أدوية",
+  "noMedicationHistoryDesc": "ستظهر الأدوية المحذوفة والمنتهية\nهنا",
+  "removeFromHistory": "إزالة من السجل؟",
+  "confirmRemoveFromHistory": "هل تريد إزالة \"{medName}\" من السجل؟",
+  "@confirmRemoveFromHistory": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "إزالة",
+  "recoverMedication": "استعادة الدواء؟",
+  "confirmRecoverMedication": "هل تريد إعادة \"{medName}\" إلى الأدوية النشطة؟",
+  "@confirmRecoverMedication": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "recover": "استعادة",
+  "recoveredSuccessfully": "تم استرجاع \"{medName}\" بنجاح",
+  "@recoveredSuccessfully": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToRecover": "فشل في استعادة الدواء",
+  "expired": "منتهي",
+  "deleted": "محذوف",
+  "unknownDate": "تاريخ غير معروف",
+  "frequency": "التكرار",
+  "dose": "الجرعة",
+  "days": "الأيام",
+  "times": "الأوقات",
+  "endDate": "تاريخ الانتهاء",
+  "notes": "ملاحظات",
+  "recoverMedicationButton": "استرجاع الدواء",
+  "actionOnDate": "{action} في {date}",
+  "@actionOnDate": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "guest": "زائر",
+  "caregiverRole": "مقدم رعاية",
+  "elderlyRole": "كبير سن",
+  "settings": "الإعدادات",
+  "linkedProfiles": "حسابات مرتبطة",
+  "link": "ربط",
+  "noProfilesLinkedYet": "لا توجد حسابات مرتبطة بعد.",
+  "logOut": "تسجيل خروج",
+  "areYouSure": "هل أنت متأكد؟",
+  "doYouReallyWantToLogOut": "هل تريد حقاً تسجيل الخروج؟",
+  "yes": "نعم",
+  "no": "لا",
+  "unlink": "إلغاء الربط",
+  "deleteProfile": "حذف الحساب",
+  "confirmDeleteProfile": "هل تريد حذف {profileName} من حسابك؟",
+  "@confirmDeleteProfile": {
+    "placeholders": {
+      "profileName": {
+        "type": "String"
+      }
+    }
+  },
+  "errorNotLoggedIn": "خطأ: لم تقم بتسجيل الدخول.",
+  "profileUnlinked": "تم إلغاء ربط حساب {profileName}",
+  "@profileUnlinked": {
+    "placeholders": {
+      "profileName": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnlinkingProfile": "خطأ في إلغاء ربط الحساب: {error}",
+  "@errorUnlinkingProfile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editInfo": "تعديل المعلومات",
+  "name": "الاسم",
+  "nameRequired": "الاسم مطلوب",
+  "gender": "الجنس",
+  "male": "ذكر",
+  "female": "أنثى",
+  "selectGender": "اختر الجنس",
+  "mobile": "رقم الجوال (05XXXXXXXX)",
+  "requiredError": "مطلوب",
+  "mustStartWith05": "يجب أن يبدأ بـ 05",
+  "mustBe10Digits": "يجب أن يكون 10 أرقام",
+  "mobileInUse": "الجوال مستخدم",
+  "mobileInUseMsg": "رقم الجوال هذا مستخدم بالفعل.",
+  "informationUpdated": "تم تحديث المعلومات",
+  "errorUpdatingInfo": "خطأ في تحديث المعلومات: {error}",
+  "@errorUpdatingInfo": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileLinked": "تم ربط الحساب!",
+  "profileLinkedMsg": "تم ربط الحساب بنجاح. يمكنك الآن إدارة هذا المستخدم من لوحة التحكم الخاصة بك.",
+  "linkElderlyViaCode": "ربط كبير سن عبر الرمز",
+  "enter6Characters": "أدخل 6 حروف/أرقام",
+  "invalidOrExpiredCode": "الرمز غير صالح أو منتهي الصلاحية.",
+  "invalidCodeData": "بيانات الرمز غير صالحة.",
+  "codeHasExpired": "انتهت صلاحية الرمز.",
+  "anErrorOccurred": "حدث خطأ: {error}",
+  "@anErrorOccurred": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "summary": "الملخص",
+  "errorLoading": "خطأ: {error}",
+  "@errorLoading": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noMedicationsFound": "لا توجد أدوية",
+  "onTimeLateMissed": "في الوقت: {onTime}   متأخر: {late}   مفوت: {missed}",
+  "@onTimeLateMissed": {
+    "placeholders": {
+      "onTime": {
+        "type": "int"
+      },
+      "late": {
+        "type": "int"
+      },
+      "missed": {
+        "type": "int"
+      }
+    }
+  },
+  "noDosesForThisMonthYet": "لا توجد جرعات لهذا الشهر بعد",
+  "medicationsForThisElderly": "أدوية كبير السن هذا",
+  "byDay": "حسب اليوم",
+  "byMedication": "حسب الدواء",
+  "scheduledTime": "مجدول {time}",
+  "@scheduledTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "takenTime": " • تم أخذه {time}",
+  "@takenTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "missedOverdue": " • مفوت (>10 دقائق تأخير)",
+  "takenLateStatus": " • تم أخذه متأخراً",
+  "noLogsForThisDay": "لا توجد سجلات لهذا اليوم",
+  "selectDayToViewDetails": "اختر يوماً لعرض التفاصيل",
+  "reminder": "تذكير!",
+  "elderlyMissedDoses": "فوت {name} عدد {count} من الجرعات!",
+  "@elderlyMissedDoses": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "youMissedDoses": "لقد فوتت {count} من الأدوية!",
+  "@youMissedDoses": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upcoming": "القادمة",
+  "nextUp": "التالي",
+  "pastDue": "متأخر",
+  "laterToday": "في وقت لاحق اليوم",
+  "taken": "تم أخذها",
+  "missedTitle": "مفوتة",
+  "medicationTakenOnTime": "تم أخذ الدواء في وقته ✓",
+  "medicationTakenLate": "تم أخذ الدواء متأخراً",
+  "undoSuccessful": "تم التراجع بنجاح لـ {medName}. تم إعادة جدولة التنبيهات.",
+  "@undoSuccessful": {
+    "placeholders": {
+      "medName": {
+        "type": "String"
+      }
+    }
+  },
+  "noMedicationsInCategory": "لا توجد أدوية في هذه الفئة اليوم.",
+  "takenOnTime": "تم أخذه في وقته",
+  "takenLate": "تم أخذه متأخراً",
+  "missed": "مفوت",
+  "dueNow": "مستحق الآن",
+  "at": "في",
+  "markAsTakenLate": "تحديد كمأخوذ متأخراً",
+  "markAsTaken": "تحديد كمأخوذ",
+  "undo": "تراجع",
+  "favorites": "المفضلة",
+  "medications": "الأدوية",
+  "addNewMedication": "إضافة دواء جديد",
+  "errorDeletingMedication": "خطأ في حذف الدواء: {error}",
+  "@errorDeletingMedication": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingMedications": "خطأ في تحميل الأدوية.",
+  "edit": "تعديل",
+  "delete": "حذف",
+  "errorLoadingVideo": "خطأ في تحميل الفيديو: {error}",
+  "@errorLoadingVideo": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingAudio": "خطأ في تحميل الصوت: {error}",
+  "@errorLoadingAudio": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "media": "الوسائط",
+  "searchFavorites": "البحث في المفضلة...",
+  "noResultsFound": "لم يتم العثور على نتائج",
+  "voiceCommandFailed": "فشل الأمر الصوتي، يرجى المحاولة مرة أخرى.",
+  "health": "الصحة",
+  "story": "قصة",
+  "quran": "قرآن",
+  "searchForAudio": "البحث عن مقطع صوتي...",
+  "addedToFavorites": "تمت الإضافة إلى المفضلة بنجاح",
+  "removedFromFavorites": "تمت الإزالة من المفضلة",
+  "noValidYoutubeUrl": "لا يوجد رابط يوتيوب صالح.",
+  "emergencyAlert": "تنبيه طوارئ",
+  "todayLabel": "اليوم • {date}",
+  "@todayLabel": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "goToMedications": "الذهاب إلى الأدوية",
+  "noUpcomingMeds": "لا توجد أدوية قادمة",
+  "monthlyOverview": "نظرة عامة شهرية",
+  "viewingDailyMeds": "أنت تعرض الأدوية اليومية لـ {name}.",
+  "@viewingDailyMeds": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "onTimeStatus": "في الوقت",
+  "missedStatus": "مفوت",
+  "howToReadPieChart": "كيف تقرأ هذا المخطط الدائري؟",
+  "pieChartHelpBody": "• كل شريحة = مجموعة من الجرعات هذا الشهر\n• الأخضر: الجرعات التي أخذت في الوقت\n• الأصفر: الجرعات التي أخذت متأخرة\n• الأحمر: الجرعات المفوتة تماماً\n\nحجم كل شريحة يوضح نسبتها من جميع الجرعات.",
+  "howToReadBarChart": "كيف تقرأ هذا المخطط العمودي اليومي؟",
+  "barChartHelpBody": "• كل عمود = يوم واحد من هذا الشهر\n• ارتفاع العمود = إجمالي عدد الجرعات في ذلك اليوم\n• الجزء الأخضر = الجرعات التي أخذت في الوقت\n• الجزء الأصفر = الجرعات التي أخذت متأخرة\n• الجزء الأحمر = الجرعات المفوتة\n\nهذا يساعدك في رؤية الأيام التي كانت فيها جرعات مفوتة أو متأخرة أكثر.",
+  "howToReadWeeklyTrend": "كيف تقرأ الاتجاه الأسبوعي؟",
+  "weeklyTrendHelpBody": "• كل بطاقة = أسبوع واحد في هذا الشهر\n• توضح كم جرعة كانت في الوقت، أو متأخرة، أو مفوتة\n• النسبة المئوية على اليمين هي الالتزام العام لذلك الأسبوع.\n\nالأسابيع الخضراء = التزام جيد جداً، الأسابيع الحمراء = تحتاج إلى انتباه.",
+  "gotIt": "فهمت",
+  "summaryForMed": "الملخص • {medName}",
+  "@summaryForMed": {
+    "placeholders": {
+      "medName": {}
+    }
+  },
+  "noDosesThisMonth": "لا توجد جرعات لهذا الشهر بعد.",
+  "statusPie": "حالة دائرية",
+  "dailyBar": "أعمدة يومية",
+  "weeklyTrend": "اتجاه أسبوعي",
+  "monthlyAdherence": "الالتزام الشهري",
+  "doseStatusThisMonth": "حالة الجرعات (هذا الشهر)",
+  "dailyDosesByStatus": "الجرعات اليومية حسب الحالة (أعمدة متراكمة)",
+  "noDailyData": "لا توجد بيانات يومية متاحة لهذا الشهر.",
+  "noDataWeeklyTrend": "لا توجد بيانات متاحة للاتجاه الأسبوعي.",
+  "notEnoughDataWeekly": "بيانات غير كافية للاتجاه الأسبوعي.",
+  "weeklyAdherenceTrend": "اتجاه الالتزام الأسبوعي",
+  "weekNumber": "الأسبوع {week}",
+  "@weekNumber": {
+    "placeholders": {
+      "week": {}
+    }
+  },
+  "dayLabel": "يوم: {day}",
+  "@dayLabel": {
+    "placeholders": {
+      "day": {}
+    }
+  },
+  "daysRangeLabel": "أيام: {startDay}–{endDay}",
+  "@daysRangeLabel": {
+    "placeholders": {
+      "startDay": {},
+      "endDay": {}
+    }
+  },
+  "greatAdherence": "التزام ممتاز 👏",
+  "moderateAdherence": "التزام متوسط – يمكن تحسينه 🙂",
+  "lowAdherence": "التزام منخفض – يحتاج إلى انتباه ⚠️",
+  "medicationDeletedSuccessfully": "تم حذف الدواء بنجاح",
+  "medsFor": "أدوية",
+  "medicationList": "قائمة الأدوية",
+  "todaysMeds": "أدوية اليوم",
+  "medList": "قائمة الأدوية",
+  "confirmDeletion": "تأكيد الحذف",
+  "areYouSureToDelete": "هل أنت متأكد أنك تريد حذف",
+  "rescan": "إعادة المسح",
+  "scanFailed": "فشل المسح",
+  "editMedication": "تعديل الدواء",
+  "step1MedicineName": "الخطوة ١: اسم الدواء",
+  "whatMedicationDoYouNeedToTake": "ما هو الدواء الذي تحتاج إلى تناوله؟",
+  "medicineName": "اسم الدواء"
+}
