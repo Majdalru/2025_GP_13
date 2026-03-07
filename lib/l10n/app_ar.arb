@@ -666,7 +666,8 @@
       }
     }
   },
-  "comingSoon": "قريباً",
-  "shortPassword": "الأدنى 6 أحرف",
-  "name": "الاسم"
+"comingSoon": "قريباً",
+"shortPassword": "الأدنى 6 أحرف",
+"name": "الاسم",
+"nameRequired": "الاسم مطلوب"
 }

@@ -268,93 +268,104 @@ class AppDrawer extends StatelessWidget {
       ),
     );
   }
+  
+Future<void> _showAddProfileDialog(BuildContext context) async {
+  final t = AppLocalizations.of(context)!;
+  final controller = TextEditingController();
+  final formKey = GlobalKey<FormState>();
 
-  Future<void> _showAddProfileDialog(BuildContext context) async {
-    final controller = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setStateInDialog) {
-          bool isLoading = false;
-          return AlertDialog(
-            title: const Text('Link Elderly via Code'),
-            content: Form(
-              key: formKey,
-              child: TextFormField(
-                controller: controller,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  letterSpacing: 6,
-                  fontWeight: FontWeight.w700,
-                ),
-                keyboardType: TextInputType.text,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
-                ],
-                decoration: const InputDecoration(
-                  hintText: '______',
-                  counterText: '',
-                ),
-                validator: (v) =>
-                    (v?.length == 6) ? null : 'Enter 6 characters',
+  await showDialog(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setStateInDialog) {
+        bool isLoading = false;
+        return AlertDialog(
+          title: Text(t.linkElderlyViaCode),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              maxLength: 6,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                letterSpacing: 6,
+                fontWeight: FontWeight.w700,
               ),
+              keyboardType: TextInputType.text,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+              ],
+              decoration: const InputDecoration(
+                hintText: '______',
+                counterText: '',
+              ),
+              validator: (v) =>
+                  (v?.length == 6) ? null : t.enter6Characters,
             ),
-            actions: [
-              TextButton(
-                onPressed: isLoading ? null : () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        if (formKey.currentState!.validate()) {
-                          setStateInDialog(() => isLoading = true);
-                          final enteredCode = controller.text
-                              .trim()
-                              .toUpperCase();
-                          final caregiverUid =
-                              FirebaseAuth.instance.currentUser?.uid;
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text(t.cancel),
+            ),
+            FilledButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate()) {
+                        setStateInDialog(() => isLoading = true);
+                        final enteredCode = controller.text.trim().toUpperCase();
+                        final caregiverUid =
+                            FirebaseAuth.instance.currentUser?.uid;
 
-                          if (caregiverUid == null) {
+                        if (caregiverUid == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(t.errorNotLoggedIn),
+                            ),
+                          );
+                          setStateInDialog(() => isLoading = false);
+                          return;
+                        }
+
+                        try {
+                          final firestore = FirebaseFirestore.instance;
+                          final querySnapshot = await firestore
+                              .collection('users')
+                              .where('pairingCode', isEqualTo: enteredCode)
+                              .limit(1)
+                              .get();
+
+                          if (querySnapshot.docs.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Error: You are not logged in.'),
+                              SnackBar(
+                                content: Text(t.invalidOrExpiredCode),
                               ),
                             );
-                            setStateInDialog(() => isLoading = false);
-                            return;
-                          }
+                          } else {
+                            final elderlyDoc = querySnapshot.docs.first;
+                            final data = elderlyDoc.data();
+                            final elderlyUid = elderlyDoc.id;
+                            final createdAtTimestamp =
+                                data['pairingCodeCreatedAt'] as Timestamp?;
 
-                          try {
-                            final firestore = FirebaseFirestore.instance;
-                            final querySnapshot = await firestore
-                                .collection('users')
-                                .where('pairingCode', isEqualTo: enteredCode)
-                                .limit(1)
-                                .get();
-
-                            if (querySnapshot.docs.isEmpty) {
+                            if (createdAtTimestamp == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Invalid or expired code.'),
+                                SnackBar(
+                                  content: Text(t.invalidCodeData),
                                 ),
                               );
+                              await elderlyDoc.reference.update({
+                                'pairingCode': null,
+                                'pairingCodeCreatedAt': null,
+                              });
                             } else {
-                              final elderlyDoc = querySnapshot.docs.first;
-                              final data = elderlyDoc.data();
-                              final elderlyUid = elderlyDoc.id;
-                              final createdAtTimestamp =
-                                  data['pairingCodeCreatedAt'] as Timestamp?;
-
-                              if (createdAtTimestamp == null) {
+                              final createdAt = createdAtTimestamp.toDate();
+                              if (DateTime.now().difference(createdAt).inMinutes >= 5) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Invalid code data.'),
+                                  SnackBar(
+                                    content: Text(t.codeHasExpired),
                                   ),
                                 );
                                 await elderlyDoc.reference.update({
@@ -362,77 +373,63 @@ class AppDrawer extends StatelessWidget {
                                   'pairingCodeCreatedAt': null,
                                 });
                               } else {
-                                final createdAt = createdAtTimestamp.toDate();
-                                if (DateTime.now()
-                                        .difference(createdAt)
-                                        .inMinutes >=
-                                    5) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Code has expired.'),
-                                    ),
-                                  );
-                                  await elderlyDoc.reference.update({
+                                final caregiverDocRef = firestore
+                                    .collection('users')
+                                    .doc(caregiverUid);
+
+                                await firestore.runTransaction((
+                                  transaction,
+                                ) async {
+                                  transaction.update(caregiverDocRef, {
+                                    'elderlyIds': FieldValue.arrayUnion([
+                                      elderlyUid,
+                                    ]),
+                                  });
+                                  transaction.update(elderlyDoc.reference, {
+                                    'caregiverIds': FieldValue.arrayUnion([
+                                      caregiverUid,
+                                    ]),
                                     'pairingCode': null,
                                     'pairingCodeCreatedAt': null,
                                   });
-                                } else {
-                                  final caregiverDocRef = firestore
-                                      .collection('users')
-                                      .doc(caregiverUid);
+                                });
 
-                                  await firestore.runTransaction((
-                                    transaction,
-                                  ) async {
-                                    transaction.update(caregiverDocRef, {
-                                      'elderlyIds': FieldValue.arrayUnion([
-                                        elderlyUid,
-                                      ]),
-                                    });
-                                    transaction.update(elderlyDoc.reference, {
-                                      'caregiverIds': FieldValue.arrayUnion([
-                                        caregiverUid,
-                                      ]),
-                                      'pairingCode': null,
-                                      'pairingCodeCreatedAt': null,
-                                    });
-                                  });
-
-                                  Navigator.pop(ctx);
-                                  // ✅ Dialog أنيق لنجاح الربط
-                                  await _showProfileLinkedDialog(context);
-                                  onProfileLinked();
-                                }
+                                Navigator.pop(ctx);
+                                await _showProfileLinkedDialog(context);
+                                onProfileLinked();
                               }
                             }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('An error occurred: $e')),
-                            );
-                          } finally {
-                            if (context.mounted) {
-                              setStateInDialog(() => isLoading = false);
-                            }
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(t.anErrorOccurred(e.toString())),
+                            ),
+                          );
+                        } finally {
+                          if (context.mounted) {
+                            setStateInDialog(() => isLoading = false);
                           }
                         }
-                      },
-                child: isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Link'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(t.link),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
 
   Future<bool?> _confirmLogout(BuildContext context) {
     return showDialog<bool>(
@@ -530,196 +527,190 @@ class AppDrawer extends StatelessWidget {
   }
 
   // ===== نافذة تعديل المعلومات (اسم / جنس / جوال) مع التحقق + منع تكرار الرقم =====
-  Future<void> _openEditDialog(BuildContext context) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+Future<void> _openEditDialog(BuildContext context) async {
+  final t = AppLocalizations.of(context)!;
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return;
 
-    // جلب القيم الحالية لتهيئة الحقول
-    final snap = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
-    final data = snap.data() ?? {};
-    final first = (data['firstName'] ?? '').toString().trim();
-    final last = (data['lastName'] ?? '').toString().trim();
-    final gender = (data['gender'] ?? '').toString().trim();
-    final phone = (data['phone'] ?? '').toString().trim();
+  final snap = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .get();
+  final data = snap.data() ?? {};
+  final first = (data['firstName'] ?? '').toString().trim();
+  final last = (data['lastName'] ?? '').toString().trim();
+  final gender = (data['gender'] ?? '').toString().trim();
+  final phone = (data['phone'] ?? '').toString().trim();
 
-    final formKey = GlobalKey<FormState>();
-    final nameCtrl = TextEditingController(
-      text: [first, last].where((s) => s.isNotEmpty).join(' '),
-    );
-    final genderCtrl = TextEditingController(text: gender);
-    final phoneCtrl = TextEditingController(text: phone);
+  final formKey = GlobalKey<FormState>();
+  final nameCtrl = TextEditingController(
+    text: [first, last].where((s) => s.isNotEmpty).join(' '),
+  );
+  final genderCtrl = TextEditingController(text: gender);
+  final phoneCtrl = TextEditingController(text: phone);
 
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Edit Info',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Form(
-          key: formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // الاسم (إلزامي)
-              TextFormField(
-                controller: nameCtrl,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                ),
-                style: const TextStyle(fontSize: 16),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-              ),
-              const SizedBox(height: 12),
-
-              // الجنس
-              DropdownButtonFormField<String>(
-                value: genderCtrl.text.isNotEmpty ? genderCtrl.text : null,
-                decoration: const InputDecoration(
-                  labelText: 'Gender',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'male', child: Text('Male')),
-                  DropdownMenuItem(value: 'female', child: Text('Female')),
-                ],
-                onChanged: (v) => genderCtrl.text = v ?? '',
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Select gender' : null,
-              ),
-              const SizedBox(height: 12),
-
-              // الجوال (05XXXXXXXX) + رسائل قصيرة وواضحة
-              TextFormField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Mobile (05XXXXXXXX)',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                ),
-                style: const TextStyle(fontSize: 16),
-                validator: (v) {
-                  final txt = (v ?? '').trim();
-                  if (txt.isEmpty) return 'Required';
-                  if (!txt.startsWith('05')) return 'Must start with 05';
-                  if (txt.length != 10) return 'Must be 10 digits';
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-
-              final newName = nameCtrl.text.trim();
-              final parts = newName.split(RegExp(r'\s+'));
-              final firstName = parts.isNotEmpty ? parts.first : '';
-              final lastName = parts.length > 1
-                  ? parts.sublist(1).join(' ')
-                  : '';
-              final newGender = genderCtrl.text;
-              final newPhone = phoneCtrl.text.trim();
-
-              try {
-                // لو غيّر الرقم → تأكد أنه مو مستخدم
-                if (newPhone != phone) {
-                  final dup = await FirebaseFirestore.instance
-                      .collection('users')
-                      .where('phone', isEqualTo: newPhone)
-                      .limit(1)
-                      .get();
-
-                  if (dup.docs.isNotEmpty && dup.docs.first.id != uid) {
-                    // رقم مستخدم مسبقاً → Dialog محترم
-                    if (ctx.mounted) {
-                      await showDialog(
-                        context: ctx,
-                        builder: (dCtx) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          title: const Text(
-                            'Mobile in use',
-                            style: TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          content: const Text(
-                            'This mobile number is already in use.',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(dCtx),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    return; // لا نكمّل التحديث
-                  }
-                }
-
-                // تحديث البيانات
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(uid)
-                    .update({
-                      'firstName': firstName,
-                      'lastName': lastName,
-                      'gender': newGender,
-                      'phone': newPhone,
-                    });
-
-                if (!context.mounted) return;
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Information updated')),
-                );
-              } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error updating info: $e')),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
+  await showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        t.editInfo,
+        style: const TextStyle(fontWeight: FontWeight.bold),
       ),
-    );
-  }
+      content: Form(
+        key: formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: nameCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: t.name,
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
+              ),
+              style: const TextStyle(fontSize: 16),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ?t.nameRequired : null,
+            ),
+            const SizedBox(height: 12),
+
+            DropdownButtonFormField<String>(
+              value: genderCtrl.text.isNotEmpty ? genderCtrl.text : null,
+              decoration: InputDecoration(
+                labelText: t.gender,
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
+              ),
+              items: [
+                DropdownMenuItem(value: 'male', child: Text(t.male)),
+                DropdownMenuItem(value: 'female', child: Text(t.female)),
+              ],
+              onChanged: (v) => genderCtrl.text = v ?? '',
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? t.selectGender : null,
+            ),
+            const SizedBox(height: 12),
+
+            TextFormField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              decoration: InputDecoration(
+                labelText: t.mobile,
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
+              ),
+              style: const TextStyle(fontSize: 16),
+              validator: (v) {
+                final txt = (v ?? '').trim();
+                if (txt.isEmpty) return t.requiredError;
+                if (!txt.startsWith('05')) return t.mustStartWith05;
+                if (txt.length != 10) return t.mustBe10Digits;
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(t.cancel),
+        ),
+        FilledButton(
+          onPressed: () async {
+            if (!formKey.currentState!.validate()) return;
+
+            final newName = nameCtrl.text.trim();
+            final parts = newName.split(RegExp(r'\s+'));
+            final firstName = parts.isNotEmpty ? parts.first : '';
+            final lastName = parts.length > 1
+                ? parts.sublist(1).join(' ')
+                : '';
+            final newGender = genderCtrl.text;
+            final newPhone = phoneCtrl.text.trim();
+
+            try {
+              if (newPhone != phone) {
+                final dup = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('phone', isEqualTo: newPhone)
+                    .limit(1)
+                    .get();
+
+                if (dup.docs.isNotEmpty && dup.docs.first.id != uid) {
+                  if (ctx.mounted) {
+                    await showDialog(
+                      context: ctx,
+                      builder: (dCtx) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        title: Text(
+                          t.mobileInUse,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        content: Text(
+                          t.mobileInUseMsg,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dCtx),
+                            child: Text(t.ok),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return;
+                }
+              }
+
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid)
+                  .update({
+                    'firstName': firstName,
+                    'lastName': lastName,
+                    'gender': newGender,
+                    'phone': newPhone,
+                  });
+
+              if (!context.mounted) return;
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(t.informationUpdated)),
+              );
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(t.errorUpdatingInfo(e.toString()))),
+              );
+            }
+          },
+          child: Text(t.save),
+        ),
+      ],
+    ),
+  );
+}
 
   // ✅ Dialog مخصص ومضبوط على ستايل التطبيق لنجاح ربط البروفايل
   Future<void> _showProfileLinkedDialog(BuildContext context) async {

@@ -1107,4 +1107,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get name => 'الاسم';
+
+  @override
+  String get nameRequired => 'الاسم مطلوب';
 }

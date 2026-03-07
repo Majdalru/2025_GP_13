@@ -1118,4 +1118,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get name => 'Name';
+
+  @override
+  String get nameRequired => 'Name is required';
 }
