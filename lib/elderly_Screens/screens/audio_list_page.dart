@@ -20,7 +20,6 @@ class _AudioListPageState extends State<AudioListPage> {
 
   static const kPrimary = Color(0xFF1B3A52);
 
-  //  tags حسب كل كاتيجوري
   final Map<String, List<String>> _tagsPerCategory = {
     'Quran': ['All', 'maher-almuaiqly', 'saad-alghamdi', 'alminshawi'],
     'Story': ['All', 'islamic', 'world'],
@@ -30,6 +29,18 @@ class _AudioListPageState extends State<AudioListPage> {
 
   String _selectedTag = 'All';
 
+  String _getTitle(AudioItem item) {
+    final lang = Localizations.localeOf(context).languageCode;
+
+    if (item.category == 'Quran') {
+      if (lang == 'ar') {
+        return item.titleAr?.isNotEmpty == true ? item.titleAr! : item.title;
+      }
+    }
+
+    return item.title;
+  }
+
   void _showTopBanner(
     String message, {
     Color color = kPrimary,
@@ -37,6 +48,7 @@ class _AudioListPageState extends State<AudioListPage> {
   }) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+
     messenger
       ..hideCurrentMaterialBanner()
       ..showMaterialBanner(
@@ -58,24 +70,71 @@ class _AudioListPageState extends State<AudioListPage> {
       );
 
     Future.delayed(Duration(seconds: seconds), () {
-      if (mounted) messenger.hideCurrentMaterialBanner();
+      if (mounted) {
+        messenger.hideCurrentMaterialBanner();
+      }
     });
+  }
+
+  String _localizedCategoryTitle(BuildContext context, String category) {
+    final loc = AppLocalizations.of(context)!;
+
+    switch (category) {
+      case 'Quran':
+        return loc.quran;
+      case 'Story':
+        return loc.story;
+      case 'Health':
+        return loc.health;
+      case 'Caregiver':
+        return loc.caregiver;
+      case 'Favorites':
+        return loc.favorites;
+      default:
+        return category;
+    }
+  }
+
+  String _localizedTagLabel(BuildContext context, String tag) {
+    final loc = AppLocalizations.of(context)!;
+
+    switch (tag) {
+      case 'All':
+        return loc.all;
+      case 'maher-almuaiqly':
+        return loc.maherAlMuaiqly;
+      case 'saad-alghamdi':
+        return loc.saadAlGhamdi;
+      case 'alminshawi':
+        return loc.alMinshawi;
+      case 'islamic':
+        return loc.islamicStories;
+      case 'world':
+        return loc.worldStories;
+      case 'food':
+        return loc.food;
+      case 'sleep':
+        return loc.sleep;
+      case 'general':
+        return loc.generalHealth;
+      default:
+        return tag;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     const cardColor = Colors.white;
+    final loc = AppLocalizations.of(context)!;
 
-    //  التاقات المناسبة للكاتيجوري الحالي
     final tags = _tagsPerCategory[widget.category] ?? ['All'];
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: kPrimary,
-        title: Text(widget.category),
+        title: Text(_localizedCategoryTitle(context, widget.category)),
         titleTextStyle: const TextStyle(
           fontSize: 34,
           color: Colors.white,
@@ -91,11 +150,9 @@ class _AudioListPageState extends State<AudioListPage> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
       ),
-
       body: SafeArea(
         child: Column(
           children: [
-            // ===== Search Bar =====
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
               child: TextField(
@@ -105,7 +162,7 @@ class _AudioListPageState extends State<AudioListPage> {
                   fontFamily: 'NotoSansArabic',
                 ),
                 decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context)!.searchForAudio,
+                  hintText: loc.searchForAudio,
                   hintStyle: const TextStyle(fontSize: 22, color: Colors.grey),
                   prefixIcon: const Icon(
                     Icons.search,
@@ -122,14 +179,20 @@ class _AudioListPageState extends State<AudioListPage> {
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: kPrimary, width: 2),
+                  ),
                 ),
               ),
             ),
 
             const SizedBox(height: 4),
 
-            //  Filter by Tag (Chips)
-            //  Filter by Tag (Chips) — scroll أفقي أوضح
             SizedBox(
               height: 46,
               child: ListView.separated(
@@ -141,22 +204,11 @@ class _AudioListPageState extends State<AudioListPage> {
                   final tag = tags[index];
                   final isSelected = _selectedTag == tag;
 
-                  // نسوي label  لليوزر
-                  String label = tag;
-                  if (tag == 'All') label = 'All';
-                  if (tag == 'maher-almuaiqly') label = 'Maher Al-Muaiqly';
-                  if (tag == 'saad-alghamdi') label = 'Saad Al-Ghamdi';
-                  if (tag == 'alminshawi') label = 'Al-Minshawi';
-
-                  if (tag == 'islamic') label = 'Islamic Stories';
-                  if (tag == 'world') label = 'World Stories';
-
-                  if (tag == 'food') label = 'Food';
-                  if (tag == 'sleep') label = 'Sleep';
-                  if (tag == 'general') label = 'General Health';
-
                   return ChoiceChip(
-                    label: Text(label, style: const TextStyle(fontSize: 16)),
+                    label: Text(
+                      _localizedTagLabel(context, tag),
+                      style: const TextStyle(fontSize: 16),
+                    ),
                     selected: isSelected,
                     selectedColor: kPrimary,
                     backgroundColor: Colors.grey.shade200,
@@ -175,7 +227,6 @@ class _AudioListPageState extends State<AudioListPage> {
 
             const SizedBox(height: 4),
 
-            // ===== List of Audio Cards =====
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: FirebaseFirestore.instance
@@ -189,32 +240,36 @@ class _AudioListPageState extends State<AudioListPage> {
 
                   if (snapshot.hasError) {
                     debugPrint(
-                      ' Firestore error in AudioListPage: ${snapshot.error}',
+                      'Firestore error in AudioListPage: ${snapshot.error}',
                     );
                     return Center(
                       child: Text(
-                        'Error: ${snapshot.error}',
-                        style: const TextStyle(fontSize: 18, color: Colors.red),
+                        '${loc.errorOccurred}: ${snapshot.error}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.red,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     );
                   }
 
                   final docs = snapshot.data?.docs ?? [];
-
-                  // نحول الـ docs إلى List<AudioItem>
                   final allItems = docs
                       .map((doc) => AudioItem.fromDoc(doc))
                       .toList();
 
-                  final query = searchQuery.toLowerCase();
+                  final query = searchQuery.toLowerCase().trim();
                   final selectedTag = _selectedTag;
 
-                  //  فلترة بالبحث + التاق معاً
                   final filteredItems = allItems.where((item) {
-                    final matchesSearch = item.title.toLowerCase().contains(
-                      query,
-                    );
+                    final title = _getTitle(item).toLowerCase();
+                    final tag = item.tag.toLowerCase();
+
+                    final matchesSearch =
+                        query.isEmpty ||
+                        title.contains(query) ||
+                        tag.contains(query);
 
                     final matchesTag =
                         selectedTag == 'All' || item.tag == selectedTag;
@@ -225,7 +280,7 @@ class _AudioListPageState extends State<AudioListPage> {
                   if (filteredItems.isEmpty) {
                     return Center(
                       child: Text(
-                        AppLocalizations.of(context)!.noResultsFound,
+                        loc.noResultsFound,
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -239,8 +294,6 @@ class _AudioListPageState extends State<AudioListPage> {
                     itemCount: filteredItems.length,
                     itemBuilder: (context, index) {
                       final item = filteredItems[index];
-
-                      //  نستخدم id بدل title
                       final isFavorite = favoritesManager.isFavorite(item.id);
 
                       return Card(
@@ -265,7 +318,7 @@ class _AudioListPageState extends State<AudioListPage> {
                             backgroundImage: AssetImage(item.imageAsset),
                           ),
                           title: Text(
-                            item.title,
+                            _getTitle(item),
                             style: const TextStyle(
                               fontFamily: 'NotoSansArabic',
                               fontSize: 26,
@@ -285,26 +338,21 @@ class _AudioListPageState extends State<AudioListPage> {
                               await favoritesManager.toggleFavorite({
                                 "audioId": item.id,
                                 "title": item.title,
+                                "titleAr": item.titleAr,
                                 "category": item.category,
                                 "image": item.imageAsset,
                                 "fileName": item.fileName,
                                 "tag": item.tag,
-                                "type": item.type, // 👈 مهم
-                                "url": item.url, // 👈 مهم لليوتيوب
+                                "type": item.type,
+                                "url": item.url,
                               });
 
-                              final nowFav = favoritesManager.isFavorite(
-                                item.id,
-                              );
+                              final nowFav = favoritesManager.isFavorite(item.id);
 
                               _showTopBanner(
                                 nowFav
-                                    ? AppLocalizations.of(
-                                        context,
-                                      )!.addedToFavorites
-                                    : AppLocalizations.of(
-                                        context,
-                                      )!.removedFromFavorites,
+                                    ? loc.addedToFavorites
+                                    : loc.removedFromFavorites,
                                 color: nowFav
                                     ? Colors.green.shade700
                                     : Colors.red.shade700,
@@ -315,7 +363,6 @@ class _AudioListPageState extends State<AudioListPage> {
                             },
                           ),
                           onTap: () {
-                            // لو نوعه YouTube نروح لصفحة اليوتيوب
                             if (item.type == 'youtube' &&
                                 item.url != null &&
                                 item.url!.isNotEmpty) {
@@ -327,7 +374,6 @@ class _AudioListPageState extends State<AudioListPage> {
                                 ),
                               );
                             } else {
-                              // أي شيء ثاني (أو ما فيه type) يفتح المشغّل الصوتي العادي
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(

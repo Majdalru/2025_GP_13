@@ -1338,7 +1338,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Hello {name}'**
-  String helloUser(String name);
+  String helloUser(Object name);
 
   /// No description provided for @sos.
   ///
@@ -2071,6 +2071,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name is required'**
   String get nameRequired;
+
+  /// No description provided for @whatWouldYouLikeToShare.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to share today?'**
+  String get whatWouldYouLikeToShare;
+
+  /// No description provided for @chooseAMediaType.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a media type below'**
+  String get chooseAMediaType;
+
+  /// No description provided for @mon.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get mon;
+
+  /// No description provided for @tue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get tue;
+
+  /// No description provided for @wed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get wed;
+
+  /// No description provided for @thu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get thu;
+
+  /// No description provided for @fri.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get fri;
+
+  /// No description provided for @sat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get sat;
+
+  /// No description provided for @sun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get sun;
+
+  /// No description provided for @late.
+  ///
+  /// In en, this message translates to:
+  /// **'Late'**
+  String get late;
+
+  /// No description provided for @onTime.
+  ///
+  /// In en, this message translates to:
+  /// **'On time'**
+  String get onTime;
+
+  /// No description provided for @unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknown;
+
+  /// No description provided for @voiceAlreadyOnHome.
+  ///
+  /// In en, this message translates to:
+  /// **'You are already on the home page.'**
+  String get voiceAlreadyOnHome;
+
+  /// No description provided for @confirmLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get confirmLogout;
+
+  /// No description provided for @medication.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication'**
+  String get medication;
+
+  /// No description provided for @noCaregiversLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'No caregivers linked'**
+  String get noCaregiversLinked;
+
+  /// No description provided for @expiresIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires in: {time}'**
+  String expiresIn(Object time);
+
+  /// No description provided for @editInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Information'**
+  String get editInformation;
+
+  /// No description provided for @nameIsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get nameIsRequired;
+
+  /// No description provided for @mobileFormatHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile (05XXXXXXXX)'**
+  String get mobileFormatHint;
+
+  /// No description provided for @startWith05.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with 05'**
+  String get startWith05;
+
+  /// No description provided for @enter10Digits.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter 10 digits'**
+  String get enter10Digits;
+
+  /// No description provided for @mobileAlreadyUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile already used'**
+  String get mobileAlreadyUsed;
+
+  /// No description provided for @maherAlMuaiqly.
+  ///
+  /// In en, this message translates to:
+  /// **'Maher Al-Muaiqly'**
+  String get maherAlMuaiqly;
+
+  /// No description provided for @saadAlGhamdi.
+  ///
+  /// In en, this message translates to:
+  /// **'Saad Al-Ghamdi'**
+  String get saadAlGhamdi;
+
+  /// No description provided for @alMinshawi.
+  ///
+  /// In en, this message translates to:
+  /// **'Al-Minshawi'**
+  String get alMinshawi;
+
+  /// No description provided for @islamicStories.
+  ///
+  /// In en, this message translates to:
+  /// **'Islamic Stories'**
+  String get islamicStories;
+
+  /// No description provided for @worldStories.
+  ///
+  /// In en, this message translates to:
+  /// **'World Stories'**
+  String get worldStories;
+
+  /// No description provided for @food.
+  ///
+  /// In en, this message translates to:
+  /// **'Food'**
+  String get food;
+
+  /// No description provided for @sleep.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep'**
+  String get sleep;
+
+  /// No description provided for @generalHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'General Health'**
+  String get generalHealth;
+
+  /// No description provided for @errorOccurred.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred'**
+  String get errorOccurred;
+
+  /// No description provided for @tapPlayToStartListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap play to start listening'**
+  String get tapPlayToStartListening;
+
+  /// No description provided for @mediaLinkMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Media link is missing'**
+  String get mediaLinkMissing;
+
+  /// No description provided for @other.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get other;
 }
 
 class _AppLocalizationsDelegate

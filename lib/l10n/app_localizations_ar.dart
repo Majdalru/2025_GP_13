@@ -356,7 +356,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get upcoming => 'القادمة';
+  String get upcoming => 'قادمة';
 
   @override
   String get nextUp => 'التالي';
@@ -391,7 +391,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get takenLate => 'تم أخذه متأخراً';
 
   @override
-  String get missed => 'مفوت';
+  String get missed => 'فائت';
 
   @override
   String get pastDue => 'متأخر';
@@ -667,10 +667,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceAddMedication => 'حسنًا، سأساعدك في إضافة دواء جديد.';
 
   @override
-  String get voiceEditMedication => 'حسنًا، لنقم بتعديل أحد أدويتك.';
+  String get voiceEditMedication => 'حسنًا، دعنا نعدّل أحد أدويتك.';
 
   @override
-  String get voiceDeleteMedication => 'حسنًا، لنختر الدواء الذي تريد حذفه.';
+  String get voiceDeleteMedication =>
+      'حسنًا، دعنا نختار الدواء الذي تريد حذفه.';
 
   @override
   String get voiceOpeningMedia => 'جاري فتح صفحة الوسائط الخاصة بك.';
@@ -690,11 +691,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get voiceSettingsNotReady =>
-      'صفحة الإعدادات غير جاهزة بعد. في المستقبل، سأفتحها لك من هنا.';
+      'صفحة الإعدادات غير جاهزة بعد. مستقبلًا سأفتحها لك من هنا.';
 
   @override
-  String helloUser(String name) {
-    return 'مرحباً $name';
+  String helloUser(Object name) {
+    return 'مرحبًا $name';
   }
 
   @override
@@ -958,10 +959,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get media => 'الوسائط';
 
   @override
-  String get story => 'قصص';
+  String get story => 'قصة';
 
   @override
-  String get quran => 'قرآن';
+  String get quran => 'القرآن';
 
   @override
   String get health => 'الصحة';
@@ -1110,4 +1111,111 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get nameRequired => 'الاسم مطلوب';
+
+  @override
+  String get whatWouldYouLikeToShare => 'ماذا تود أن تشارك اليوم؟';
+
+  @override
+  String get chooseAMediaType => 'اختر نوع الوسائط أدناه';
+
+  @override
+  String get mon => 'الإثنين';
+
+  @override
+  String get tue => 'الثلاثاء';
+
+  @override
+  String get wed => 'الأربعاء';
+
+  @override
+  String get thu => 'الخميس';
+
+  @override
+  String get fri => 'الجمعة';
+
+  @override
+  String get sat => 'السبت';
+
+  @override
+  String get sun => 'الأحد';
+
+  @override
+  String get late => 'متأخر';
+
+  @override
+  String get onTime => 'في الوقت';
+
+  @override
+  String get unknown => 'غير معروف';
+
+  @override
+  String get voiceAlreadyOnHome => 'أنت بالفعل في الصفحة الرئيسية.';
+
+  @override
+  String get confirmLogout => 'هل أنت متأكد أنك تريد تسجيل الخروج؟';
+
+  @override
+  String get medication => 'الأدوية';
+
+  @override
+  String get noCaregiversLinked => 'لا يوجد مقدمو رعاية مرتبطون';
+
+  @override
+  String expiresIn(Object time) {
+    return 'ينتهي خلال: $time';
+  }
+
+  @override
+  String get editInformation => 'تعديل المعلومات';
+
+  @override
+  String get nameIsRequired => 'الاسم مطلوب';
+
+  @override
+  String get mobileFormatHint => 'رقم الجوال (05XXXXXXXX)';
+
+  @override
+  String get startWith05 => 'يجب أن يبدأ بـ 05';
+
+  @override
+  String get enter10Digits => 'أدخل 10 أرقام';
+
+  @override
+  String get mobileAlreadyUsed => 'رقم الجوال مستخدم بالفعل';
+
+  @override
+  String get maherAlMuaiqly => 'ماهر المعيقلي';
+
+  @override
+  String get saadAlGhamdi => 'سعد الغامدي';
+
+  @override
+  String get alMinshawi => 'المنشاوي';
+
+  @override
+  String get islamicStories => 'قصص إسلامية';
+
+  @override
+  String get worldStories => 'قصص عالمية';
+
+  @override
+  String get food => 'الغذاء';
+
+  @override
+  String get sleep => 'النوم';
+
+  @override
+  String get generalHealth => 'الصحة العامة';
+
+  @override
+  String get errorOccurred => 'حدث خطأ';
+
+  @override
+  String get tapPlayToStartListening => 'اضغط تشغيل لبدء الاستماع';
+
+  @override
+  String get mediaLinkMissing => 'رابط الوسائط غير موجود';
+
+  @override
+  String get other => 'أخرى';
 }

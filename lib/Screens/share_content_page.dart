@@ -53,7 +53,7 @@ class _ShareContentPageState extends State<ShareContentPage> {
     if (file == null) return;
 
     _showTitleDialog(
-      type: 'Video',
+      type: AppLocalizations.of(context)!.video,
       onConfirm: (title) async {
         setState(() => _isUploading = true);
         try {
@@ -128,7 +128,6 @@ class _ShareContentPageState extends State<ShareContentPage> {
       final path = await _audioRecorder.stop();
       setState(() {
         _isRecording = false;
-        // _recordedPath = path; // Removed field, just pass it
       });
       if (path != null) {
         _confirmUploadVoice(path);
@@ -143,7 +142,7 @@ class _ShareContentPageState extends State<ShareContentPage> {
 
   void _confirmUploadVoice(String path) {
     _showTitleDialog(
-      type: 'Voice Message',
+      type: AppLocalizations.of(context)!.voiceMessage,
       onConfirm: (title) async {
         setState(() => _isUploading = true);
         try {
@@ -225,7 +224,7 @@ class _ShareContentPageState extends State<ShareContentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // Light grey background
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context)!.shareWithElderly,
@@ -243,27 +242,29 @@ class _ShareContentPageState extends State<ShareContentPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'What would you like to share today?',
+                Text(
+                  AppLocalizations.of(context)!.whatWouldYouLikeToShare,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF374151),
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                  'Choose a media type below',
+                Text(
+                  AppLocalizations.of(context)!.chooseAMediaType,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF6B7280),
+                  ),
                 ),
                 const SizedBox(height: 40),
 
-                // Video Card
                 _buildActionCard(
-                  title: 'Share Video',
-                  subtitle: 'Pick from Gallery',
+                  title: AppLocalizations.of(context)!.shareVideo,
+                  subtitle: AppLocalizations.of(context)!.pickFromGallery,
                   icon: Icons.videocam_rounded,
                   color: Colors.orange.shade600,
                   onTap: _shareVideo,
@@ -271,10 +272,13 @@ class _ShareContentPageState extends State<ShareContentPage> {
 
                 const SizedBox(height: 24),
 
-                // Voice Card
                 _buildActionCard(
-                  title: _isRecording ? 'Recording...' : 'Voice Message',
-                  subtitle: _isRecording ? 'Tap to Stop' : 'Tap to Record',
+                  title: _isRecording
+                      ? AppLocalizations.of(context)!.recording
+                      : AppLocalizations.of(context)!.voiceMessage,
+                  subtitle: _isRecording
+                      ? AppLocalizations.of(context)!.tapToStop
+                      : AppLocalizations.of(context)!.tapToRecord,
                   icon: _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
                   color: _isRecording
                       ? Colors.red.shade600
@@ -298,7 +302,6 @@ class _ShareContentPageState extends State<ShareContentPage> {
             ),
           ),
 
-          // Loading Overlay
           if (_isUploading)
             Container(
               color: Colors.black.withValues(alpha: 0.5),
@@ -333,7 +336,11 @@ class _ShareContentPageState extends State<ShareContentPage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
+          return Text(
+            AppLocalizations.of(context)!.errorLoading(
+              snapshot.error.toString(),
+            ),
+          );
         }
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
@@ -484,7 +491,6 @@ class _ShareContentPageState extends State<ShareContentPage> {
             padding: const EdgeInsets.all(24),
             child: Row(
               children: [
-                // Icon Container
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   width: 80,
@@ -497,7 +503,6 @@ class _ShareContentPageState extends State<ShareContentPage> {
                 ),
                 const SizedBox(width: 24),
 
-                // Text Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,7 +530,6 @@ class _ShareContentPageState extends State<ShareContentPage> {
                   ),
                 ),
 
-                // Arrow or status indicator
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: Colors.grey.shade300,

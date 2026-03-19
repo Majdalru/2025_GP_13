@@ -5,7 +5,8 @@ class AudioItem {
   final String title;
   final String category;
   final String fileName;
-  final String tag;            //  
+  final String tag;
+  final String? titleAr; // 👈 خليته optional عشان ما يسبب crash
   final String imageAsset;
   final String type;     // audio | youtube
   final String? url;     // رابط اليوتيوب لاحقًا
@@ -15,9 +16,10 @@ class AudioItem {
     required this.title,
     required this.category,
     required this.fileName,
-    required this.tag,         //  
+    required this.tag,
+    this.titleAr, // 👈 مهم جدًا
     required this.imageAsset,
-    this.type = 'audio',   // افتراضي
+    this.type = 'audio',
     this.url,
   });
 
@@ -28,9 +30,10 @@ class AudioItem {
     return AudioItem(
       id: doc.id,
       title: data['title'] as String? ?? 'Untitled',
+      titleAr: data['titleAr'] as String?, // 👈 أهم سطر
       category: category,
       fileName: data['fileName'] as String? ?? '',
-      tag: data['tag'] as String? ?? 'All',     //  نقرأ tag من Firestore
+      tag: data['tag'] as String? ?? 'All',
       imageAsset: _imageForCategory(category),
       type: data['type'] as String? ?? 'audio',
       url: data['url'] as String?,

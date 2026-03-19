@@ -441,18 +441,18 @@ class _MedsSummaryPageState extends State<MedsSummaryPage> {
                     const SizedBox(height: 8),
 
                     // Weekday headers
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        _SummaryDow('Mon'),
-                        _SummaryDow('Tue'),
-                        _SummaryDow('Wed'),
-                        _SummaryDow('Thu'),
-                        _SummaryDow('Fri'),
-                        _SummaryDow('Sat'),
-                        _SummaryDow('Sun'),
-                      ],
-                    ),
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    _SummaryDow(AppLocalizations.of(context)!.mon),
+    _SummaryDow(AppLocalizations.of(context)!.tue),
+    _SummaryDow(AppLocalizations.of(context)!.wed),
+    _SummaryDow(AppLocalizations.of(context)!.thu),
+    _SummaryDow(AppLocalizations.of(context)!.fri),
+    _SummaryDow(AppLocalizations.of(context)!.sat),
+    _SummaryDow(AppLocalizations.of(context)!.sun),
+  ],
+),
                     const SizedBox(height: 8),
 
                     // Calendar grid
@@ -1012,12 +1012,24 @@ class _LegendRow extends StatelessWidget {
       alignment: WrapAlignment.center,
       spacing: 16,
       runSpacing: 8,
-      children: const [
-        _LegendItem(color: Color(0xFFD32F2F), label: 'Missed'),
-        _LegendItem(color: Color(0xFFF9A825), label: 'Late'),
-        _LegendItem(color: Color(0xFF2E7D32), label: 'On time'),
-        _LegendItem(color: Color(0xFFEEEEEE), label: 'Upcoming'),
-      ],
+      children: [
+        _LegendItem(
+          color: const Color(0xFFD32F2F),
+          label: AppLocalizations.of(context)!.missed,
+         ),
+        _LegendItem(
+         color: const Color(0xFFF9A825),
+         label: AppLocalizations.of(context)!.late,
+         ),
+        _LegendItem(
+         color: const Color(0xFF2E7D32),
+         label: AppLocalizations.of(context)!.onTime,
+         ),
+        _LegendItem(
+         color: const Color(0xFFEEEEEE),
+         label: AppLocalizations.of(context)!.upcoming,
+        ),
+],
     );
   }
 }

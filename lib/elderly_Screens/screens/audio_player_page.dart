@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../models/audio_item.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 class AudioPlayerPage extends StatefulWidget {
   final AudioItem item;
@@ -18,6 +19,20 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   bool _isLoading = true;
+
+  String _getTitle() {
+    final lang = Localizations.localeOf(context).languageCode;
+
+    if (widget.item.category == 'Quran') {
+      if (lang == 'ar') {
+        return widget.item.titleAr?.isNotEmpty == true
+            ? widget.item.titleAr!
+            : widget.item.title;
+      }
+    }
+
+    return widget.item.title;
+  }
 
   @override
   void initState() {
@@ -84,7 +99,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     final minSec = 0;
     final maxSec = _duration.inSeconds;
 
-    final clamped = target.clamp(minSec, maxSec); // num
+    final clamped = target.clamp(minSec, maxSec);
     await _player.seek(Duration(seconds: clamped.toInt()));
   }
 
@@ -99,14 +114,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: AudioPlayerPage.kPrimary,
-
         title: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(widget.item.title, textAlign: TextAlign.center),
+          child: Text(_getTitle(), textAlign: TextAlign.center),
         ),
         titleTextStyle: const TextStyle(
           fontSize: 28,
@@ -123,14 +136,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
       ),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Column(
             children: [
               const SizedBox(height: 10),
-
               Expanded(
                 child: Center(
                   child: Card(
@@ -165,10 +176,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-
                               Expanded(
                                 child: Text(
-                                  widget.item.title,
+                                  _getTitle(),
                                   softWrap: true,
                                   maxLines: 3,
                                   style: const TextStyle(
@@ -181,9 +191,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 32),
-
                           if (_isLoading)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 20),
@@ -240,9 +248,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                 ),
                               ],
                             ),
-
                           const SizedBox(height: 26),
-
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
@@ -256,7 +262,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               ),
                               const SizedBox(width: 16),
 
-                              // Play / Pause
                               StreamBuilder<PlayerState>(
                                 stream: _player.playerStateStream,
                                 builder: (context, snapshot) {
@@ -288,30 +293,27 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                     child: Icon(
                                       icon,
                                       color: Colors.white,
-                                      size: 60, //  نفس اللي كان
+                                      size: 60,
                                     ),
                                   );
                                 },
                               ),
                               const SizedBox(width: 16),
 
-                              //  تقدّم 10 ثواني
                               IconButton(
                                 icon: const Icon(Icons.forward_10),
-                                iconSize: 44, //  نفس اللي كان
+                                iconSize: 44,
                                 color: AudioPlayerPage.kPrimary,
                                 onPressed: () => _seekRelative(10),
                                 splashRadius: 30,
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 22),
-
-                          const Text(
-                            "Tap play to start listening",
+                          Text(
+                            AppLocalizations.of(context)!.tapPlayToStartListening,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontFamily: 'NotoSansArabic',
                               fontSize: 22,
                               color: Colors.black54,

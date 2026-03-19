@@ -64,22 +64,36 @@ class _FavoritesPageState extends State<FavoritesPage> {
     });
   }
 
+  String _localizedCategory(BuildContext context, String category) {
+    switch (category.trim().toLowerCase()) {
+      case 'story':
+        return AppLocalizations.of(context)!.story;
+      case 'quran':
+        return AppLocalizations.of(context)!.quran;
+      case 'health':
+        return AppLocalizations.of(context)!.health;
+      case 'caregiver':
+        return AppLocalizations.of(context)!.caregiver;
+      default:
+        return category;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final favoriteAudios = favoritesManager.favorites;
 
-    // فلترة البحث
     final filteredFavorites = favoriteAudios.where((audio) {
-      final title = (audio["title"] ?? '').toLowerCase();
-      final category = (audio["category"] ?? '').toLowerCase();
+      final title = (audio["title"] ?? '').toString().toLowerCase();
+      final category = (audio["category"] ?? '').toString().toLowerCase();
       final query = searchQuery.toLowerCase();
       return title.contains(query) || category.contains(query);
     }).toList();
 
-    // نصنّف بحسب الكاتيجوري
     final grouped = <String, List<Map<String, dynamic>>>{};
     for (var item in filteredFavorites) {
-      final cat = item["category"] ?? "Other";
+      final cat =
+          (item["category"] ?? AppLocalizations.of(context)!.other).toString();
       grouped.putIfAbsent(cat, () => []).add(item);
     }
 
@@ -102,7 +116,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
       ),
       body: Column(
         children: [
-          // حقل البحث
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -127,8 +140,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
             ),
           ),
-
-          // محتوى الصفحة
           Expanded(
             child: filteredFavorites.isEmpty
                 ? Center(
@@ -156,18 +167,19 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     children: grouped.entries.map((entry) {
                       final category = entry.key;
                       final items = entry.value;
+                      final localizedCategory =
+                          _localizedCategory(context, category);
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // عنوان القسم (Story / Quran / Health / Caregiver)
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               vertical: 10,
                               horizontal: 4,
                             ),
                             child: Text(
-                              category,
+                              localizedCategory,
                               style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
@@ -175,11 +187,18 @@ class _FavoritesPageState extends State<FavoritesPage> {
                               ),
                             ),
                           ),
-
-                          // عناصر الفيفورت في هذا القسم
                           ...items.map((audio) {
-                            final title = audio["title"] ?? "";
-                            final image = audio["image"] ?? 'assets/audio.jpg';
+                            final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+
+final titleEn = (audio["title"] ?? "").toString();
+final titleAr = (audio["titleAr"] ?? "").toString();
+
+final title = isArabic
+    ? (titleAr.isNotEmpty ? titleAr : titleEn)
+    : titleEn;
+                            final image =
+                                (audio["image"] ?? 'assets/audio.jpg')
+                                    .toString();
 
                             return Card(
                               margin: const EdgeInsets.symmetric(vertical: 8),
@@ -205,14 +224,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  category,
+                                  localizedCategory,
                                   style: const TextStyle(
                                     fontSize: 20,
                                     color: Colors.grey,
                                   ),
                                 ),
-
-                                // زر حذف من الفيفورت
                                 trailing: IconButton(
                                   icon: const Icon(
                                     Icons.favorite,
@@ -220,28 +237,26 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                     size: 36,
                                   ),
                                   onPressed: () async {
-                                    await favoritesManager.toggleFavorite(
-                                      audio,
-                                    );
+                                    await favoritesManager.toggleFavorite(audio);
 
                                     _showTopBanner(
-                                      "Removed from Favorites",
+                                      AppLocalizations.of(context)!
+                                          .removedFromFavorites,
                                       color: Colors.red.shade700,
                                     );
                                   },
                                 ),
-
                                 onTap: () {
-                                  // نقرأ النوع والرابط من البيانات المخزّنة
                                   final type =
-                                      (audio["type"] ?? 'audio') as String;
+                                      (audio["type"] ?? 'audio').toString();
                                   final url = audio["url"] as String?;
-                                  // ✅ إضافة فقط: تشغيل مقاطع/أصوات الكيرقفر (shared)
+
                                   if (type == "shared_video" ||
                                       type == "shared_audio") {
                                     if (url == null || url.isEmpty) {
                                       _showTopBanner(
-                                        "Media link is missing",
+                                        AppLocalizations.of(context)!
+                                            .mediaLinkMissing,
                                         color: Colors.red.shade700,
                                       );
                                       return;
@@ -251,6 +266,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                       id:
                                           (audio["itemId"] ??
                                                   audio["audioId"] ??
+                                                  audio["id"] ??
                                                   '')
                                               .toString(),
                                       type: type == "shared_video"
@@ -263,8 +279,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                       senderId:
                                           (audio["senderId"] ?? 'caregiver')
                                               .toString(),
-                                      timestamp:
-                                          DateTime.now(), // إذا ما عندك timestamp محفوظ في favorites
+                                      timestamp: DateTime.now(),
                                     );
 
                                     if (sharedItem.type ==
@@ -286,20 +301,28 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                         ),
                                       );
                                     }
-                                    return; // مهم جدًا عشان ما يكمل على منطق AudioItem
+                                    return;
                                   }
+
+                                  final itemId =
+                                      (audio["itemId"] ??
+                                              audio["audioId"] ??
+                                              audio["id"] ??
+                                              '')
+                                          .toString();
+
                                   final item = AudioItem(
-                                    id: audio["audioId"] ?? '',
+                                    id: itemId,
                                     title: title,
                                     category: category,
-                                    fileName: audio["fileName"] ?? '',
-                                    tag: audio["tag"] ?? '',
+                                    fileName:
+                                        (audio["fileName"] ?? '').toString(),
+                                    tag: (audio["tag"] ?? '').toString(),
                                     imageAsset: image,
                                     type: type,
                                     url: url,
                                   );
 
-                                  // لو يوتيوب → افتح صفحة يوتيوب
                                   if (item.type == 'youtube' &&
                                       item.url != null &&
                                       item.url!.isNotEmpty) {
@@ -311,7 +334,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                       ),
                                     );
                                   } else {
-                                    // غير كذا → Audio عادي
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(

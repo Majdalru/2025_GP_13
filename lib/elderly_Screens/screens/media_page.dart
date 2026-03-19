@@ -146,21 +146,25 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   _buildMediaCard(
                     context,
                     Icons.library_music,
+                    'Story',
                     AppLocalizations.of(context)!.story,
                   ),
                   _buildMediaCard(
                     context,
                     Icons.menu_book,
+                    'Quran',
                     AppLocalizations.of(context)!.quran,
                   ),
                   _buildMediaCard(
                     context,
                     Icons.upload_file,
+                    'Caregiver',
                     AppLocalizations.of(context)!.caregiver,
                   ),
                   _buildMediaCard(
                     context,
                     Icons.favorite,
+                    'Health',
                     AppLocalizations.of(context)!.health,
                   ),
                 ],
@@ -306,7 +310,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMediaCard(BuildContext context, IconData icon, String title) {
+  Widget _buildMediaCard(BuildContext context, IconData icon,String categoryKey, String title) {
     return Card(
       color: Colors.white,
       elevation: 4,
@@ -319,7 +323,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(18),
         splashColor: MediaPage.kPrimary.withOpacity(0.15),
         onTap: () {
-          if (title == "Caregiver") {
+          if (categoryKey == "Caregiver") {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SharedMediaListPage()),
@@ -327,7 +331,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           } else {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => AudioListPage(category: title)),
+              MaterialPageRoute(builder: (_) => AudioListPage(category: categoryKey)),
             );
           }
         },

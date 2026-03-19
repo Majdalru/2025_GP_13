@@ -74,6 +74,21 @@ class ElderlyHomePage extends StatefulWidget {
 
 class _ElderlyHomePageState extends State<ElderlyHomePage> {
   String? fullName;
+  String _translateGender(String? g) {
+    if (g == null || g.isEmpty) {
+      return AppLocalizations.of(context)!.na;
+    }
+
+    switch (g.toLowerCase()) {
+      case 'male':
+        return AppLocalizations.of(context)!.male;
+      case 'female':
+        return AppLocalizations.of(context)!.female;
+      default:
+        return g;
+    }
+  }
+
   String? gender;
   String? phone;
   List<String> caregiverNames = [];
@@ -368,7 +383,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     const SizedBox(height: 14),
                     _InfoBox(
                       label: AppLocalizations.of(context)!.gender,
-                      value: gender ?? AppLocalizations.of(context)!.na,
+                      value:_translateGender(gender),
                     ),
                     const SizedBox(height: 14),
                     _InfoBox(
@@ -379,7 +394,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                 ),
               ),
             ),
-
+               
             // ===== Card 2: Caregivers =====
             Card(
               elevation: 1,
@@ -621,8 +636,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text(
-                                "Are you sure you want to log out?",
+                               Text(
+                                AppLocalizations.of(context)!.confirmLogout,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 26,
@@ -650,8 +665,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                       ),
                                     ),
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text(
-                                      "No",
+                                    child:  Text(
+                                      AppLocalizations.of(context)!.no,
                                       style: TextStyle(
                                         fontSize: 22,
                                         color: kPrimary,
@@ -678,8 +693,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                         (_) => false,
                                       );
                                     },
-                                    child: const Text(
-                                      "Yes",
+                                    child:  Text(
+                                      AppLocalizations.of(context)!.yes,
                                       style: kButtonText,
                                     ),
                                   ),
@@ -696,7 +711,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
               const SizedBox(height: 65),
               Text(
-                "Hello ${fullName?.split(' ').first ?? ''}",
+                 AppLocalizations.of(
+                  context,
+                  )!.helloUser(fullName?.split(' ').first ?? ''),
                 style: const TextStyle(
                   fontSize: 42,
                   fontWeight: FontWeight.bold,
@@ -716,8 +733,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   elevation: 6,
                 ),
                 onPressed: () => HapticFeedback.heavyImpact(),
-                child: const Text(
-                  "SOS",
+                child:  Text(
+                  AppLocalizations.of(context)!.sos,
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -735,7 +752,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   Expanded(
                     child: _HomeCard(
                       icon: Icons.video_library,
-                      title: "Media",
+                      title: AppLocalizations.of(context)!.media,
                       onTap: () {
                         HapticFeedback.selectionClick();
                         Navigator.push(
@@ -749,7 +766,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   Expanded(
                     child: _HomeCard(
                       icon: Icons.medical_services,
-                      title: "Medication",
+                      title: AppLocalizations.of(context)!.medication,
                       onTap: () {
                         HapticFeedback.selectionClick();
                         final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -839,8 +856,8 @@ class _CaregiversBox extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
               border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             ),
-            child: const Text(
-              'No caregivers linked',
+            child:  Text(
+              AppLocalizations.of(context)!.noCaregiversLinked,
               style: TextStyle(fontSize: 18, color: Colors.black54),
             ),
           )
@@ -1178,8 +1195,8 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
         borderRadius: BorderRadius.circular(22),
         side: BorderSide(color: kPrimary.withOpacity(0.3), width: 2),
       ),
-      title: const Text(
-        "Edit Information",
+      title:  Text(
+        AppLocalizations.of(context)!.editInformation,
         style: TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
@@ -1204,10 +1221,10 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                   textCapitalization: TextCapitalization.words,
                   style: kBodyText,
                   decoration: kInput(
-                    "Name",
+                    AppLocalizations.of(context)!.name,
                   ).copyWith(errorStyle: const TextStyle(fontSize: 18)),
                   validator: (v) => (v == null || v.trim().isEmpty)
-                      ? "Name is required"
+                      ? AppLocalizations.of(context)!.nameIsRequired
                       : null,
                 ),
                 const SizedBox(height: 18),
@@ -1215,7 +1232,7 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                 // Gender Dropdown
                 DropdownButtonFormField<String>(
                   value: _selectedGender,
-                  decoration: kInput("Gender").copyWith(
+                  decoration: kInput(AppLocalizations.of(context)!.gender).copyWith(
                     filled: true,
                     fillColor: Colors.white,
                     errorStyle: const TextStyle(fontSize: 18),
@@ -1244,7 +1261,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     });
                   },
                   validator: (v) =>
-                      v == null || v.isEmpty ? "Select gender" : null,
+                      v == null || v.isEmpty 
+                          ? AppLocalizations.of(context)!.selectGender
+    : null
                 ),
                 const SizedBox(height: 18),
 
@@ -1258,13 +1277,13 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     LengthLimitingTextInputFormatter(10),
                   ],
                   decoration: kInput(
-                    "Mobile (05XXXXXXXX)",
+                    AppLocalizations.of(context)!.mobileFormatHint
                   ).copyWith(errorStyle: const TextStyle(fontSize: 18)),
                   validator: (v) {
                     final txt = (v ?? "").trim();
-                    if (txt.isEmpty) return "Required";
-                    if (!txt.startsWith('05')) return "Start with 05";
-                    if (txt.length != 10) return "Enter 10 digits";
+                    if (txt.isEmpty) return AppLocalizations.of(context)!.requiredField;
+                    if (!txt.startsWith('05')) return AppLocalizations.of(context)!.startWith05;
+                    if (txt.length != 10) return AppLocalizations.of(context)!.enter10Digits;
                     if (_phoneUsedError != null) return _phoneUsedError;
                     return null;
                   },
@@ -1296,8 +1315,8 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     ),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    "Cancel",
+                  child:  Text(
+                      AppLocalizations.of(context)!.cancel,
                     style: TextStyle(
                       fontSize: 22,
                       color: kPrimary,
@@ -1334,7 +1353,7 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     if (!available) {
                       if (!mounted) return;
                       setState(() {
-                        _phoneUsedError = "Mobile already used";
+                        _phoneUsedError = AppLocalizations.of(context)!.mobileAlreadyUsed;
                       });
                       _formKey.currentState!.validate();
                       return;

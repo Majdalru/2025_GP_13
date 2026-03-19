@@ -72,6 +72,7 @@ class FavoritesManager extends ChangeNotifier {
       final data = {
         "audioId": audio["audioId"],
         "title": audio["title"],
+        "titleAr": (audio["titleAr"] ?? '').toString(),
         "category": audio["category"],
         "fileName": audio["fileName"],
         "image": audio["image"],
