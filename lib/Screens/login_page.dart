@@ -37,7 +37,154 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // Dialog عام وآمن
+  Future<void> _showLanguagePicker(LocaleProvider localeProvider) async {
+    final currentLang = localeProvider.currentLanguageCode;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: false,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Choose Language',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1B3A52),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'اختر لغة التطبيق',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                _buildLanguageOption(
+                  title: 'العربية',
+                  subtitle: 'Arabic',
+                  isSelected: currentLang == 'ar',
+                  onTap: () {
+                    localeProvider.setArabic();
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(height: 14),
+                _buildLanguageOption(
+                  title: 'English',
+                  subtitle: 'الإنجليزية',
+                  isSelected: currentLang == 'en',
+                  onTap: () {
+                    localeProvider.setEnglish();
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(height: 18),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption({
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF1B3A52).withOpacity(0.08)
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF1B3A52)
+                : Colors.grey.shade300,
+            width: isSelected ? 2 : 1.2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color: isSelected
+                  ? const Color(0xFF1B3A52)
+                  : Colors.grey,
+              size: 28,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B3A52),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _showCenteredDialog(String title, String message) async {
     if (!mounted) return;
     await showDialog(
@@ -87,14 +234,12 @@ class _LoginPageState extends State<LoginPage> {
       final email = _email.text.trim();
       final password = _pass.text.trim();
 
-      // 1) Auth
       final cred = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
       final uid = cred.user!.uid;
 
-      // 2) Fetch profile
       final snap = await _db.collection('users').doc(uid).get();
       if (!snap.exists || snap.data() == null) {
         await _auth.signOut();
@@ -105,7 +250,6 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // 3) Role gating
       final roleStr = (snap.data()!['role'] ?? '')
           .toString()
           .toLowerCase()
@@ -123,7 +267,6 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // 4) Navigate
       if (!mounted) return;
       if (actualRole == UserRole.elderly) {
         Navigator.of(context).pushReplacement(
@@ -136,7 +279,10 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      await _showCenteredDialog('Sign-in failed', _prettyAuthError(e));
+      await _showCenteredDialog(
+        AppLocalizations.of(context)!.signInFailed,
+        _prettyAuthError(e),
+      );
     } catch (_) {
       if (!mounted) return;
       await _showCenteredDialog(
@@ -161,7 +307,6 @@ class _LoginPageState extends State<LoginPage> {
 
     final isElderly = _role == UserRole.elderly;
 
-    // أحجام Elderly أكبر للوضوح
     final titleStyle = TextStyle(
       fontWeight: FontWeight.w900,
       fontSize: isElderly ? 34 : 24,
@@ -207,15 +352,8 @@ class _LoginPageState extends State<LoginPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.language),
-            tooltip: localeProvider.locale?.languageCode == 'ar'
-                ? 'English'
-                : 'العربية',
-            onPressed: () {
-              final newLocale = localeProvider.locale?.languageCode == 'ar'
-                  ? const Locale('en')
-                  : const Locale('ar');
-              localeProvider.setLocale(newLocale);
-            },
+            tooltip: 'Language',
+            onPressed: () => _showLanguagePicker(localeProvider),
           ),
           const SizedBox(width: 8),
         ],
@@ -227,7 +365,6 @@ class _LoginPageState extends State<LoginPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               children: [
-                // Logo
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -241,11 +378,8 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-
                 Center(child: Text(loc.login, style: titleStyle)),
                 const SizedBox(height: 14),
-
-                // Role chips
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -269,8 +403,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // ===== Form =====
                 Form(
                   key: _formKey,
                   child: Column(
@@ -286,14 +418,13 @@ class _LoginPageState extends State<LoginPage> {
                         validator: (v) {
                           final s = (v ?? '').trim();
                           if (s.isEmpty) return loc.requiredField;
-                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s))
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
                             return loc.invalidEmail;
+                          }
                           return null;
                         },
                       ),
-
                       const SizedBox(height: 14),
-
                       Text(loc.password, style: labelTextStyle),
                       const SizedBox(height: 6),
                       TextFormField(
@@ -312,7 +443,6 @@ class _LoginPageState extends State<LoginPage> {
                             ? loc.shortPassword
                             : null,
                       ),
-
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
                         child: TextButton(
@@ -329,7 +459,6 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-
                 FilledButton(
                   onPressed: _loading ? null : _login,
                   style: buttonStyle,
@@ -344,9 +473,7 @@ class _LoginPageState extends State<LoginPage> {
                         )
                       : Text(loc.next),
                 ),
-
                 const SizedBox(height: 16),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

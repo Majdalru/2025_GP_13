@@ -6,6 +6,13 @@ class LocaleProvider extends ChangeNotifier {
 
   Locale? get locale => _locale;
 
+  /// ⭐ مهم جدًا للصوت
+  bool get isArabic => _locale?.languageCode == 'ar';
+  bool get isEnglish => _locale?.languageCode == 'en';
+
+  /// ⭐ يفيدنا كثير في المقارنات
+  String get currentLanguageCode => _locale?.languageCode ?? 'en';
+
   LocaleProvider() {
     _loadFromPrefs();
   }
@@ -13,13 +20,18 @@ class LocaleProvider extends ChangeNotifier {
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final languageCode = prefs.getString('language_code');
+
     if (languageCode != null) {
       _locale = Locale(languageCode);
-      notifyListeners();
+    } else {
+      /// ⭐ default language
+      _locale = const Locale('en');
     }
+
+    notifyListeners();
   }
 
-  void setLocale(Locale loc) async {
+  Future<void> setLocale(Locale loc) async {
     if (!['en', 'ar'].contains(loc.languageCode)) return;
 
     _locale = loc;
@@ -29,8 +41,26 @@ class LocaleProvider extends ChangeNotifier {
     await prefs.setString('language_code', loc.languageCode);
   }
 
-  void clearLocale() async {
-    _locale = null;
+  /// ⭐ أسهل للاستخدام
+  Future<void> setArabic() async {
+    await setLocale(const Locale('ar'));
+  }
+
+  Future<void> setEnglish() async {
+    await setLocale(const Locale('en'));
+  }
+
+  /// ⭐ لو تبغون toggle
+  Future<void> toggleLanguage() async {
+    if (isArabic) {
+      await setEnglish();
+    } else {
+      await setArabic();
+    }
+  }
+
+  Future<void> clearLocale() async {
+    _locale = const Locale('en');
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();

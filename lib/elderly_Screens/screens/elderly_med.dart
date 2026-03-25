@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // ← NEW: for duration display
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import 'addmedeld.dart';
 import '../../models/medication.dart';
@@ -10,8 +11,14 @@ import '../../services/medication_history_service.dart';
 import '../../widgets/medication_history_page.dart';
 
 import '../../widgets/floating_voice_button.dart';
+import '../../widgets/arabic_floating_voice_button.dart';
+
 import '../../services/voice_assistant_service.dart';
+import '../../services/arabic_voice_assistant_service.dart';
+
 import '../../models/voice_command.dart';
+import '../../providers/locale_provider.dart';
+
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 // --- Main Page Widget ---
@@ -35,8 +42,12 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Voice service (Whisper + GPT)
+  // English voice service
   final VoiceAssistantService _voiceService = VoiceAssistantService();
+
+  // Arabic voice service
+  final ArabicVoiceAssistantService _arabicVoiceService =
+      ArabicVoiceAssistantService();
 
   // نحتفظ بقائمة الأدوية المعروضة
   List<Medication> _currentMeds = [];
@@ -45,28 +56,41 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
     // ✅ Check and remove expired medications on screen load
     MedicationScheduler().scheduleAllMedications(widget.elderlyId);
 
     // Handle initial voice command coming from home (add / edit / delete)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+      final isArabic = localeProvider.isArabic;
+
       switch (widget.initialCommand) {
         case VoiceCommand.addMedication:
-          // Run voice-guided medication addition
-          _voiceService.runAddMedicationFlow(widget.elderlyId);
+          if (isArabic) {
+            await _arabicVoiceService.runAddMedicationFlow(widget.elderlyId);
+          } else {
+            await _voiceService.runAddMedicationFlow(widget.elderlyId);
+          }
           break;
 
         case VoiceCommand.deleteMedication:
-          await _voiceService.runDeleteMedicationFlow(widget.elderlyId);
+          if (isArabic) {
+            await _arabicVoiceService.runDeleteMedicationFlow(widget.elderlyId);
+          } else {
+            await _voiceService.runDeleteMedicationFlow(widget.elderlyId);
+          }
           break;
 
         case VoiceCommand.editMedication:
-          // Run the complete voice edit flow
-          await _voiceService.runEditMedicationFlow(widget.elderlyId);
+          if (isArabic) {
+            await _arabicVoiceService.runEditMedicationFlow(widget.elderlyId);
+          } else {
+            await _voiceService.runEditMedicationFlow(widget.elderlyId);
+          }
           break;
 
         default:
-          // no initial command
           break;
       }
     });
@@ -83,20 +107,16 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   // ============================
 
   void _navigateAndAddMedication(BuildContext context) async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddMedScreen(elderlyId: widget.elderlyId),
       ),
     );
-
-    // if (result == true && mounted) {
-    //   _showSuccessMessage('Medication Added Successfully');
-    // }
   }
 
   void _navigateAndEditMedication(Medication medication) async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddMedScreen(
@@ -105,10 +125,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
         ),
       ),
     );
-
-    // if (result == true && mounted) {
-    //   _showSuccessMessage('Medication Updated Successfully');
-    // }
   }
 
   // ============================
@@ -116,13 +132,12 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   // ============================
 
   Future<void> _deleteMedication(Medication medicationToDelete) async {
-    // ✅ Show snackbar IMMEDIATELY (optimistic UI)
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             AppLocalizations.of(context)!.deleted,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           backgroundColor: Colors.red.shade600,
@@ -141,7 +156,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
       );
     }
 
-    // Now do the database work in background
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyId);
@@ -163,7 +177,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
     } catch (e) {
       debugPrint('❌ Error deleting medication: $e');
 
-      // Show error if something went wrong
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -215,6 +228,9 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
 
   @override
   Widget build(BuildContext context) {
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final isArabic = localeProvider.isArabic;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
@@ -238,7 +254,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
       ),
-
       body: Column(
         children: [
           CustomSegmentedControl(tabController: _tabController),
@@ -285,7 +300,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                         children: [
                           Text(
                             AppLocalizations.of(context)!.medications,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 30,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF1B3A52),
@@ -415,54 +430,106 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
         ],
       ),
 
-      //  Voice button in medications page
-      floatingActionButton: FloatingVoiceButton(
-        customGreeting:
-            "You are in the medication page. I can help you with adding, editing, or deleting some meds. What would you like to do? , You can say add medicine, edit medicine, or delete medicine. ",
+      // Voice button in medications page
+      floatingActionButton: isArabic
+          ? ArabicFloatingVoiceButton(
+              customGreeting:
+                  "أنت الآن في صفحة الأدوية. أستطيع مساعدتك في إضافة دواء أو تعديل دواء أو حذف دواء. ماذا تريد؟ يمكنك قول أضف دواء أو عدل دواء أو احذف دواء.",
+              customErrorResponse:
+                  "لم أفهم طلبك. يمكنك قول أضف دواء أو عدل دواء أو احذف دواء.",
+              onCommand: (command) async {
+                switch (command) {
+                  case VoiceCommand.addMedication:
+                    await _arabicVoiceService.runAddMedicationFlow(
+                      widget.elderlyId,
+                    );
+                    break;
 
-        customErrorResponse:
-            "I didn't understand. You can say add medication, edit medication, or delete medication.",
+                  case VoiceCommand.deleteMedication:
+                    await _arabicVoiceService.runDeleteMedicationFlow(
+                      widget.elderlyId,
+                    );
+                    break;
 
-        onCommand: (command) async {
-          switch (command) {
-            case VoiceCommand.addMedication:
-              await _voiceService.runAddMedicationFlow(widget.elderlyId);
-              break;
+                  case VoiceCommand.editMedication:
+                    await _arabicVoiceService.runEditMedicationFlow(
+                      widget.elderlyId,
+                    );
+                    break;
 
-            case VoiceCommand.deleteMedication:
-              await _voiceService.runDeleteMedicationFlow(widget.elderlyId);
-              break;
+                  case VoiceCommand.goToMedication:
+                    await _arabicVoiceService.speak(
+                      "أنت بالفعل في صفحة الأدوية. يمكنك قول أضف دواء أو عدل دواء أو احذف دواء.",
+                    );
+                    break;
 
-            case VoiceCommand.editMedication:
-              await _voiceService.runEditMedicationFlow(widget.elderlyId);
-              break;
+                  case VoiceCommand.goToHome:
+                    if (Navigator.canPop(context)) {
+                      await _arabicVoiceService.speak(
+                        "جاري الرجوع إلى الصفحة الرئيسية.",
+                      );
+                      Navigator.pop(context);
+                    } else {
+                      await _arabicVoiceService.speak(
+                        "أنت بالفعل في الصفحة الرئيسية.",
+                      );
+                    }
+                    break;
 
-            case VoiceCommand.goToMedication:
-              //  بدل البوب أب: رد صوتي
-              await _voiceService.speak(
-                "You are already on your medications page. "
-                "You can say add medicine, edit medicine, or delete medicine.",
-              );
-              break;
+                  default:
+                    await _arabicVoiceService.speak(
+                      "هذا الأمر الصوتي يعمل من الصفحة الرئيسية. من فضلك ارجع أولًا إلى الصفحة الرئيسية.",
+                    );
+                    break;
+                }
+              },
+            )
+          : FloatingVoiceButton(
+              customGreeting:
+                  "You are in the medication page. I can help you with adding, editing, or deleting some meds. What would you like to do? You can say add medicine, edit medicine, or delete medicine.",
+              customErrorResponse:
+                  "I didn't understand. You can say add medication, edit medication, or delete medication.",
+              onCommand: (command) async {
+                switch (command) {
+                  case VoiceCommand.addMedication:
+                    await _voiceService.runAddMedicationFlow(widget.elderlyId);
+                    break;
 
-            case VoiceCommand.goToHome:
-              if (Navigator.canPop(context)) {
-                await _voiceService.speak("Going back to the home page.");
-                Navigator.pop(context);
-              } else {
-                await _voiceService.speak("You are already on the home page.");
-              }
-              break;
+                  case VoiceCommand.deleteMedication:
+                    await _voiceService.runDeleteMedicationFlow(
+                      widget.elderlyId,
+                    );
+                    break;
 
-            default:
-              await _voiceService.speak(
-                "This voice command works from the home page. "
-                "Please go back to home first.",
-              );
-              break;
-          }
-        },
-      ),
+                  case VoiceCommand.editMedication:
+                    await _voiceService.runEditMedicationFlow(widget.elderlyId);
+                    break;
+
+                  case VoiceCommand.goToMedication:
+                    await _voiceService.speak(
+                      "You are already on your medications page. You can say add medicine, edit medicine, or delete medicine.",
+                    );
+                    break;
+
+                  case VoiceCommand.goToHome:
+                    if (Navigator.canPop(context)) {
+                      await _voiceService.speak("Going back to the home page.");
+                      Navigator.pop(context);
+                    } else {
+                      await _voiceService.speak(
+                        "You are already on the home page.",
+                      );
+                    }
+                    break;
+
+                  default:
+                    await _voiceService.speak(
+                      "This voice command works from the home page. Please go back to home first.",
+                    );
+                    break;
+                }
+              },
+            ),
     );
   }
 }
@@ -614,8 +681,8 @@ class MedicationCard extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); //  Close dialog first
-                onDelete(); // Then delete in background
+                Navigator.of(dialogContext).pop();
+                onDelete();
               },
             ),
           ],
@@ -624,7 +691,6 @@ class MedicationCard extends StatelessWidget {
     );
   }
 
-  // ← NEW: helper to format duration for card display
   String _durationDisplay() {
     if (medication.endDate == null) return 'Ongoing';
     final endDt = medication.endDate!.toDate();
@@ -649,18 +715,18 @@ class MedicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeString = medication.times
-        .map((t) => t.format(context))
-        .join(', ');
+    final timeString = medication.times.map((t) => t.format(context)).join(', ');
     final labelStyle = DefaultTextStyle.of(context).style.copyWith(
       fontSize: 22,
       fontWeight: FontWeight.bold,
       color: const Color(0xFF1B3A52),
       letterSpacing: 0.3,
     );
-    final valueStyle = DefaultTextStyle.of(
-      context,
-    ).style.copyWith(fontSize: 22, color: const Color(0xFF212121), height: 1.4);
+    final valueStyle = DefaultTextStyle.of(context).style.copyWith(
+      fontSize: 22,
+      color: const Color(0xFF212121),
+      height: 1.4,
+    );
 
     return Card(
       elevation: 6,
@@ -721,7 +787,6 @@ class MedicationCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ═══════════ Duration (NEW) ═══════════
                   RichText(
                     text: TextSpan(
                       style: valueStyle,
@@ -745,7 +810,6 @@ class MedicationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  // ═══════════ Dose ═══════════
                   RichText(
                     text: TextSpan(
                       style: valueStyle,
@@ -755,7 +819,6 @@ class MedicationCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  ///////////
                   RichText(
                     text: TextSpan(
                       style: valueStyle,
