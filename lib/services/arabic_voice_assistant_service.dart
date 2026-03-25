@@ -13,10 +13,10 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// Google Cloud TTS API Key
-const String _googleTtsApiKey = 'AIzaSyBCq3Feac7VVULUhKKgGJlsrXaYCzftJt0'; // <-- حطي مفتاح Google Cloud هنا
+const String _googleTtsApiKey = ''; // <-- حطي مفتاح Google Cloud هنا
 
 /// OpenAI API Key for Whisper + intent classification
-const String _openAIApiKey = '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'; // <-- حطي مفتاح OpenAI هنا
+const String _openAIApiKey = ''; // <-- حطي مفتاح OpenAI هنا
 
 class ArabicVoiceAssistantService {
   // ===== Singleton =====
