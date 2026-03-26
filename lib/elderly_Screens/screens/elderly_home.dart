@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 import 'media_page.dart';
 import 'elderly_med.dart';
@@ -13,9 +14,13 @@ import 'favorites_manager.dart';
 import '../../Screens/login_page.dart';
 
 import '../../widgets/floating_voice_button.dart';
-import '../../services/voice_assistant_service.dart';
-import 'package:flutter_application_1/models/voice_command.dart';
+import '../../widgets/arabic_floating_voice_button.dart';
 
+import '../../services/voice_assistant_service.dart';
+import '../../services/arabic_voice_assistant_service.dart';
+
+import '../../providers/locale_provider.dart';
+import 'package:flutter_application_1/models/voice_command.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 /// =====================
@@ -74,6 +79,7 @@ class ElderlyHomePage extends StatefulWidget {
 
 class _ElderlyHomePageState extends State<ElderlyHomePage> {
   String? fullName;
+
   String _translateGender(String? g) {
     if (g == null || g.isEmpty) {
       return AppLocalizations.of(context)!.na;
@@ -95,6 +101,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   bool loading = true;
 
   final VoiceAssistantService _voice = VoiceAssistantService();
+  final ArabicVoiceAssistantService _arabicVoice =
+      ArabicVoiceAssistantService();
+
   StreamSubscription<DocumentSnapshot>? _userSub;
   int _prevCaregiverCount = 0;
   bool _initialCaregiverLoaded = false;
@@ -133,11 +142,12 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       );
 
     Future.delayed(Duration(seconds: seconds), () {
-      if (mounted) messenger.hideCurrentMaterialBanner();
+      if (mounted) {
+        messenger.hideCurrentMaterialBanner();
+      }
     });
   }
 
-  // chunk helper for whereIn (max 10 ids)
   List<List<T>> _chunk<T>(List<T> list, int size) {
     final out = <List<T>>[];
     for (var i = 0; i < list.length; i += size) {
@@ -170,14 +180,11 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
             final first = (data['firstName'] ?? '').toString().trim();
             final last = (data['lastName'] ?? '').toString().trim();
-            final newFullName = [
-              first,
-              last,
-            ].where((s) => s.isNotEmpty).join(' ');
+            final newFullName =
+                [first, last].where((s) => s.isNotEmpty).join(' ');
             final newGender = (data['gender'] ?? '').toString();
             final newPhone = (data['phone'] ?? '').toString();
 
-            // caregiverIds[]
             final ids = (data['caregiverIds'] is List)
                 ? List<String>.from(data['caregiverIds'])
                 : <String>[];
@@ -207,7 +214,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             final newCount = names.length;
 
             if (!_initialCaregiverLoaded) {
-              // أول مرة نحمل البيانات: لا نعرض أي رسالة
               _prevCaregiverCount = newCount;
               _initialCaregiverLoaded = true;
             } else {
@@ -269,6 +275,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       );
     }
 
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final bool isArabic = localeProvider.isArabic;
+
     return Scaffold(
       backgroundColor: kSurface,
       drawer: Drawer(
@@ -296,7 +305,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             ),
             const SizedBox(height: 20),
 
-            // ===== Card 1: Elderly Info =====
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
@@ -383,7 +391,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     const SizedBox(height: 14),
                     _InfoBox(
                       label: AppLocalizations.of(context)!.gender,
-                      value:_translateGender(gender),
+                      value: _translateGender(gender),
                     ),
                     const SizedBox(height: 14),
                     _InfoBox(
@@ -394,8 +402,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                 ),
               ),
             ),
-               
-            // ===== Card 2: Caregivers =====
+
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
@@ -409,7 +416,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
             const SizedBox(height: 14),
 
-            // ===== Card 3: Verification Code (Generate) =====
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
@@ -434,14 +440,12 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         ),
       ),
 
-      // ===== Main content =====
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(25),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // top bar
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -457,164 +461,313 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     ),
                   ),
 
-                  // Floating voice button with advanced flows
-                  FloatingVoiceButton(
-                    onCommand: (command) async {
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                  isArabic
+                      ? ArabicFloatingVoiceButton(
+                          onCommand: (command) async {
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
 
-                      debugPrint(
-                        '🎯 Voice command received in ElderlyHomePage: $command',
-                      );
-
-                      switch (command) {
-                        // ====== MEDICATIONS (Navigation + flows) ======
-                        case VoiceCommand.goToMedication:
-                          if (uid != null) {
-                            // await _voice.speak(
-                            //   "Opening your medications page.",
-                            // );
-                            if (!mounted) return;
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ElderlyMedicationPage(elderlyId: uid),
-                              ),
+                            debugPrint(
+                              '🎯 Arabic voice command received in ElderlyHomePage: $command',
                             );
-                          } else {
-                            await _voice.speak(
-                              "I could not find your account. Please log in again.",
-                            );
-                          }
-                          break;
 
-                        case VoiceCommand.addMedication:
-                          if (uid == null) {
-                            await _voice.speak(
-                              "I could not find your account. Please log in again.",
-                            );
-                            return;
-                          }
-                          await _voice.speak(
-                            "Okay, I will help you add a new medication.",
-                          );
-                          if (!mounted) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ElderlyMedicationPage(
-                                elderlyId: uid,
-                                initialCommand: VoiceCommand.addMedication,
-                              ),
-                            ),
-                          );
-                          break;
-
-                        case VoiceCommand.editMedication:
-                          if (uid == null) {
-                            await _voice.speak(
-                              "I could not find your account. Please log in again.",
-                            );
-                            return;
-                          }
-                          await _voice.speak(
-                            "Okay, let us edit one of your medications.",
-                          );
-                          if (!mounted) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ElderlyMedicationPage(
-                                elderlyId: uid,
-                                initialCommand: VoiceCommand.editMedication,
-                              ),
-                            ),
-                          );
-                          break;
-
-                        case VoiceCommand.deleteMedication:
-                          if (uid == null) {
-                            await _voice.speak(
-                              "I could not find your account. Please log in again.",
-                            );
-                            return;
-                          }
-                          await _voice.speak(
-                            "Okay, let us choose which medication to delete.",
-                          );
-                          if (!mounted) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ElderlyMedicationPage(
-                                elderlyId: uid,
-                                initialCommand: VoiceCommand.deleteMedication,
-                              ),
-                            ),
-                          );
-                          break;
-
-                        // ====== MEDIA ======
-                        case VoiceCommand.goToMedia:
-                          // await _voice.speak(
-                          //   "Opening your media page.",
-                          // );
-                          if (!mounted) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MediaPage(),
-                            ),
-                          );
-                          break;
-
-                        // ====== HOME ======
-                        case VoiceCommand.goToHome:
-                          await _voice.speak(
-                            "You are already on the home page.",
-                          );
-                          break;
-
-                        // ====== SOS ======
-                        case VoiceCommand.sos:
-                          if (!mounted) return;
-                          await _voice.speak(
-                            AppLocalizations.of(context)!.voiceSosPreamble,
-                          );
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: Text(
-                                  AppLocalizations.of(context)!.emergencyTitle,
-                                ),
-                                content: Text(
-                                  AppLocalizations.of(
+                            switch (command) {
+                              case VoiceCommand.goToMedication:
+                                if (uid != null) {
+                                  if (!mounted) return;
+                                  Navigator.push(
                                     context,
-                                  )!.emergencyFlowDesc,
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text(
-                                      AppLocalizations.of(context)!.ok,
+                                    MaterialPageRoute(
+                                      builder: (_) => ElderlyMedicationPage(
+                                        elderlyId: uid,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  await _arabicVoice.speak(
+                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                  );
+                                }
+                                break;
+
+                              case VoiceCommand.addMedication:
+                                if (uid == null) {
+                                  await _arabicVoice.speak(
+                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                  );
+                                  return;
+                                }
+                                await _arabicVoice.speak(
+                                  'حسنًا، سأساعدك في إضافة دواء جديد.',
+                                );
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ElderlyMedicationPage(
+                                      elderlyId: uid,
+                                      initialCommand:
+                                          VoiceCommand.addMedication,
                                     ),
                                   ),
-                                ],
-                              );
-                            },
-                          );
-                          break;
+                                );
+                                break;
 
-                        // ====== SETTINGS ======
-                        case VoiceCommand.goToSettings:
-                          await _voice.speak(
-                            "Settings page is not ready yet. In the future, I will open it for you from here.",
-                          );
-                          break;
-                      }
-                    },
-                  ),
+                              case VoiceCommand.editMedication:
+                                if (uid == null) {
+                                  await _arabicVoice.speak(
+                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                  );
+                                  return;
+                                }
+                                await _arabicVoice.speak(
+                                  'حسنًا، لنعدّل أحد أدويتك.',
+                                );
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ElderlyMedicationPage(
+                                      elderlyId: uid,
+                                      initialCommand:
+                                          VoiceCommand.editMedication,
+                                    ),
+                                  ),
+                                );
+                                break;
+
+                              case VoiceCommand.deleteMedication:
+                                if (uid == null) {
+                                  await _arabicVoice.speak(
+                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                  );
+                                  return;
+                                }
+                                await _arabicVoice.speak(
+                                  'حسنًا، لنحدد الدواء الذي تريد حذفه.',
+                                );
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ElderlyMedicationPage(
+                                      elderlyId: uid,
+                                      initialCommand:
+                                          VoiceCommand.deleteMedication,
+                                    ),
+                                  ),
+                                );
+                                break;
+
+                              case VoiceCommand.goToMedia:
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const MediaPage(),
+                                  ),
+                                );
+                                break;
+
+                              case VoiceCommand.goToHome:
+                                await _arabicVoice.speak(
+                                  'أنت بالفعل في الصفحة الرئيسية.',
+                                );
+                                break;
+
+                              case VoiceCommand.sos:
+                                if (!mounted) return;
+                                await _arabicVoice.speak(
+                                  AppLocalizations.of(context)!.voiceSosPreamble,
+                                );
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.emergencyTitle,
+                                      ),
+                                      content: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.emergencyFlowDesc,
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: Text(
+                                            AppLocalizations.of(context)!.ok,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                                break;
+
+                              case VoiceCommand.goToSettings:
+                                await _arabicVoice.speak(
+                                  'صفحة الإعدادات غير جاهزة الآن. لاحقًا سأتمكن من فتحها لك من هنا.',
+                                );
+                                break;
+                            }
+                          },
+                        )
+                      : FloatingVoiceButton(
+                          onCommand: (command) async {
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                            debugPrint(
+                              '🎯 Voice command received in ElderlyHomePage: $command',
+                            );
+
+                            switch (command) {
+                              case VoiceCommand.goToMedication:
+                                if (uid != null) {
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ElderlyMedicationPage(
+                                        elderlyId: uid,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  await _voice.speak(
+                                    "I could not find your account. Please log in again.",
+                                  );
+                                }
+                                break;
+
+                              case VoiceCommand.addMedication:
+                                if (uid == null) {
+                                  await _voice.speak(
+                                    "I could not find your account. Please log in again.",
+                                  );
+                                  return;
+                                }
+                                await _voice.speak(
+                                  "Okay, I will help you add a new medication.",
+                                );
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ElderlyMedicationPage(
+                                      elderlyId: uid,
+                                      initialCommand:
+                                          VoiceCommand.addMedication,
+                                    ),
+                                  ),
+                                );
+                                break;
+
+                              case VoiceCommand.editMedication:
+                                if (uid == null) {
+                                  await _voice.speak(
+                                    "I could not find your account. Please log in again.",
+                                  );
+                                  return;
+                                }
+                                await _voice.speak(
+                                  "Okay, let us edit one of your medications.",
+                                );
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ElderlyMedicationPage(
+                                      elderlyId: uid,
+                                      initialCommand:
+                                          VoiceCommand.editMedication,
+                                    ),
+                                  ),
+                                );
+                                break;
+
+                              case VoiceCommand.deleteMedication:
+                                if (uid == null) {
+                                  await _voice.speak(
+                                    "I could not find your account. Please log in again.",
+                                  );
+                                  return;
+                                }
+                                await _voice.speak(
+                                  "Okay, let us choose which medication to delete.",
+                                );
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ElderlyMedicationPage(
+                                      elderlyId: uid,
+                                      initialCommand:
+                                          VoiceCommand.deleteMedication,
+                                    ),
+                                  ),
+                                );
+                                break;
+
+                              case VoiceCommand.goToMedia:
+                                if (!mounted) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const MediaPage(),
+                                  ),
+                                );
+                                break;
+
+                              case VoiceCommand.goToHome:
+                                await _voice.speak(
+                                  "You are already on the home page.",
+                                );
+                                break;
+
+                              case VoiceCommand.sos:
+                                if (!mounted) return;
+                                await _voice.speak(
+                                  AppLocalizations.of(context)!.voiceSosPreamble,
+                                );
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.emergencyTitle,
+                                      ),
+                                      content: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.emergencyFlowDesc,
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: Text(
+                                            AppLocalizations.of(context)!.ok,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                                break;
+
+                              case VoiceCommand.goToSettings:
+                                await _voice.speak(
+                                  "Settings page is not ready yet. In the future, I will open it for you from here.",
+                                );
+                                break;
+                            }
+                          },
+                        ),
 
                   IconButton(
                     icon: const Icon(
@@ -636,10 +789,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                               Text(
+                              Text(
                                 AppLocalizations.of(context)!.confirmLogout,
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w700,
                                   color: kPrimary,
@@ -665,9 +818,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                       ),
                                     ),
                                     onPressed: () => Navigator.pop(context),
-                                    child:  Text(
+                                    child: Text(
                                       AppLocalizations.of(context)!.no,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 22,
                                         color: kPrimary,
                                         fontWeight: FontWeight.bold,
@@ -693,7 +846,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                         (_) => false,
                                       );
                                     },
-                                    child:  Text(
+                                    child: Text(
                                       AppLocalizations.of(context)!.yes,
                                       style: kButtonText,
                                     ),
@@ -711,9 +864,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
               const SizedBox(height: 65),
               Text(
-                 AppLocalizations.of(
+                AppLocalizations.of(
                   context,
-                  )!.helloUser(fullName?.split(' ').first ?? ''),
+                )!.helloUser(fullName?.split(' ').first ?? ''),
                 style: const TextStyle(
                   fontSize: 42,
                   fontWeight: FontWeight.bold,
@@ -722,7 +875,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               ),
               const SizedBox(height: 55),
 
-              // SOS
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kAccentRed,
@@ -733,9 +885,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   elevation: 6,
                 ),
                 onPressed: () => HapticFeedback.heavyImpact(),
-                child:  Text(
+                child: Text(
                   AppLocalizations.of(context)!.sos,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -746,7 +898,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
               const SizedBox(height: 40),
 
-              // two tiles
               Row(
                 children: [
                   Expanded(
@@ -757,7 +908,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                         HapticFeedback.selectionClick();
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const MediaPage()),
+                          MaterialPageRoute(
+                            builder: (_) => const MediaPage(),
+                          ),
                         );
                       },
                     ),
@@ -800,11 +953,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   }
 }
 
-// ===== Reusable widgets =====
-
 class _InfoBox extends StatelessWidget {
   final String label;
   final String value;
+
   const _InfoBox({required this.label, required this.value});
 
   @override
@@ -838,6 +990,7 @@ class _InfoBox extends StatelessWidget {
 
 class _CaregiversBox extends StatelessWidget {
   final List<String> names;
+
   const _CaregiversBox({required this.names});
 
   @override
@@ -856,9 +1009,9 @@ class _CaregiversBox extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
               border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
             ),
-            child:  Text(
+            child: Text(
               AppLocalizations.of(context)!.noCaregiversLinked,
-              style: TextStyle(fontSize: 18, color: Colors.black54),
+              style: const TextStyle(fontSize: 18, color: Colors.black54),
             ),
           )
         else
@@ -914,7 +1067,7 @@ class _PairingCodeBox extends StatefulWidget {
 class _PairingCodeBoxState extends State<_PairingCodeBox> {
   String? _code;
   Timer? _timer;
-  int _countdown = 300; // 5 minutes
+  int _countdown = 300;
   bool _isLoading = false;
 
   @override
@@ -1062,6 +1215,7 @@ class _HomeCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+
   const _HomeCard({
     required this.icon,
     required this.title,
@@ -1144,7 +1298,6 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
   late String _selectedGender;
   final _formKey = GlobalKey<FormState>();
 
-  // error للجوال إذا طلع مستخدم
   String? _phoneUsedError;
 
   @override
@@ -1175,12 +1328,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
       if (snap.docs.isEmpty) return true;
 
       final currentUid = FirebaseAuth.instance.currentUser?.uid;
-      // لو الرقم نفس المستخدم الحالي عادي
       return snap.docs.first.id == currentUid;
     } catch (e) {
-      // مع الرول الحالية ممكن ترجع PERMISSION_DENIED
       debugPrint('⚠️ phone uniqueness check failed: $e');
-      // نرجّع true عشان ما نكسر التجربة
       return true;
     }
   }
@@ -1195,9 +1345,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
         borderRadius: BorderRadius.circular(22),
         side: BorderSide(color: kPrimary.withOpacity(0.3), width: 2),
       ),
-      title:  Text(
+      title: Text(
         AppLocalizations.of(context)!.editInformation,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
           color: kPrimary,
@@ -1215,7 +1365,6 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
             autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               children: [
-                // Name Field
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
@@ -1229,10 +1378,11 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                 ),
                 const SizedBox(height: 18),
 
-                // Gender Dropdown
                 DropdownButtonFormField<String>(
                   value: _selectedGender,
-                  decoration: kInput(AppLocalizations.of(context)!.gender).copyWith(
+                  decoration: kInput(
+                    AppLocalizations.of(context)!.gender,
+                  ).copyWith(
                     filled: true,
                     fillColor: Colors.white,
                     errorStyle: const TextStyle(fontSize: 18),
@@ -1260,14 +1410,12 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                       _selectedGender = val ?? 'male';
                     });
                   },
-                  validator: (v) =>
-                      v == null || v.isEmpty 
-                          ? AppLocalizations.of(context)!.selectGender
-    : null
+                  validator: (v) => v == null || v.isEmpty
+                      ? AppLocalizations.of(context)!.selectGender
+                      : null,
                 ),
                 const SizedBox(height: 18),
 
-                // Phone Field
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -1277,14 +1425,22 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     LengthLimitingTextInputFormatter(10),
                   ],
                   decoration: kInput(
-                    AppLocalizations.of(context)!.mobileFormatHint
+                    AppLocalizations.of(context)!.mobileFormatHint,
                   ).copyWith(errorStyle: const TextStyle(fontSize: 18)),
                   validator: (v) {
                     final txt = (v ?? "").trim();
-                    if (txt.isEmpty) return AppLocalizations.of(context)!.requiredField;
-                    if (!txt.startsWith('05')) return AppLocalizations.of(context)!.startWith05;
-                    if (txt.length != 10) return AppLocalizations.of(context)!.enter10Digits;
-                    if (_phoneUsedError != null) return _phoneUsedError;
+                    if (txt.isEmpty) {
+                      return AppLocalizations.of(context)!.requiredField;
+                    }
+                    if (!txt.startsWith('05')) {
+                      return AppLocalizations.of(context)!.startWith05;
+                    }
+                    if (txt.length != 10) {
+                      return AppLocalizations.of(context)!.enter10Digits;
+                    }
+                    if (_phoneUsedError != null) {
+                      return _phoneUsedError;
+                    }
                     return null;
                   },
                 ),
@@ -1298,7 +1454,6 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
       actions: [
         Row(
           children: [
-            // Cancel Button
             Expanded(
               child: SizedBox(
                 height: 56,
@@ -1315,9 +1470,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     ),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child:  Text(
-                      AppLocalizations.of(context)!.cancel,
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.cancel,
+                    style: const TextStyle(
                       fontSize: 22,
                       color: kPrimary,
                       fontWeight: FontWeight.bold,
@@ -1328,7 +1483,6 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
             ),
             const SizedBox(width: 12),
 
-            // Save Button
             Expanded(
               child: SizedBox(
                 height: 56,
@@ -1341,19 +1495,18 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     ),
                   ).copyWith(elevation: const WidgetStatePropertyAll(2)),
                   onPressed: () async {
-                    // نفضي رسالة "مستخدم" قبل ما نتحقق
                     setState(() => _phoneUsedError = null);
 
                     if (!_formKey.currentState!.validate()) return;
 
                     final phone = _phoneController.text.trim();
 
-                    // نحاول نتأكد إذا الرقم مستخدم
                     final available = await _isPhoneAvailable(phone);
                     if (!available) {
                       if (!mounted) return;
                       setState(() {
-                        _phoneUsedError = AppLocalizations.of(context)!.mobileAlreadyUsed;
+                        _phoneUsedError =
+                            AppLocalizations.of(context)!.mobileAlreadyUsed;
                       });
                       _formKey.currentState!.validate();
                       return;

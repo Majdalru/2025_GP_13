@@ -1,8 +1,9 @@
-import 'dart:math' as math; // Needed for rotation
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; //  Needed for HapticFeedback
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 import 'audio_list_page.dart';
 import 'Favoritespage.dart';
@@ -10,7 +11,9 @@ import 'audio_player_page.dart';
 
 import '../../models/audio_item.dart';
 import '../../services/voice_assistant_service.dart';
-import 'package:flutter_application_1/models/voice_command.dart'; //  NEW
+import '../../services/arabic_voice_assistant_service.dart';
+import '../../providers/locale_provider.dart';
+import 'package:flutter_application_1/models/voice_command.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 import 'youtube_player_page.dart';
 import 'shared_media_list_page.dart';
@@ -25,10 +28,10 @@ class MediaPage extends StatefulWidget {
 }
 
 class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
-  // Use the Singleton instance
   final VoiceAssistantService _voiceService = VoiceAssistantService();
+  final ArabicVoiceAssistantService _arabicVoiceService =
+      ArabicVoiceAssistantService();
 
-  // 🔹 Animation Controllers
   late AnimationController _rippleController;
   late AnimationController _pulseController;
   late AnimationController _rotateController;
@@ -36,10 +39,15 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   bool _isListeningState = false;
   bool _isSpeakingState = false;
 
+  bool get _isArabic {
+    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+    return localeProvider.isArabic;
+  }
+
   @override
   void initState() {
     super.initState();
-    // Initialize Animations
+
     _rippleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -55,8 +63,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 3000),
     );
 
-    //  Listen to voice service state changes
     _voiceService.setOnListeningStateChange(_handleVoiceStateChange);
+    _arabicVoiceService.setOnListeningStateChange(_handleVoiceStateChange);
   }
 
   void _handleVoiceStateChange(bool isListening, bool isSpeaking) {
@@ -79,30 +87,60 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     _rippleController.dispose();
     _pulseController.dispose();
     _rotateController.dispose();
-    _voiceService.setOnListeningStateChange(null); //  Cleanup
+    _voiceService.setOnListeningStateChange(null);
+    _arabicVoiceService.setOnListeningStateChange(null);
     super.dispose();
   }
 
-  // 🔹 Helper to start visual effects
   void _startAnimations() {
     _rippleController.repeat();
     _pulseController.repeat(reverse: true);
     _rotateController.repeat();
   }
 
-  // 🔹 Helper to stop visual effects
   void _stopAnimations() {
     _rippleController.stop();
     _pulseController.stop();
     _rotateController.stop();
   }
 
+  Future<void> _speak(String text) async {
+    if (_isArabic) {
+      await _arabicVoiceService.speak(text);
+    } else {
+      await _voiceService.speak(text);
+    }
+  }
+
+  Future<bool> _initializeVoice() async {
+    if (_isArabic) {
+      return _arabicVoiceService.initialize();
+    }
+    return _voiceService.initialize();
+  }
+
+  Future<String?> _listen({int seconds = 5}) async {
+    if (_isArabic) {
+      return _arabicVoiceService.listenWhisper(seconds: seconds);
+    }
+    return _voiceService.listenWhisper(seconds: seconds);
+  }
+
+  Future<VoiceCommand?> _analyzeCommand(String text) async {
+    if (_isArabic) {
+      return _arabicVoiceService.analyzeSmartCommand(text);
+    }
+    return _voiceService.analyzeSmartCommand(text);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final isArabic = localeProvider.isArabic;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
 
-      // 🔹 AppBar
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: const Color(0xFF1B3A52),
@@ -125,14 +163,12 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         ),
       ),
 
-      // 🔹 Body
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Grid Categories
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -172,7 +208,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
               const SizedBox(height: 40),
 
-              // 🔹 Favorites Button
               SizedBox(
                 width: double.infinity,
                 height: 90,
@@ -191,7 +226,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   label: Text(
                     AppLocalizations.of(context)!.favorites,
                     style: TextStyle(
-                      fontFamily: 'NotoSansArabic',
+                      fontFamily: isArabic ? 'NotoSansArabic' : null,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -207,14 +242,12 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 ),
               ),
 
-              // Add padding at bottom so the floating button doesn't cover content
               const SizedBox(height: 120),
             ],
           ),
         ),
       ),
 
-      //  CUSTOM ANIMATED VOICE BUTTON
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: GestureDetector(
         onTap: _startVoiceConversation,
@@ -224,12 +257,10 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Layer 1: Ripples (show when listening OR speaking)
               if (_isListeningState || _isSpeakingState)
                 AnimatedBuilder(
                   animation: _rippleController,
                   builder: (context, child) {
-                    // ✅ Dynamic color based on state
                     final rippleColor = _isListeningState
                         ? Colors.green
                         : Colors.red;
@@ -244,7 +275,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   },
                 ),
 
-              // Layer 2: Button Background
               AnimatedBuilder(
                 animation: Listenable.merge([
                   _pulseController,
@@ -255,7 +285,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                       ? 1.0 + (_pulseController.value * 0.15)
                       : 1.0;
 
-                  // ✅ Determine button color
                   Color buttonColor;
                   if (_isListeningState) {
                     buttonColor = Colors.green;
@@ -293,13 +322,12 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 },
               ),
 
-              // Layer 3: Icon (changes based on state)
               Icon(
                 _isListeningState
                     ? Icons.mic
                     : _isSpeakingState
-                    ? Icons.volume_up
-                    : Icons.mic_none,
+                        ? Icons.volume_up
+                        : Icons.mic_none,
                 color: Colors.white,
                 size: 40,
               ),
@@ -310,7 +338,12 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMediaCard(BuildContext context, IconData icon,String categoryKey, String title) {
+  Widget _buildMediaCard(
+    BuildContext context,
+    IconData icon,
+    String categoryKey,
+    String title,
+  ) {
     return Card(
       color: Colors.white,
       elevation: 4,
@@ -331,7 +364,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           } else {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => AudioListPage(category: categoryKey)),
+              MaterialPageRoute(
+                builder: (_) => AudioListPage(category: categoryKey),
+              ),
             );
           }
         },
@@ -344,8 +379,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
               const SizedBox(height: 18),
               Text(
                 title,
-                style: const TextStyle(
-                  fontFamily: 'NotoSansArabic',
+                style: TextStyle(
+                  fontFamily: _isArabic ? 'NotoSansArabic' : null,
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
                   color: MediaPage.kPrimary,
@@ -358,11 +393,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     );
   }
 
-  /// ==============================================
-  /// 🧠 ARABIC NORMALIZATION HELPERS
-  /// ==============================================
-
-  /// يشيل التشكيل ويوحّد بعض الحروف
   String _normalizeArabic(String input) {
     final diacritics = RegExp(
       r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]',
@@ -391,9 +421,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     return false;
   }
 
-  /// يرجع كلمة مفتاحية من اسم السورة بالعربي نستخدمها للبحث في fileName
   String? _quranFileKeywordFromUtterance(String normalizedUtter) {
-    // الفاتحة
     if (_containsAnyNormalized(normalizedUtter, [
       'الفاتحه',
       'سوره الفاتحه',
@@ -402,12 +430,10 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return 'faatiha';
     }
 
-    // الفلق
     if (_containsAnyNormalized(normalizedUtter, ['الفلق', 'سوره الفلق'])) {
       return 'falaq';
     }
 
-    // الإخلاص
     if (_containsAnyNormalized(normalizedUtter, [
       'الاخلاص',
       'الإخلاص',
@@ -417,12 +443,10 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return 'ikhlaas';
     }
 
-    // الملك
     if (_containsAnyNormalized(normalizedUtter, ['الملك', 'سوره الملك'])) {
       return 'mulk';
     }
 
-    // الناس
     if (_containsAnyNormalized(normalizedUtter, ['الناس', 'سوره الناس'])) {
       return 'naas';
     }
@@ -431,7 +455,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   }
 
   String? _healthFileKeywordFromUtterance(String normalizedUtter) {
-    // 🏃 Exercises
     if (_containsAnyNormalized(normalizedUtter, [
       'exercise',
       'exercises',
@@ -445,7 +468,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return 'Exercises';
     }
 
-    // 🛏 Sleep
     if (_containsAnyNormalized(normalizedUtter, [
       'sleep',
       'sleeping',
@@ -457,7 +479,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return 'sleep';
     }
 
-    // 💆 Self care
     if (_containsAnyNormalized(normalizedUtter, [
       'self care',
       'care',
@@ -469,7 +490,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return 'self care';
     }
 
-    // 🥗 Diet
     if (_containsAnyNormalized(normalizedUtter, [
       'diet',
       'food',
@@ -487,7 +507,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     return null;
   }
 
-  /// يرجع كلمة مفتاحية من كلام المستخدم عشان نعرف القصة (  )
   String? _storyFileKeywordFromUtterance(String normalizedUtter) {
     if (_containsAnyNormalized(normalizedUtter, [
       'muhammad',
@@ -514,17 +533,14 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     return null;
   }
 
-  /// ✅ هل الكلام يعتبر إلغاء للجلسة؟
   bool _isCancelUtterance(String? answer) {
     if (answer == null) return false;
     final lower = answer.toLowerCase();
 
-    // إنجليزي
     if (lower.contains('stop') || lower.contains('cancel')) {
       return true;
     }
 
-    // عربي مع تطبيع
     final norm = _normalizeArabic(lower);
     return norm.contains('خلاص') ||
         norm.contains('وقف') ||
@@ -535,21 +551,14 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         norm.contains('الغ');
   }
 
-  /// ==============================================
-  /// 🧠 GLOBAL INTENTS HANDLER (go to home / medications .. )
-  /// ==============================================
   Future<void> _handleGlobalCommand(VoiceCommand cmd) async {
     switch (cmd) {
       case VoiceCommand.goToMedia:
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.alreadyOnMediaPage,
-        );
+        await _speak(AppLocalizations.of(context)!.alreadyOnMediaPage);
         break;
 
       case VoiceCommand.goToHome:
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.goingBackToHome,
-        );
+        await _speak(AppLocalizations.of(context)!.goingBackToHome);
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop();
         }
@@ -559,40 +568,27 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       case VoiceCommand.addMedication:
       case VoiceCommand.editMedication:
       case VoiceCommand.deleteMedication:
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.manageMedicationsInstruction,
-        );
+        await _speak(AppLocalizations.of(context)!.manageMedicationsInstruction);
         break;
 
       case VoiceCommand.sos:
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.startingSosFlow,
-        );
-        // TODO: استدعاء منطق الـ SOS الحقيقي
+        await _speak(AppLocalizations.of(context)!.startingSosFlow);
         break;
 
       case VoiceCommand.goToSettings:
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.settingsNotAvailableHere,
-        );
+        await _speak(AppLocalizations.of(context)!.settingsNotAvailableHere);
         break;
     }
   }
 
-  /// ==============================================
-  /// 🧠 CONVERSATIONAL LOGIC
-  /// ==============================================
   Future<void> _startVoiceConversation() async {
-    // Check if already running to avoid double taps
     if (_isListeningState) return;
 
-    // 1. Start Animations & UI
     setState(() => _isListeningState = true);
     _startAnimations();
     HapticFeedback.mediumImpact();
 
-    // 2. Initialize Service
-    final ok = await _voiceService.initialize();
+    final ok = await _initializeVoice();
     if (!ok) {
       setState(() => _isListeningState = false);
       _stopAnimations();
@@ -600,38 +596,36 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     }
 
     try {
-      // --- STEP 1: Ask Category ---
-      await _voiceService.speak(
-        AppLocalizations.of(context)!.mediaCategoryPrompt,
-      );
+      await _speak(AppLocalizations.of(context)!.mediaCategoryPrompt);
 
-      String? categoryAnswer = await _voiceService.listenWhisper(seconds: 5);
+      String? categoryAnswer = await _listen(seconds: 6);
       debugPrint("User said category: $categoryAnswer");
 
-      // ✅ لو قال cancel / خلاص هنا نوقف الجلسة كاملة
       if (_isCancelUtterance(categoryAnswer)) {
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.stoppingVoiceAssistant,
-        );
+        await _speak(AppLocalizations.of(context)!.stoppingVoiceAssistant);
         _resetVoiceState();
         return;
       }
 
-      // if (categoryAnswer != null && categoryAnswer.trim().isNotEmpty) {
-      //   final globalCmd = await _voiceService.analyzeSmartCommand(
-      //     categoryAnswer,
-      //   );
-      //   if (globalCmd != null) {
-      //     await _handleGlobalCommand(globalCmd);
-      //     _resetVoiceState();
-      //     return;
-      //   }
-      // }
+      if (categoryAnswer != null && categoryAnswer.trim().isNotEmpty) {
+        final globalCmd = await _analyzeCommand(categoryAnswer);
+        if (globalCmd != null &&
+            (globalCmd == VoiceCommand.goToHome ||
+                globalCmd == VoiceCommand.goToMedia ||
+                globalCmd == VoiceCommand.goToMedication ||
+                globalCmd == VoiceCommand.addMedication ||
+                globalCmd == VoiceCommand.editMedication ||
+                globalCmd == VoiceCommand.deleteMedication ||
+                globalCmd == VoiceCommand.sos ||
+                globalCmd == VoiceCommand.goToSettings)) {
+          await _handleGlobalCommand(globalCmd);
+          _resetVoiceState();
+          return;
+        }
+      }
 
       if (categoryAnswer == null || categoryAnswer.trim().isEmpty) {
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.didNotCatchThat,
-        );
+        await _speak(AppLocalizations.of(context)!.didNotCatchThat);
         _resetVoiceState();
         return;
       }
@@ -639,26 +633,20 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       String? matchedCategory = _detectCategory(categoryAnswer);
 
       if (matchedCategory == null) {
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.categoryNotUnderstood,
-        );
+        await _speak(AppLocalizations.of(context)!.categoryNotUnderstood);
         _resetVoiceState();
         return;
       }
 
-      // --- STEP 2: Ask Specific vs Random ---
-      await _voiceService.speak(
+      await _speak(
         AppLocalizations.of(context)!.specificOrRandomPrompt(matchedCategory),
       );
 
-      String? modeAnswer = await _voiceService.listenWhisper(seconds: 5);
+      String? modeAnswer = await _listen(seconds: 6);
       debugPrint("User said mode: $modeAnswer");
 
-      // ✅ إلغاء في خطوة المود
       if (_isCancelUtterance(modeAnswer)) {
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.stoppingVoiceAssistant,
-        );
+        await _speak(AppLocalizations.of(context)!.stoppingVoiceAssistant);
         _resetVoiceState();
         return;
       }
@@ -669,19 +657,13 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           modeLower.contains("choose") ||
           modeLower.contains("search") ||
           _containsAnyNormalized(modeLower, ['معين', 'سوره', 'سورة'])) {
-        // --- STEP 3A: Handle Specific ---
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.sayAudioOrVideoName,
-        );
+        await _speak(AppLocalizations.of(context)!.sayAudioOrVideoName);
 
-        String? titleQuery = await _voiceService.listenWhisper(seconds: 5);
+        String? titleQuery = await _listen(seconds: 6);
         debugPrint("User said title: $titleQuery");
 
-        // ✅ إلغاء في اسم السورة / الصوت
         if (_isCancelUtterance(titleQuery)) {
-          await _voiceService.speak(
-            AppLocalizations.of(context)!.stoppingVoiceAssistant,
-          );
+          await _speak(AppLocalizations.of(context)!.stoppingVoiceAssistant);
           _resetVoiceState();
           return;
         }
@@ -689,13 +671,10 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         if (titleQuery != null && titleQuery.isNotEmpty) {
           await _playSpecificAudio(matchedCategory, titleQuery);
         } else {
-          await _voiceService.speak(
-            AppLocalizations.of(context)!.didNotHearTitle,
-          );
+          await _speak(AppLocalizations.of(context)!.didNotHearTitle);
         }
       } else {
-        // --- STEP 3B: Handle Random (Default) ---
-        await _voiceService.speak(
+        await _speak(
           AppLocalizations.of(
             context,
           )!.playingRandomFromCategory(matchedCategory),
@@ -721,12 +700,10 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     }
   }
 
-  /// Helper to map voice input to exact Category strings
   String? _detectCategory(String text) {
     final lower = text.toLowerCase();
     final norm = _normalizeArabic(lower);
 
-    // ===== Quran =====
     if (_containsAnyNormalized(norm, [
       'quran',
       'qur\'an',
@@ -744,7 +721,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return "Quran";
     }
 
-    // ===== Story =====
     if (_containsAnyNormalized(norm, [
       'story',
       'stories',
@@ -756,7 +732,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return "Story";
     }
 
-    // ===== Health =====
     if (_containsAnyNormalized(norm, [
       'health',
       'exercise',
@@ -772,7 +747,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return "Health";
     }
 
-    // ===== Caregiver =====
     if (_containsAnyNormalized(norm, [
       'care',
       'family',
@@ -790,7 +764,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return "Caregiver";
     }
 
-    // ===== Favorites =====
     if (_containsAnyNormalized(norm, [
       'favorite',
       'favorites',
@@ -805,7 +778,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     return null;
   }
 
-  /// 🎲 Logic to play a RANDOM item
   Future<void> _playRandomForCategory(String category) async {
     try {
       QuerySnapshot<Map<String, dynamic>> qs;
@@ -813,9 +785,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       if (category == 'Favorites') {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
-          await _voiceService.speak(
-            AppLocalizations.of(context)!.mustBeLoggedInForFavorites,
-          );
+          await _speak(AppLocalizations.of(context)!.mustBeLoggedInForFavorites);
           return;
         }
         qs = await FirebaseFirestore.instance
@@ -831,7 +801,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       }
 
       if (qs.docs.isEmpty) {
-        await _voiceService.speak(
+        await _speak(
           AppLocalizations.of(context)!.noAudioFoundForCategory(category),
         );
         return;
@@ -842,24 +812,18 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       _navigateToPlayer(item);
     } catch (e) {
       debugPrint("Error playing random: $e");
-      await _voiceService.speak(
-        AppLocalizations.of(context)!.somethingWentWrong,
-      );
+      await _speak(AppLocalizations.of(context)!.somethingWentWrong);
     }
   }
 
-  /// 🎯 Logic to play a SPECIFIC item based on title search
   Future<void> _playSpecificAudio(String category, String searchTitle) async {
     try {
       QuerySnapshot<Map<String, dynamic>> qs;
 
-      // Fetch all items in category first
       if (category == 'Favorites') {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
-          await _voiceService.speak(
-            AppLocalizations.of(context)!.mustBeLoggedInForFavorites,
-          );
+          await _speak(AppLocalizations.of(context)!.mustBeLoggedInForFavorites);
           return;
         }
         qs = await FirebaseFirestore.instance
@@ -874,11 +838,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             .get();
       }
 
-      //  نطبّع النص قبل المطابقة (عربي + إنجليزي)
       final searchLower = searchTitle.toLowerCase();
       final searchNorm = _normalizeArabic(searchLower);
 
-      // ------ 1) نحاول بالمطابقة على العنوان ------
       final matchingDocs = qs.docs.where((doc) {
         final rawTitle = (doc.data()['title'] ?? '').toString();
         final titleLower = rawTitle.toLowerCase();
@@ -890,14 +852,11 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       if (matchingDocs.isNotEmpty) {
         final item = AudioItem.fromDoc(matchingDocs.first);
-        await _voiceService.speak(
-          AppLocalizations.of(context)!.playingItem(item.title),
-        );
+        await _speak(AppLocalizations.of(context)!.playingItem(item.title));
         _navigateToPlayer(item);
         return;
       }
 
-      // ------ 2) لو category = Quran نطيح على fileName بالكلمة المفتاحية ------
       if (category == 'Quran') {
         final keyword = _quranFileKeywordFromUtterance(searchNorm);
         if (keyword != null) {
@@ -905,20 +864,18 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             final fileName = (doc.data()['fileName'] ?? '')
                 .toString()
                 .toLowerCase();
-            return fileName.contains(keyword); // مثال: contains 'falaq'
+            return fileName.contains(keyword);
           }).toList();
 
           if (quranDocs.isNotEmpty) {
             final item = AudioItem.fromDoc(quranDocs.first);
-            await _voiceService.speak(
-              AppLocalizations.of(context)!.playingItem(item.title),
-            );
+            await _speak(AppLocalizations.of(context)!.playingItem(item.title));
             _navigateToPlayer(item);
             return;
           }
         }
       }
-      // ------ 2) لو category = Health نطيح على  بالكلمة المفتاحية ------
+
       if (category == 'Health') {
         String? keyword = _healthFileKeywordFromUtterance(searchNorm);
         if (keyword != null) {
@@ -935,7 +892,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             final tagLower = rawTag.toLowerCase();
             final tagNorm = _normalizeArabic(tagLower);
 
-            // نطابق الكلمة الأساسية مع العنوان أو التاق
             return titleLower.contains(keyword!) ||
                 titleNorm.contains(keyword) ||
                 tagLower.contains(keyword) ||
@@ -944,18 +900,13 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
           if (healthDocs.isNotEmpty) {
             final item = AudioItem.fromDoc(healthDocs.first);
-            await _voiceService.speak(
-              AppLocalizations.of(context)!.playingItem(item.title),
-            );
-            _navigateToPlayer(
-              item,
-            ); // لو type = youtube → يفتح YouTubePlayerPage
+            await _speak(AppLocalizations.of(context)!.playingItem(item.title));
+            _navigateToPlayer(item);
             return;
           }
         }
       }
 
-      // ------ لو category = Story نطابق الكلمة على العنوان أو التاق ------
       if (category == 'Story') {
         String? keyword = _storyFileKeywordFromUtterance(searchNorm);
         if (keyword != null) {
@@ -980,25 +931,21 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
           if (storyDocs.isNotEmpty) {
             final item = AudioItem.fromDoc(storyDocs.first);
-            await _voiceService.speak(
-              AppLocalizations.of(context)!.playingItem(item.title),
-            );
-            _navigateToPlayer(
-              item,
-            ); // لو type = youtube يفتح YouTubePlayerPage تلقائيًا
+            await _speak(AppLocalizations.of(context)!.playingItem(item.title));
+            _navigateToPlayer(item);
             return;
           }
         }
       }
-      // ------ 3) لو لا عنوان ولا ملف طابقوا ------
-      await _voiceService.speak(
+
+      await _speak(
         AppLocalizations.of(
           context,
         )!.couldNotFindAudioNamed(searchTitle, category),
       );
     } catch (e) {
       debugPrint("Error playing specific: $e");
-      await _voiceService.speak(
+      await _speak(
         AppLocalizations.of(context)!.somethingWentWrongWhileSearching,
       );
     }
@@ -1007,14 +954,12 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   void _navigateToPlayer(AudioItem item) {
     if (!mounted) return;
 
-    // لو الميديا من نوع يوتيوب → افتح صفحة اليوتيوب
     if (item.type == 'youtube' && item.url != null && item.url!.isNotEmpty) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => YouTubePlayerPage(item: item)),
       );
     } else {
-      // غير كذا → افتح مشغّل الصوت العادي
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => AudioPlayerPage(item: item)),
@@ -1023,7 +968,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   }
 }
 
-// 🖌️ PAINTER FOR THE RIPPLES
 class RipplePainter extends CustomPainter {
   final double animation;
   final Color color;
@@ -1039,8 +983,7 @@ class RipplePainter extends CustomPainter {
 
     for (int i = 0; i < 3; i++) {
       final progress = (animation + (i * 0.33)) % 1.0;
-      final radius =
-          40 + (progress * 50); // Starts at button radius, expands out
+      final radius = 40 + (progress * 50);
       final opacity = 1.0 - progress;
 
       paint.color = color.withOpacity(opacity * 0.6);
