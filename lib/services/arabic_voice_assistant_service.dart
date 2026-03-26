@@ -10,16 +10,16 @@ import 'package:http/http.dart' as http;
 import '../models/voice_command.dart';
 import '../models/medication.dart';
 import 'medication_scheduler.dart';
+import 'voice_structured_parser_service.dart';
 import 'whisper_service.dart';
 
 /// Google Cloud TTS API Key
-const String _googleTtsApiKey = ''; // <-- حطي مفتاح Google Cloud هنا
+const String _googleTtsApiKey = '';
 
-/// OpenAI API Key for Whisper + intent classification
-const String _openAIApiKey = ''; // <-- حطي مفتاح OpenAI هنا
+/// OpenAI API Key for Whisper + intent classification + structured parsing
+const String _openAIApiKey = '';
 
 class ArabicVoiceAssistantService {
-  // ===== Singleton =====
   static final ArabicVoiceAssistantService _instance =
       ArabicVoiceAssistantService._internal();
 
@@ -28,6 +28,8 @@ class ArabicVoiceAssistantService {
   ArabicVoiceAssistantService._internal();
 
   final AudioPlayer _player = AudioPlayer();
+  final VoiceStructuredParserService _structuredParser =
+      VoiceStructuredParserService();
 
   bool _isInitialized = false;
   bool _isSpeaking = false;
@@ -48,10 +50,6 @@ class ArabicVoiceAssistantService {
       cb(listening, speaking);
     }
   }
-
-  // =========================
-  // INIT
-  // =========================
 
   Future<bool> initialize() async {
     if (_isInitialized) return true;
@@ -132,7 +130,6 @@ class ArabicVoiceAssistantService {
 
       final audioBytes = base64Decode(audioContent);
       await _player.play(BytesSource(audioBytes));
-
       await _player.onPlayerComplete.first;
     } catch (e) {
       debugPrint('❌ Arabic speak error: $e');
@@ -165,7 +162,7 @@ class ArabicVoiceAssistantService {
   // LISTEN (Whisper)
   // =========================
 
-  Future<String?> listenWhisper({int seconds = 4}) async {
+  Future<String?> listenWhisper({int seconds = 6}) async {
     final ok = await initialize();
     if (!ok) return null;
 
@@ -182,7 +179,11 @@ class ArabicVoiceAssistantService {
       return null;
     }
 
-    final text = await whisper.transcribeAudio(file, _openAIApiKey);
+    final text = await whisper.transcribeAudio(
+      file,
+      _openAIApiKey,
+      arabic: true,
+    );
 
     if (text == null || text.trim().isEmpty) {
       debugPrint('❌ Whisper returned empty text');
@@ -210,7 +211,7 @@ class ArabicVoiceAssistantService {
 
     await speak(getGreeting());
 
-    final answer = await listenWhisper(seconds: 5);
+    final answer = await listenWhisper(seconds: 6);
 
     if (_isCancelUtterance(answer)) {
       await speak('حسنًا، سأتوقف الآن.');
@@ -520,7 +521,7 @@ class ArabicVoiceAssistantService {
 
     final name = await _askQuestion(
       'ما اسم الدواء؟ يمكنك قوله بالعربية أو الإنجليزية.',
-      listenSeconds: 5,
+      listenSeconds: 6,
     );
 
     if (_isCancelUtterance(name)) {
@@ -535,7 +536,7 @@ class ArabicVoiceAssistantService {
 
     final confirmName = await _askQuestion(
       'قلت $name. هل هذا صحيح؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (_isCancelUtterance(confirmName)) {
@@ -549,8 +550,8 @@ class ArabicVoiceAssistantService {
     }
 
     final daysAnswer = await _askQuestion(
-      'في أي أيام تأخذ هذا الدواء؟ يمكنك قول كل يوم، أو ذكر أيام محددة مثل الأحد والأربعاء.',
-      listenSeconds: 6,
+      'في أي أيام تأخذ هذا الدواء؟ يمكنك قول كل يوم، أو ذكر أيام محددة مثل الأحد والثلاثاء والخميس.',
+      listenSeconds: 7,
     );
 
     if (_isCancelUtterance(daysAnswer)) {
@@ -558,11 +559,22 @@ class ArabicVoiceAssistantService {
       return;
     }
 
-    final days = parseDaysFromSpeech(daysAnswer ?? '');
+    final parsedDays =
+        await _structuredParser.parseDays(daysAnswer ?? '', _openAIApiKey);
+    final days = parsedDays ??
+        const [
+          'Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+        ];
 
     final freqAnswer = await _askQuestion(
       'كم مرة في اليوم تأخذ هذا الدواء؟ قل مرة واحدة، مرتين، ثلاث مرات، أو أربع مرات.',
-      listenSeconds: 4,
+      listenSeconds: 6,
     );
 
     if (_isCancelUtterance(freqAnswer)) {
@@ -570,12 +582,15 @@ class ArabicVoiceAssistantService {
       return;
     }
 
-    final frequency = parseFrequencyFromSpeech(freqAnswer ?? '');
+    final frequency = await _structuredParser.parseFrequency(
+      freqAnswer ?? '',
+      _openAIApiKey,
+    );
     final finalFrequency = frequency ?? 'Once a day';
 
     final timeAnswer = await _askQuestion(
       'في أي وقت تأخذ الجرعة الأولى؟ مثلًا الساعة 8 صباحًا أو 9:30 مساءً.',
-      listenSeconds: 5,
+      listenSeconds: 7,
     );
 
     if (_isCancelUtterance(timeAnswer)) {
@@ -583,15 +598,59 @@ class ArabicVoiceAssistantService {
       return;
     }
 
-    final firstTime = (timeAnswer == null || timeAnswer.isEmpty)
-        ? _fallbackTime()
-        : parseTimeFromSpeech(timeAnswer);
+    TimeOfDay firstTime;
+    if (timeAnswer == null || timeAnswer.isEmpty) {
+      firstTime = _fallbackTime();
+    } else {
+      final parsedTime = await _structuredParser.parseTime(
+        timeAnswer,
+        _openAIApiKey,
+      );
+      if (parsedTime != null) {
+        firstTime = TimeOfDay(
+          hour: parsedTime['hour']!,
+          minute: parsedTime['minute']!,
+        );
+      } else {
+        firstTime = _fallbackTime();
+      }
+    }
 
     final times = expandTimesForFrequency(firstTime, finalFrequency);
 
+    final durationAnswer = await _askQuestion(
+      'هل هذا الدواء مستمر، أم له مدة محددة؟ يمكنك قول مستمر، أو خمسة أيام، أو شهرين، أو سنة.',
+      listenSeconds: 7,
+    );
+
+    if (_isCancelUtterance(durationAnswer)) {
+      await speak('حسنًا، سنتوقف عن إضافة الدواء.');
+      return;
+    }
+
+    Timestamp? endDate;
+    if (durationAnswer != null && durationAnswer.trim().isNotEmpty) {
+      final parsedDuration = await _structuredParser.parseDuration(
+        durationAnswer,
+        _openAIApiKey,
+      );
+
+      if (parsedDuration != null) {
+        final mode = parsedDuration['mode']?.toString();
+        final daysCount = (parsedDuration['days'] as num?)?.toInt() ?? 0;
+
+        if (mode == 'days' && daysCount > 0) {
+          final end = DateTime.now().add(Duration(days: daysCount));
+          endDate = Timestamp.fromDate(end);
+        } else {
+          endDate = null;
+        }
+      }
+    }
+
     final notesAnswer = await _askQuestion(
-      'هل تريد إضافة ملاحظات؟ مثل قبل الأكل أو بعد الأكل.',
-      listenSeconds: 5,
+      'هل تريد إضافة ملاحظات؟ مثل قبل الأكل أو بعد الأكل. إذا لا، قل لا.',
+      listenSeconds: 6,
     );
 
     if (_isCancelUtterance(notesAnswer)) {
@@ -615,6 +674,7 @@ class ArabicVoiceAssistantService {
       addedBy: currentUser.uid,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
+      endDate: endDate,
     );
 
     final docRef = FirebaseFirestore.instance
@@ -627,7 +687,6 @@ class ArabicVoiceAssistantService {
       }, SetOptions(merge: true));
 
       await speak('تمت إضافة $name إلى قائمة الأدوية.');
-
       await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error saving medication by voice: $e');
@@ -652,7 +711,7 @@ class ArabicVoiceAssistantService {
     const maxTries = 3;
 
     for (int attempt = 1; attempt <= maxTries; attempt++) {
-      final answer = await listenWhisper(seconds: 4);
+      final answer = await listenWhisper(seconds: 6);
 
       if (_isCancelUtterance(answer)) {
         await speak('حسنًا، سنتوقف عن الحذف الآن.');
@@ -685,7 +744,7 @@ class ArabicVoiceAssistantService {
 
     final confirm = await _askQuestion(
       'هل تريد حذف ${target.name}؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (_isCancelUtterance(confirm)) {
@@ -708,7 +767,6 @@ class ArabicVoiceAssistantService {
       });
 
       await speak('تم حذف الدواء ${target.name}.');
-
       await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error deleting medication: $e');
@@ -734,7 +792,7 @@ class ArabicVoiceAssistantService {
     const maxTries = 3;
 
     for (int attempt = 1; attempt <= maxTries; attempt++) {
-      final answer = await listenWhisper(seconds: 4);
+      final answer = await listenWhisper(seconds: 6);
 
       if (_isCancelUtterance(answer)) {
         await speak('حسنًا، سنتوقف عن التعديل الآن.');
@@ -766,7 +824,7 @@ class ArabicVoiceAssistantService {
 
     final confirm = await _askQuestion(
       'هل تريد تعديل ${targetMed.name}؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (_isCancelUtterance(confirm)) {
@@ -784,13 +842,13 @@ class ArabicVoiceAssistantService {
 
     while (continueEditing) {
       await speak(
-        'ماذا تريد أن تعدل؟ يمكنك قول الاسم، الأيام، عدد المرات، الأوقات، أو الملاحظات.',
+        'ماذا تريد أن تعدل؟ يمكنك قول الاسم، الأيام، عدد المرات، الأوقات، الملاحظات، أو المدة.',
       );
 
       String? fieldToEdit;
 
       for (int attempt = 1; attempt <= 2; attempt++) {
-        final fieldAnswer = await listenWhisper(seconds: 4);
+        final fieldAnswer = await listenWhisper(seconds: 6);
 
         if (_isCancelUtterance(fieldAnswer)) {
           await speak('حسنًا، سنتوقف عن التعديل.');
@@ -800,7 +858,7 @@ class ArabicVoiceAssistantService {
         if (fieldAnswer == null || fieldAnswer.isEmpty) {
           if (attempt < 2) {
             await speak(
-              'من فضلك قل: الاسم أو الأيام أو عدد المرات أو الأوقات أو الملاحظات.',
+              'من فضلك قل: الاسم أو الأيام أو عدد المرات أو الأوقات أو الملاحظات أو المدة.',
             );
             continue;
           } else {
@@ -815,7 +873,7 @@ class ArabicVoiceAssistantService {
 
         if (attempt < 2) {
           await speak(
-            'لم أفهم المطلوب. قل الاسم أو الأيام أو عدد المرات أو الأوقات أو الملاحظات.',
+            'لم أفهم المطلوب. قل الاسم أو الأيام أو عدد المرات أو الأوقات أو الملاحظات أو المدة.',
           );
         }
       }
@@ -836,7 +894,7 @@ class ArabicVoiceAssistantService {
 
       final continueAnswer = await _askQuestion(
         'هل تريد تعديل شيء آخر؟ قل نعم أو لا.',
-        listenSeconds: 3,
+        listenSeconds: 4,
       );
 
       if (_isCancelUtterance(continueAnswer)) {
@@ -867,7 +925,6 @@ class ArabicVoiceAssistantService {
       await docRef.update({'medsList': updatedMedsList});
 
       await speak('تم حفظ التعديلات على ${targetMed.name}.');
-
       await MedicationScheduler().scheduleAllMedications(elderlyId);
     } catch (e) {
       debugPrint('❌ Error saving edited medication: $e');
@@ -911,6 +968,16 @@ class ArabicVoiceAssistantService {
     if (_containsAny(lower, ['note', 'notes', 'ملاحظات', 'تعليمات'])) {
       return 'notes';
     }
+    if (_containsAny(lower, [
+      'duration',
+      'المده',
+      'المدة',
+      'مدة',
+      'ينتهي',
+      'مستمر',
+    ])) {
+      return 'duration';
+    }
 
     return null;
   }
@@ -930,6 +997,8 @@ class ArabicVoiceAssistantService {
         return await _editTimes(original);
       case 'notes':
         return await _editNotes(original);
+      case 'duration':
+        return await _editDuration(original);
       default:
         return null;
     }
@@ -938,7 +1007,7 @@ class ArabicVoiceAssistantService {
   Future<Medication?> _editName(Medication original) async {
     await speak('ما الاسم الجديد للدواء؟');
 
-    final newName = await listenWhisper(seconds: 5);
+    final newName = await listenWhisper(seconds: 6);
 
     if (_isCancelUtterance(newName)) {
       await speak('حسنًا، سنحتفظ بالاسم الحالي.');
@@ -952,7 +1021,7 @@ class ArabicVoiceAssistantService {
 
     final confirm = await _askQuestion(
       'هل تريد تغيير الاسم إلى $newName؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (!_isYes(confirm)) {
@@ -970,13 +1039,14 @@ class ArabicVoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
   Future<Medication?> _editDays(Medication original) async {
     await speak('ما الأيام الجديدة؟ يمكنك قول كل يوم أو ذكر أيام محددة.');
 
-    final daysAnswer = await listenWhisper(seconds: 6);
+    final daysAnswer = await listenWhisper(seconds: 7);
 
     if (_isCancelUtterance(daysAnswer)) {
       await speak('حسنًا، سنحتفظ بالأيام الحالية.');
@@ -988,12 +1058,14 @@ class ArabicVoiceAssistantService {
       return null;
     }
 
-    final newDays = parseDaysFromSpeech(daysAnswer);
+    final parsedDays =
+        await _structuredParser.parseDays(daysAnswer, _openAIApiKey);
+    final newDays = parsedDays ?? original.days;
     final daysText = newDays.join('، ');
 
     final confirm = await _askQuestion(
       'هل تريد ضبط الأيام على: $daysText؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (!_isYes(confirm)) {
@@ -1011,13 +1083,14 @@ class ArabicVoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
   Future<Medication?> _editFrequency(Medication original) async {
     await speak('كم مرة في اليوم تريد أخذ هذا الدواء؟');
 
-    final freqAnswer = await listenWhisper(seconds: 4);
+    final freqAnswer = await listenWhisper(seconds: 6);
 
     if (_isCancelUtterance(freqAnswer)) {
       await speak('حسنًا، سنحتفظ بعدد المرات الحالي.');
@@ -1029,11 +1102,14 @@ class ArabicVoiceAssistantService {
       return null;
     }
 
-    final newFrequency = parseFrequencyFromSpeech(freqAnswer) ?? 'Once a day';
+    final newFrequency =
+        await _structuredParser.parseFrequency(freqAnswer, _openAIApiKey) ??
+            original.frequency ??
+            'Once a day';
 
     final confirm = await _askQuestion(
       'هل تريد تغيير عدد المرات إلى $newFrequency؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (!_isYes(confirm)) {
@@ -1057,13 +1133,14 @@ class ArabicVoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
   Future<Medication?> _editTimes(Medication original) async {
     await speak('ما وقت الجرعة الأولى الجديد؟');
 
-    final timeAnswer = await listenWhisper(seconds: 5);
+    final timeAnswer = await listenWhisper(seconds: 7);
 
     if (_isCancelUtterance(timeAnswer)) {
       await speak('حسنًا، سنحتفظ بالأوقات الحالية.');
@@ -1075,7 +1152,20 @@ class ArabicVoiceAssistantService {
       return null;
     }
 
-    final newFirstTime = parseTimeFromSpeech(timeAnswer);
+    final parsedTime = await _structuredParser.parseTime(
+      timeAnswer,
+      _openAIApiKey,
+    );
+    if (parsedTime == null) {
+      await speak('لم أتمكن من فهم الوقت الجديد.');
+      return null;
+    }
+
+    final newFirstTime = TimeOfDay(
+      hour: parsedTime['hour']!,
+      minute: parsedTime['minute']!,
+    );
+
     final frequency = original.frequency ?? 'Once a day';
     final newTimes = expandTimesForFrequency(newFirstTime, frequency);
 
@@ -1085,7 +1175,7 @@ class ArabicVoiceAssistantService {
 
     final confirm = await _askQuestion(
       'هل تريد ضبط الأوقات على: $timesText؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (!_isYes(confirm)) {
@@ -1103,6 +1193,7 @@ class ArabicVoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
     );
   }
 
@@ -1127,7 +1218,7 @@ class ArabicVoiceAssistantService {
       newNotes != null
           ? 'هل تريد ضبط الملاحظات على: $newNotes؟ قل نعم أو لا.'
           : 'هل تريد إزالة جميع الملاحظات؟ قل نعم أو لا.',
-      listenSeconds: 3,
+      listenSeconds: 4,
     );
 
     if (!_isYes(confirm)) {
@@ -1145,6 +1236,72 @@ class ArabicVoiceAssistantService {
       addedBy: original.addedBy,
       createdAt: original.createdAt,
       updatedAt: Timestamp.now(),
+      endDate: original.endDate,
+    );
+  }
+
+  Future<Medication?> _editDuration(Medication original) async {
+    await speak(
+      'هل هذا الدواء مستمر، أم له مدة محددة؟ يمكنك قول مستمر، أو خمسة أيام، أو شهرين، أو سنة.',
+    );
+
+    final durationAnswer = await listenWhisper(seconds: 7);
+
+    if (_isCancelUtterance(durationAnswer)) {
+      await speak('حسنًا، سنحتفظ بالمدة الحالية.');
+      return null;
+    }
+
+    if (durationAnswer == null || durationAnswer.trim().isEmpty) {
+      await speak('لم أسمع المدة الجديدة.');
+      return null;
+    }
+
+    final parsedDuration = await _structuredParser.parseDuration(
+      durationAnswer,
+      _openAIApiKey,
+    );
+    if (parsedDuration == null) {
+      await speak('لم أتمكن من فهم المدة الجديدة.');
+      return null;
+    }
+
+    final mode = parsedDuration['mode']?.toString();
+    final daysCount = (parsedDuration['days'] as num?)?.toInt() ?? 0;
+
+    Timestamp? newEndDate;
+    String readableDuration;
+
+    if (mode == 'ongoing') {
+      newEndDate = null;
+      readableDuration = 'مستمر';
+    } else {
+      final end = DateTime.now().add(Duration(days: daysCount));
+      newEndDate = Timestamp.fromDate(end);
+      readableDuration = '$daysCount يوم';
+    }
+
+    final confirm = await _askQuestion(
+      'هل تريد ضبط مدة الدواء إلى $readableDuration؟ قل نعم أو لا.',
+      listenSeconds: 4,
+    );
+
+    if (!_isYes(confirm)) {
+      await speak('حسنًا، سنحتفظ بالمدة الحالية.');
+      return null;
+    }
+
+    return Medication(
+      id: original.id,
+      name: original.name,
+      days: original.days,
+      frequency: original.frequency,
+      times: original.times,
+      notes: original.notes,
+      addedBy: original.addedBy,
+      createdAt: original.createdAt,
+      updatedAt: Timestamp.now(),
+      endDate: newEndDate,
     );
   }
 
@@ -1272,7 +1429,7 @@ class ArabicVoiceAssistantService {
   // GENERIC HELPERS
   // =========================
 
-  Future<String?> _askQuestion(String prompt, {int listenSeconds = 4}) async {
+  Future<String?> _askQuestion(String prompt, {int listenSeconds = 6}) async {
     await speak(prompt);
     final answer = await listenWhisper(seconds: listenSeconds);
 
@@ -1325,121 +1482,6 @@ class ArabicVoiceAssistantService {
         lower.contains('الغ') ||
         lower.contains('الغاء') ||
         lower.contains('إلغاء');
-  }
-
-  TimeOfDay parseTimeFromSpeech(String speech) {
-    final now = TimeOfDay.now();
-    final lower = _normalizeArabic(speech.toLowerCase());
-
-    int hour = now.hour;
-    int minute = 0;
-
-    final regex = RegExp(r'(\d{1,2})(:(\d{1,2}))?');
-    final match = regex.firstMatch(lower);
-    if (match != null) {
-      final hStr = match.group(1);
-      final mStr = match.group(3);
-      if (hStr != null) {
-        hour = int.tryParse(hStr) ?? now.hour;
-      }
-      if (mStr != null) {
-        minute = int.tryParse(mStr) ?? 0;
-      }
-    }
-
-    final isPm =
-        lower.contains('pm') || lower.contains('مساء') || lower.contains('ليل');
-    final isAm =
-        lower.contains('am') ||
-        lower.contains('صباح') ||
-        lower.contains('صباحا');
-
-    if (isPm && hour < 12) hour += 12;
-    if (isAm && hour == 12) hour = 0;
-
-    return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
-  }
-
-  List<String> parseDaysFromSpeech(String speech) {
-    final lower = _normalizeArabic(speech.toLowerCase());
-
-    if (lower.contains('every day') || lower.contains('كل يوم')) {
-      return const [
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-      ];
-    }
-
-    final Map<String, String> dayMap = {
-      'sunday': 'Sunday',
-      'monday': 'Monday',
-      'tuesday': 'Tuesday',
-      'wednesday': 'Wednesday',
-      'thursday': 'Thursday',
-      'friday': 'Friday',
-      'saturday': 'Saturday',
-      'الاحد': 'Sunday',
-      'الاثنين': 'Monday',
-      'الثلاثاء': 'Tuesday',
-      'الاربعاء': 'Wednesday',
-      'الأربعاء': 'Wednesday',
-      'الخميس': 'Thursday',
-      'الجمعة': 'Friday',
-      'السبت': 'Saturday',
-    };
-
-    final result = <String>[];
-    for (final entry in dayMap.entries) {
-      if (lower.contains(_normalizeArabic(entry.key.toLowerCase()))) {
-        result.add(entry.value);
-      }
-    }
-
-    if (result.isEmpty) {
-      return const [
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-      ];
-    }
-
-    return result.toSet().toList();
-  }
-
-  String? parseFrequencyFromSpeech(String speech) {
-    final lower = _normalizeArabic(speech.toLowerCase());
-
-    if (lower.contains('once') ||
-        lower.contains('one time') ||
-        lower.contains('مره واحده') ||
-        lower.contains('مرة واحدة')) {
-      return 'Once a day';
-    }
-    if (lower.contains('twice') ||
-        lower.contains('two times') ||
-        lower.contains('مرتين')) {
-      return 'Twice a day';
-    }
-    if (lower.contains('three') ||
-        lower.contains('ثلاث') ||
-        lower.contains('ثلاث مرات')) {
-      return 'Three times a day';
-    }
-    if (lower.contains('four') ||
-        lower.contains('اربع') ||
-        lower.contains('أربع')) {
-      return 'Four times a day';
-    }
-    return null;
   }
 
   List<TimeOfDay> expandTimesForFrequency(

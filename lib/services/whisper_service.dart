@@ -13,8 +13,7 @@ class WhisperService {
 
   final Record _record = Record();
 
-  
-  Future<File?> recordAudio({int seconds = 4}) async {
+  Future<File?> recordAudio({int seconds = 8}) async {
     try {
       final hasPerm = await _record.hasPermission();
       if (!hasPerm) {
@@ -46,11 +45,11 @@ class WhisperService {
     }
   }
 
-  
   Future<String?> transcribeAudio(
     File audioFile,
     String apiKey, {
     bool englishOnly = false,
+    bool arabic = false,
   }) async {
     try {
       final uri = Uri.parse('https://api.openai.com/v1/audio/transcriptions');
@@ -67,11 +66,16 @@ class WhisperService {
         ..fields['model'] = 'gpt-4o-transcribe'
         ..fields['response_format'] = 'json';
 
-      
       if (englishOnly) {
-        
-        request.fields['translate'] = 'true';
         request.fields['language'] = 'en';
+        request.fields['prompt'] =
+            'Transcribe clearly in English. This is a medication app.';
+      } else if (arabic) {
+        request.fields['language'] = 'ar';
+        request.fields['prompt'] =
+            'انسخ الكلام العربي بوضوح. هذا تطبيق أدوية لكبار السن. '
+            'قد يحتوي الكلام على: أسماء أدوية، أيام الأسبوع، مرة، مرتين، ثلاث مرات، أربع مرات، '
+            'أوقات مثل ثلاث صباحا، سبعة ونص مساء، ومدد مثل خمسة أيام، أسبوعين، شهرين، سنة، مستمر.';
       }
 
       print('📤 Sending audio to OpenAI...');
