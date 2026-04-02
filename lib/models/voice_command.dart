@@ -7,4 +7,5 @@ enum VoiceCommand {
   goToHome,
   sos,
   goToSettings,
+  weather,
 }

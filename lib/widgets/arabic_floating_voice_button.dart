@@ -191,7 +191,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
 
       if (hour < 12) {
         greeting = _userName != null
-            ? "صباح الخير يا $_userName، كيف أقدر أساعدك؟"
+            ? "صباح الخير يا $_userName، كيف استطيع مساعدتك"
             : "صباح الخير، كيف أقدر أساعدك؟";
       } else if (hour < 17) {
         greeting = _userName != null
@@ -205,7 +205,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "أستطيع مساعدتك في التنقل داخل التطبيق. إلى أين تريد الذهاب؟",
+        "أستطيع مساعدتك في معرفة الطقس او التنقل داخل التطبيق. ",
       );
     }
 
@@ -296,7 +296,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
     } else {
       final String errorMessage =
           widget.customErrorResponse ??
-          "لم أفهم طلبك. جرّب قول الأدوية أو الوسائط أو الصفحة الرئيسية.";
+          "لم أفهم طلبك. جرّب السؤال عن الطقس او قول الأدوية أو الوسائط أو الصفحة الرئيسية.";
 
       await _speak(errorMessage);
 
@@ -341,6 +341,8 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
         return "جاري تفعيل الطوارئ.";
       case VoiceCommand.goToSettings:
         return "جاري فتح الإعدادات.";
+      case VoiceCommand.weather:
+        return "جاري معرفة حالة الطقس.";
     }
   }
 

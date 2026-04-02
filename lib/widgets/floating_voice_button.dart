@@ -212,7 +212,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "I can help you navigate through the app. Where do you want to go?",
+        "I can help you check the weather or navigate through the app.",
       );
     }
 
@@ -300,13 +300,13 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         widget.onCommand(command);
       } else {
         await _speak(
-          "I'm not sure what you mean. Try saying: medications, media, or home.",
+          "I'm not sure what you mean. Try asking about the weather, or say medications, media, or home.",
         );
       }
     } else {
       final String errorMessage =
           widget.customErrorResponse ??
-          "I'm not sure what you mean. Try saying: medications, media, or home.";
+          "I'm not sure what you mean. Try asking about the weather, or say medications, media, or home.";
 
       await _speak(errorMessage);
 
@@ -351,6 +351,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         return "Activating emergency!";
       case VoiceCommand.goToSettings:
         return "Opening settings.";
+      case VoiceCommand.weather:
+        return "Checking today's weather.";
     }
   }
 

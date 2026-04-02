@@ -611,6 +611,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         break;
 
       case VoiceCommand.goToHome:
+      case VoiceCommand.weather:
         await _speak(AppLocalizations.of(context)!.goingBackToHome);
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop();
@@ -631,6 +632,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       case VoiceCommand.goToSettings:
         await _speak(AppLocalizations.of(context)!.settingsNotAvailableHere);
         break;
+      
+       
     }
   }
 

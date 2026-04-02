@@ -180,7 +180,7 @@ class VoiceAssistantService {
       onCommand(command);
     } else {
       await speak(
-        'Sorry, I could not understand. You can say medications, media, home, or SOS.',
+        'Sorry, I could not understand. You can ask about the weather or  say medications, media, home, or SOS.',
       );
     }
   }
@@ -231,7 +231,7 @@ class VoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'User may speak English or Arabic. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, none. '
+                  'goToMedia, goToHome, sos, goToSettings, weather, none. '
                   'You MUST respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -290,6 +290,11 @@ class VoiceAssistantService {
       case 'medication':
       case 'goToMedication':
         return VoiceCommand.goToMedication;
+      
+      case 'weather':
+      case 'getweather':
+      case 'weathertoday':
+        return VoiceCommand.weather;
 
       case 'addmedication':
       case 'add_medication':
@@ -431,6 +436,18 @@ class VoiceAssistantService {
       'عدّل الدواء',
     ])) {
       return VoiceCommand.editMedication;
+    }
+
+    if (_containsAny(lower, [
+      'weather',
+      'today weather',
+      'forecast',
+      'temperature',
+      'climate',
+      'how is the weather',
+      'what is the weather',
+    ])) {
+     return VoiceCommand.weather;
     }
 
     return null;

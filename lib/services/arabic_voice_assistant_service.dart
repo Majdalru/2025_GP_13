@@ -228,7 +228,7 @@ class ArabicVoiceAssistantService {
       onCommand(command);
     } else {
       await speak(
-        'عذرًا، لم أفهم طلبك. يمكنك قول الأدوية أو الوسائط أو الصفحة الرئيسية أو الطوارئ.',
+        'عذرًا، لم أفهم طلبك. يمكنك السؤال عن الطقس او قول  الأدوية أو الوسائط أو الصفحة الرئيسية أو الطوارئ.',
       );
     }
   }
@@ -322,6 +322,12 @@ class ArabicVoiceAssistantService {
       case 'med':
       case 'medication':
         return VoiceCommand.goToMedication;
+
+      
+      case 'weather':
+      case 'getweather':
+      case 'weathertoday':
+        return VoiceCommand.weather;
 
       case 'addmedication':
       case 'add_medication':
@@ -476,6 +482,23 @@ class ArabicVoiceAssistantService {
       'ابغى اعدل الدواء',
     ])) {
       return VoiceCommand.editMedication;
+    }
+
+    if (_containsAny(lower, [
+      'الطقس',
+      'جو',
+      'الجو',
+      'درجه الحراره',
+      'درجة الحرارة',
+      'حراره',
+      'حرارة',
+      'كيف الطقس',
+      'كيف الجو',
+      'وش الجو',
+      'وش الطقس',
+      'ايش الطقس',
+    ])) {
+      return VoiceCommand.weather;
     }
 
     return null;
