@@ -124,8 +124,24 @@ class _AudioListPageState extends State<AudioListPage> {
 
   @override
   Widget build(BuildContext context) {
+
     const cardColor = Colors.white;
     final loc = AppLocalizations.of(context)!;
+
+     final lang = Localizations.localeOf(context).languageCode;
+
+  final stream =    (widget.category == 'Story' || widget.category == 'Health') && lang == 'ar'
+        ? FirebaseFirestore.instance
+            .collection('audioMedia')
+            .where('category', isEqualTo: widget.category)
+            .where('language', isEqualTo:'ar')
+            .snapshots()
+        : FirebaseFirestore.instance
+            .collection('audioMedia')
+            .where('category', isEqualTo: widget.category)
+            .snapshots();
+
+
 
     final tags = _tagsPerCategory[widget.category] ?? ['All'];
 
@@ -228,12 +244,13 @@ class _AudioListPageState extends State<AudioListPage> {
             const SizedBox(height: 4),
 
             Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('audioMedia')
-                    .where('category', isEqualTo: widget.category)
-                    .snapshots(),
+              child: StreamBuilder(
+                stream:stream,
+                   
                 builder: (context, snapshot) {
+                    debugPrint('hasError = ${snapshot.hasError}');
+debugPrint('error = ${snapshot.error}');
+debugPrint('docs count = ${snapshot.data?.docs.length}');
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }

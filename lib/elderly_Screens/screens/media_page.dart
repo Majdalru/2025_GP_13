@@ -28,6 +28,38 @@ class MediaPage extends StatefulWidget {
 }
 
 class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
+
+   String _localizedCategoryName(String category) {
+    final loc = AppLocalizations.of(context)!;
+
+    switch (category) {
+      case 'Story':
+        return loc.story;
+      case 'Quran':
+        return loc.quran;
+      case 'Health':
+        return loc.health;
+      case 'Caregiver':
+        return loc.caregiver;
+      case 'Favorites':
+        return loc.favorites;
+      default:
+        return category;
+    }
+  }
+  Future<QuerySnapshot<Map<String, dynamic>>> _getMediaByCategory(String category) {
+    final lang = Localizations.localeOf(context).languageCode;
+
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+        .collection('audioMedia')
+        .where('category', isEqualTo: category);
+
+    if ((category == 'Story' || category == 'Health') && lang == 'ar') {
+      query = query.where('language', isEqualTo: 'ar');
+    }
+
+    return query.get();
+  }
   final VoiceAssistantService _voiceService = VoiceAssistantService();
   final ArabicVoiceAssistantService _arabicVoiceService =
       ArabicVoiceAssistantService();
@@ -486,8 +518,12 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       'العناية',
       'نفسي',
       'صحه نفسيه',
+      'نصائح',
+      'كبار السن',
+      'النفسية',
+      'تعزيز',
     ])) {
-      return 'self care';
+      return 'الصحة النفسية';
     }
 
     if (_containsAnyNormalized(normalizedUtter, [
@@ -529,6 +565,23 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     ])) {
       return 'noah';
     }
+     if (_containsAnyNormalized(normalizedUtter, [
+    'نوح',
+    'سيدنا نوح',
+    'قصة نوح',
+    'قصة سيدنا نوح',
+  ])) {
+    return 'نوح'; //  عربي
+  }
+
+  if (_containsAnyNormalized(normalizedUtter, [
+    'زهران',
+    'القاضي زهران',
+    'قصة القاضي',
+    'قصة القاضي زهران',
+  ])) {
+    return 'زهران'; //  عربي
+  }
 
     return null;
   }
@@ -611,7 +664,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         final globalCmd = await _analyzeCommand(categoryAnswer);
         if (globalCmd != null &&
             (globalCmd == VoiceCommand.goToHome ||
-                globalCmd == VoiceCommand.goToMedia ||
+                
                 globalCmd == VoiceCommand.goToMedication ||
                 globalCmd == VoiceCommand.addMedication ||
                 globalCmd == VoiceCommand.editMedication ||
@@ -638,9 +691,11 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         return;
       }
 
-      await _speak(
-        AppLocalizations.of(context)!.specificOrRandomPrompt(matchedCategory),
-      );
+      final spokenCategory = _localizedCategoryName(matchedCategory);
+
+await _speak(
+  AppLocalizations.of(context)!.specificOrRandomPrompt(spokenCategory),
+);
 
       String? modeAnswer = await _listen(seconds: 6);
       debugPrint("User said mode: $modeAnswer");
@@ -656,7 +711,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       if (modeLower.contains("specific") ||
           modeLower.contains("choose") ||
           modeLower.contains("search") ||
-          _containsAnyNormalized(modeLower, ['معين', 'سوره', 'سورة'])) {
+          _containsAnyNormalized(modeLower, ['معين', 'سوره', 'مشي','محدد','قصة','نصيحة','شي محدد','شي معين','ابغى','اريد'])) {
         await _speak(AppLocalizations.of(context)!.sayAudioOrVideoName);
 
         String? titleQuery = await _listen(seconds: 6);
@@ -675,10 +730,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         }
       } else {
         await _speak(
-          AppLocalizations.of(
-            context,
-          )!.playingRandomFromCategory(matchedCategory),
-        );
+  AppLocalizations.of(context)!.playingRandomFromCategory(spokenCategory),
+);
+        
         await _playRandomForCategory(matchedCategory);
       }
     } catch (e) {
@@ -794,10 +848,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             .collection('favorites')
             .get();
       } else {
-        qs = await FirebaseFirestore.instance
-            .collection('audioMedia')
-            .where('category', isEqualTo: category)
-            .get();
+        qs = await _getMediaByCategory(category);
+          
       }
 
       if (qs.docs.isEmpty) {
@@ -832,10 +884,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             .collection('favorites')
             .get();
       } else {
-        qs = await FirebaseFirestore.instance
-            .collection('audioMedia')
-            .where('category', isEqualTo: category)
-            .get();
+        qs = await _getMediaByCategory(category);
+            
       }
 
       final searchLower = searchTitle.toLowerCase();
