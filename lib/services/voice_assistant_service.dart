@@ -231,7 +231,7 @@ class VoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'User may speak English or Arabic. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, weather, none. '
+                  'goToMedia, goToHome, sos, goToSettings, weather, news, none. '
                   'You MUST respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -295,6 +295,13 @@ class VoiceAssistantService {
       case 'getweather':
       case 'weathertoday':
         return VoiceCommand.weather;
+      
+      case 'news':
+      case 'latestnews':
+      case 'headlines':
+      case 'getnews':
+      case 'newstoday':
+        return VoiceCommand.news;
 
       case 'addmedication':
       case 'add_medication':
@@ -448,6 +455,17 @@ class VoiceAssistantService {
       'what is the weather',
     ])) {
      return VoiceCommand.weather;
+    }
+
+    if (_containsAny(lower, [
+     'news',
+     'latest news',
+     'headlines',
+     'اخبار',
+     'الأخبار',
+     'خبر',
+    ])) {
+     return VoiceCommand.news;
     }
 
     return null;

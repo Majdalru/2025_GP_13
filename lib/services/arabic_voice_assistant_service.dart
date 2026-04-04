@@ -228,7 +228,7 @@ class ArabicVoiceAssistantService {
       onCommand(command);
     } else {
       await speak(
-        'عذرًا، لم أفهم طلبك. يمكنك السؤال عن الطقس او قول  الأدوية أو الوسائط أو الصفحة الرئيسية أو الطوارئ.',
+        'عذرًا، لم أفهم طلبك. يمكنك السؤال عن الطقس او الأخبار او قول  الأدوية أو الوسائط أو الصفحة الرئيسية أو الطوارئ.',
       );
     }
   }
@@ -273,7 +273,7 @@ class ArabicVoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'The user may speak Arabic or English. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, none. '
+                  'goToMedia, goToHome, sos, goToSettings, weather, news, none. '
                   'Respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -328,6 +328,14 @@ class ArabicVoiceAssistantService {
       case 'getweather':
       case 'weathertoday':
         return VoiceCommand.weather;
+
+
+      case 'news':
+      case 'latestnews':
+      case 'headlines':
+      case 'getnews':
+      case 'newstoday':
+       return VoiceCommand.news;
 
       case 'addmedication':
       case 'add_medication':
@@ -499,6 +507,25 @@ class ArabicVoiceAssistantService {
       'ايش الطقس',
     ])) {
       return VoiceCommand.weather;
+    }
+
+    if (_containsAny(lower, [
+      'اخبار',
+      'أخبار',
+      'الاخبار',
+      'الأخبار',
+      'خبر',
+      'وش الاخبار',
+      'وش الأخبار',
+     'ايش الاخبار',
+     'ايش الأخبار',
+     'اخبار اليوم',
+     'أخبار اليوم',
+     'news',
+     'latest news',
+     'headlines',
+    ])) {
+     return VoiceCommand.news;
     }
 
     return null;

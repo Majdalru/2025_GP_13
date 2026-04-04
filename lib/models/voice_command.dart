@@ -8,4 +8,5 @@ enum VoiceCommand {
   sos,
   goToSettings,
   weather,
+  news,
 }

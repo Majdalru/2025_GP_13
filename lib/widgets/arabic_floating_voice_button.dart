@@ -343,6 +343,8 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
         return "جاري فتح الإعدادات.";
       case VoiceCommand.weather:
         return "جاري معرفة حالة الطقس.";
+      case VoiceCommand.news:
+        return "جاري جلب الأخبار.";
     }
   }
 
