@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 /// Google Cloud Vision API Key
-const String _cloudVisionApiKey = '';
+const String _cloudVisionApiKey = 'AIzaSyC0wWVOvH35PPKr65Udb3gESz-OrVbEi28';
 
 class MedicationScanResult {
   final String? name;

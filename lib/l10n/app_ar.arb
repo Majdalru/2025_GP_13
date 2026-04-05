@@ -670,6 +670,130 @@
 "shortPassword": "الأدنى 6 أحرف",
 "name": "الاسم",
 "nameRequired": "الاسم مطلوب",
+"stepDurationTitle": "الخطوة ٢: المدة",
+  "stepDurationSub": "ما هي مدة تناول هذا الدواء؟",
+  "stepDaysTitle": "الخطوة ٣: الأيام",
+  "stepDaysSub": "في أي أيام يجب تناول هذا الدواء؟",
+  "stepFreqTitle": "الخطوة ٤: التكرار",
+  "stepFreqSub": "اختر عدد مرات تناول هذا الدواء",
+  "stepDoseTitle": "الخطوة ٥: الجرعة",
+  "stepDoseSub": "ما هو شكل وجرعة هذا الدواء؟",
+  "stepTimesTitle": "الخطوة ٦: الأوقات",
+  "stepTimesSub": "متى يجب تناول هذا الدواء؟",
+  "stepNotesTitle": "الخطوة ٧: ملاحظات",
+  "stepNotesSub": "هل توجد تعليمات خاصة؟ (اختياري)",
+  "stepSummaryTitle": "الخطوة ٨: الملخص",
+  "stepSummarySub": "يرجى مراجعة المعلومات قبل الحفظ.",
+  
+  "medFormTitle": "شكل الدواء",
+  "strengthDoseTitle": "الجرعة / التركيز",
+  "formCapsule": "كبسولة",
+  "formSyrup": "شراب",
+  "formCream": "كريم / مرهم",
+  "formEyeDrops": "قطرة عين",
+  "formEarDrops": "قطرة أذن",
+  "formNasal": "بخاخ أنف",
+  "formInjection": "حقنة",
+  "formOther": "أخرى",
+  
+  "durOngoing": "مستمر (بدون تاريخ انتهاء)",
+  "durPickCustom": "اختيار تاريخ انتهاء محدد",
+  
+  "freqOnce": "مرة واحدة يومياً",
+  "freqTwice": "مرتين يومياً",
+  "freqThree": "٣ مرات يومياً",
+  "freqFour": "٤ مرات يومياً",
+  "freqCustom": "مخصص",
+  
+  "scanPreview": "معاينة المسح",
+  "scanPrescription": "مسح الوصفة الطبية",
+  "scanning": "جاري المسح...",
+  "rescanBtn": "إعادة المسح",
+  "applyBtn": "تطبيق",
+  "fillAllFieldsBtn": "أكمل جميع الحقول",
+  "saveChangesBtn": "حفظ التغييرات",
+  "addMedBtn": "إضافة دواء",
+  
+  "medAddedSuccess": "تم إضافة الدواء بنجاح",
+  "medUpdatedSuccess": "تم تحديث الدواء بنجاح",
+
+  "summaryMedName": "اسم الدواء",
+  "summaryDose": "الجرعة",
+  "summaryDuration": "المدة",
+  "summaryFrequency": "التكرار",
+  "summaryDays": "الأيام",
+  "summaryTimes": "الأوقات",
+  "summaryNotes": "ملاحظات",
+  "durDays": "أيام",
+  "durWeeks": "أسابيع",
+  "durMonths": "أشهر",
+  "durEndsOn": "ينتهي في {date}",
+  "@durEndsOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "durOngoingShort": "مستمر",
+  "durCustomShort": "مخصص",
+  "durCustomSelected": "مخصص: {date}",
+  "@durCustomSelected": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "orDivider": "أو",
+  "scanNotLabelWarning": "هذه الصورة لا تبدو كبطاقة دواء. يرجى التقاط صورة واضحة لملصق الوصفة أو علبة الدواء.",
+  "scanCouldNotDetect": "لم يتم اكتشاف:",
+  "scanFillManually": "يرجى ملء الحقول يدوياً أدناه، أو التقاط صورة أوضح.",
+  "scanAllDetected": "تم اكتشاف جميع الحقول بنجاح! يرجى التحقق قبل التطبيق.",
+  "scanMedNameHint": "مثال: حمض الفيوسيديك",
+  "scanDaysLimitedHintDays": "يتم عرض الأيام ضمن مدة {count} يوم فقط",
+  "@scanDaysLimitedHintDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scanDaysLimitedHintCustom": "يتم عرض الأيام ضمن المدة المخصصة فقط",
+  "daySunday": "الأحد",
+  "dayMonday": "الاثنين",
+  "dayTuesday": "الثلاثاء",
+  "dayWednesday": "الأربعاء",
+  "dayThursday": "الخميس",
+  "dayFriday": "الجمعة",
+  "daySaturday": "السبت",
+  "stepDaysScheduleLabel": "الجدول اليومي",
+  "stepDaysEveryDayCount": "كل يوم ({count} أيام)",
+  "@stepDaysEveryDayCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "stepDaysAvailable": "الأيام المتاحة",
+  "stepDaysSpecific": "أيام محددة",
+  "stepDaysBasedOnDuration": "بناءً على مدة {count} يوم، الأيام التالية فقط متاحة.",
+  "@stepDaysBasedOnDuration": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "stepDaysBasedOnEndDate": "بناءً على تاريخ الانتهاء المحدد، الأيام التالية فقط متاحة.",
+  "selectATime": "اختر وقتاً",
+  "summaryNotSpecified": "غير محدد",
+  "summaryDurationDaysUntil": "{days} يوم (حتى {date})",
+  "@summaryDurationDaysUntil": {
+    "placeholders": {
+      "days": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "summaryDurationUntil": "حتى {date}",
+  "@summaryDurationUntil": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  }}
+
+"nameRequired": "الاسم مطلوب",
 "whatWouldYouLikeToShare": "ماذا تود أن تشارك اليوم؟",
 "chooseAMediaType": "اختر نوع الوسائط أدناه",
 "shareVideo": "مشاركة فيديو",

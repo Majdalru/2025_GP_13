@@ -12,6 +12,67 @@ import 'services/medication_scan_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 
+// ── Translation helpers (used across multiple widgets) ──
+
+String _translateDay(String englishDay, AppLocalizations loc) {
+  switch (englishDay) {
+    case 'Every day':
+      return loc.everyDay;
+    case 'Sunday':
+      return loc.daySunday;
+    case 'Monday':
+      return loc.dayMonday;
+    case 'Tuesday':
+      return loc.dayTuesday;
+    case 'Wednesday':
+      return loc.dayWednesday;
+    case 'Thursday':
+      return loc.dayThursday;
+    case 'Friday':
+      return loc.dayFriday;
+    case 'Saturday':
+      return loc.daySaturday;
+    default:
+      return englishDay;
+  }
+}
+
+String _translateFreq(String englishFreq, AppLocalizations loc) {
+  switch (englishFreq) {
+    case 'Once a day':
+      return loc.freqOnce;
+    case 'Twice a day':
+      return loc.freqTwice;
+    case 'Three times a day':
+      return loc.freqThree;
+    case 'Four times a day':
+      return loc.freqFour;
+    default:
+      return loc.freqCustom;
+  }
+}
+
+String _translateForm(String englishForm, AppLocalizations loc) {
+  switch (englishForm) {
+    case 'Capsule':
+      return loc.formCapsule;
+    case 'Syrup':
+      return loc.formSyrup;
+    case 'Cream/Ointment':
+      return loc.formCream;
+    case 'Eye Drops':
+      return loc.formEyeDrops;
+    case 'Ear Drops':
+      return loc.formEarDrops;
+    case 'Nasal Spray':
+      return loc.formNasal;
+    case 'Injection':
+      return loc.formInjection;
+    default:
+      return loc.formOther;
+  }
+}
+
 // ===============================
 //  CAREGIVER Add/Edit Medication
 // ===============================
@@ -156,6 +217,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 
   Future<bool?> _showEditableScanSheet({required MedicationScanResult result}) {
+    final loc = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController(text: result.name ?? '');
     final notesCtrl = TextEditingController(text: result.notes ?? '');
     // Prefer patientDose ("1 tablet") over product strength ("500 mg") for the dose field
@@ -176,7 +238,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
     int ocrDurUnit = 0; // 0=Days, 1=Weeks, 2=Months
     int ocrDurCount = 7;
     String ocrDurMode = 'wheel';
-    const ocrUnits = ['Days', 'Weeks', 'Months'];
+    const ocrUnits = ['Days', 'Weeks', 'Months']; // kept for index logic
+    final ocrUnitsDisplay = [loc.durDays, loc.durWeeks, loc.durMonths];
     const ocrMaxVals = [30, 12, 12];
 
     if (selectedDuration == null || selectedDuration == 0) {
@@ -242,6 +305,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       }
     }
 
+    // English keys used for internal comparison; display translated via _translateFreq
     const freqOptions = [
       'Once a day',
       'Twice a day',
@@ -329,10 +393,10 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                 color: Colors.teal,
                               ),
                               const SizedBox(width: 8),
-                              const Expanded(
+                              Expanded(
                                 child: Text(
-                                  'Scan Preview',
-                                  style: TextStyle(
+                                  AppLocalizations.of(context)!.scanPreview,
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -368,8 +432,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'This doesn\'t look like a medication label. '
-                                      'Please take a clear photo of the prescription sticker or medication box.',
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.scanNotLabelWarning,
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.red.shade800,
@@ -408,7 +473,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Could not detect:',
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.scanCouldNotDetect,
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
@@ -433,7 +500,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Please fill them in manually below, or take a clearer photo.',
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.scanFillManually,
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.orange.shade700,
@@ -469,7 +538,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'All fields detected successfully! Please verify before applying.',
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.scanAllDetected,
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.green.shade800,
@@ -481,9 +552,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                               ),
                             ),
 
-                          const Text(
-                            'Medication name',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          Text(
+                            AppLocalizations.of(context)!.medicineName,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 6),
                           TextField(
@@ -491,7 +562,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             textInputAction: TextInputAction.next,
                             onChanged: (_) => setSheetState(() {}),
                             decoration: InputDecoration(
-                              hintText: 'e.g. Fusidic Acid',
+                              hintText: AppLocalizations.of(
+                                context,
+                              )!.scanMedNameHint,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -501,9 +574,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
                           // ═══════════ Duration (NEW) ═══════════
                           // ═══════════ Duration (NEW) ═══════════
-                          const Text(
-                            'Duration',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          Text(
+                            AppLocalizations.of(context)!.summaryDuration,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
 
@@ -522,7 +595,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     label: SizedBox(
                                       width: double.infinity,
                                       child: Text(
-                                        ocrUnits[i],
+                                        ocrUnitsDisplay[i],
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontSize: 13,
@@ -617,7 +690,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
-                                '${ocrDurCount} ${ocrUnits[ocrDurUnit].toLowerCase()}  •  Ends ${_formatEndDate(selectedDuration!)}',
+                                '${ocrDurCount} ${ocrUnitsDisplay[ocrDurUnit]}  •  ${AppLocalizations.of(context)!.durEndsOn(_formatEndDate(selectedDuration!))}',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.teal.shade700,
@@ -639,12 +712,17 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        Icon(Icons.all_inclusive, size: 16),
-                                        SizedBox(width: 4),
+                                      children: [
+                                        const Icon(
+                                          Icons.all_inclusive,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 4),
                                         Text(
-                                          'Ongoing',
-                                          style: TextStyle(fontSize: 13),
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.durOngoingShort,
+                                          style: const TextStyle(fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -684,7 +762,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                               ? DateFormat(
                                                   'MMM d',
                                                 ).format(scanCustomEndDate!)
-                                              : 'Custom',
+                                              : AppLocalizations.of(
+                                                  context,
+                                                )!.durCustomShort,
                                           style: const TextStyle(fontSize: 13),
                                         ),
                                       ],
@@ -734,7 +814,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
-                                'Ends ${DateFormat('MMM d, yyyy').format(scanCustomEndDate!)}',
+                                AppLocalizations.of(context)!.durEndsOn(
+                                  DateFormat(
+                                    'MMM d, yyyy',
+                                  ).format(scanCustomEndDate!),
+                                ),
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.teal.shade700,
@@ -744,9 +828,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                           const SizedBox(height: 14),
 
                           // ═══════════════════════════════════════
-                          const Text(
-                            'Frequency',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          Text(
+                            AppLocalizations.of(context)!.frequency,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
                           Wrap(
@@ -755,7 +839,12 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             children: freqOptions.map((opt) {
                               final selected = selectedFreq == opt;
                               return ChoiceChip(
-                                label: Text(opt),
+                                label: Text(
+                                  _translateFreq(
+                                    opt,
+                                    AppLocalizations.of(context)!,
+                                  ),
+                                ),
                                 selected: selected,
                                 onSelected: (_) =>
                                     setSheetState(() => selectedFreq = opt),
@@ -765,13 +854,14 @@ class _AddMedScreenState extends State<AddMedScreen> {
                           ),
                           const SizedBox(height: 14),
 
-                          const Text(
-                            'Days',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          Text(
+                            AppLocalizations.of(context)!.days,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
                           Builder(
                             builder: (_) {
+                              final loc = AppLocalizations.of(context)!;
                               final allowed = getAllowedDays();
                               final isLimited = allowed.length < 7;
                               return Column(
@@ -781,7 +871,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 8),
                                       child: Text(
-                                        'Only showing days within your ${selectedDuration == -1 ? "custom" : "$selectedDuration-day"} duration',
+                                        selectedDuration == -1
+                                            ? loc.scanDaysLimitedHintCustom
+                                            : loc.scanDaysLimitedHintDays(
+                                                selectedDuration!,
+                                              ),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.teal.shade600,
@@ -795,11 +889,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     children: [
                                       if (!isLimited)
                                         FilterChip(
-                                          label: Text(
-                                            AppLocalizations.of(
-                                              context,
-                                            )!.everyDay,
-                                          ),
+                                          label: Text(loc.everyDay),
                                           selected: selectedDays.contains(
                                             'Every day',
                                           ),
@@ -812,7 +902,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                           d,
                                         );
                                         return FilterChip(
-                                          label: Text(d),
+                                          label: Text(_translateDay(d, loc)),
                                           selected: selected,
                                           onSelected: (_) => toggleDay(d),
                                           selectedColor: Colors.teal.shade100,
@@ -826,16 +916,18 @@ class _AddMedScreenState extends State<AddMedScreen> {
                           ),
                           const SizedBox(height: 14),
 
-                          const Text(
-                            'Notes',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          Text(
+                            AppLocalizations.of(context)!.notes,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: notesCtrl,
                             maxLines: 4,
                             decoration: InputDecoration(
-                              hintText: 'Optional instructions…',
+                              hintText: AppLocalizations.of(
+                                context,
+                              )!.optionalInstructions,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -938,7 +1030,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                           : null,
                                       icon: const Icon(Icons.check_circle),
                                       label: Text(
-                                        canApply ? 'Apply' : 'Fill all fields',
+                                        canApply
+                                            ? AppLocalizations.of(
+                                                context,
+                                              )!.applyBtn
+                                            : AppLocalizations.of(
+                                                context,
+                                              )!.fillAllFieldsBtn,
                                       ),
                                     );
                                   },
@@ -1082,11 +1180,12 @@ class _AddMedScreenState extends State<AddMedScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
-                children: const [
+                children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 20),
                   SizedBox(width: 12),
                   Text(
-                    'Medication updated successfully',
+                    //update success
+                    AppLocalizations.of(context)!.medUpdatedSuccess,
                     style: TextStyle(fontSize: 14),
                   ),
                 ],
@@ -1146,11 +1245,12 @@ class _AddMedScreenState extends State<AddMedScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
-                children: const [
+                children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 20),
                   SizedBox(width: 12),
                   Text(
-                    'Medication added successfully',
+                    //add success
+                    AppLocalizations.of(context)!.medAddedSuccess,
                     style: TextStyle(fontSize: 14),
                   ),
                 ],
@@ -1681,6 +1781,28 @@ class _Step2DoseState extends State<_Step2Dose> {
     }
   }
 
+  String _getTranslatedForm(BuildContext context, String englishLabel) {
+    final loc = AppLocalizations.of(context)!;
+    switch (englishLabel) {
+      case 'Capsule':
+        return loc.formCapsule;
+      case 'Syrup':
+        return loc.formSyrup;
+      case 'Cream/Ointment':
+        return loc.formCream;
+      case 'Eye Drops':
+        return loc.formEyeDrops;
+      case 'Ear Drops':
+        return loc.formEarDrops;
+      case 'Nasal Spray':
+        return loc.formNasal;
+      case 'Injection':
+        return loc.formInjection;
+      default:
+        return loc.formOther;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1711,13 +1833,13 @@ class _Step2DoseState extends State<_Step2Dose> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 5: Dose',
-                subtitle: 'What form and strength is this medication?',
+                title: AppLocalizations.of(context)!.stepDoseTitle,
+                subtitle: AppLocalizations.of(context)!.stepDoseSub,
               ),
 
               // ── Form grid ──
-              const Text(
-                'Medication Form',
+              Text(
+                AppLocalizations.of(context)!.medFormTitle,
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
               const SizedBox(height: 10),
@@ -1725,9 +1847,21 @@ class _Step2DoseState extends State<_Step2Dose> {
                 spacing: 8,
                 runSpacing: 10,
                 children: _formOptions.map((opt) {
-                  final label = opt['label'] as String;
+                  // 1. Get the English string from the array
+                  final String englishLabel = opt['label'] as String;
+
+                  // 2. Translate it for the UI
+                  final String translatedLabel = _getTranslatedForm(
+                    context,
+                    englishLabel,
+                  );
+
+                  // 3. Get the icon
                   final icon = opt['icon'] as IconData;
-                  final isSelected = _selectedForm == label;
+
+                  // 4. Check if this is the currently selected option (using English)
+                  final isSelected = _selectedForm == englishLabel;
+
                   return ChoiceChip(
                     avatar: Icon(
                       icon,
@@ -1736,13 +1870,14 @@ class _Step2DoseState extends State<_Step2Dose> {
                           ? Colors.teal.shade800
                           : Colors.grey.shade600,
                     ),
-                    label: Text(label),
+                    label: Text(translatedLabel), // Display translated
                     selected: isSelected,
                     showCheckmark: false,
                     elevation: 0,
                     pressElevation: 0,
                     onSelected: (_) => setState(() {
-                      _selectedForm = isSelected ? null : label;
+                      // Save the English value to the database
+                      _selectedForm = isSelected ? null : englishLabel;
                     }),
                     selectedColor: Colors.teal.shade100,
                   );
@@ -1752,8 +1887,8 @@ class _Step2DoseState extends State<_Step2Dose> {
               const SizedBox(height: 20),
 
               // ── Strength ──
-              const Text(
-                'Strength / Dose',
+              Text(
+                AppLocalizations.of(context)!.strengthDoseTitle,
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
               const SizedBox(height: 8),
@@ -1834,8 +1969,12 @@ class _Step2DurationState extends State<_Step2Duration> {
   int _count = 7;
   DateTime? _customDate;
 
-  static const _units = ['Days', 'Weeks', 'Months'];
   static const _maxValues = [30, 12, 12];
+
+  List<String> _getUnits(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    return [loc.durDays, loc.durWeeks, loc.durMonths];
+  }
 
   @override
   void initState() {
@@ -1882,9 +2021,11 @@ class _Step2DurationState extends State<_Step2Duration> {
     }
   }
 
-  String _endDateLabel(int days) {
+  String _endDateLabel(BuildContext context, int days) {
     final end = DateTime.now().add(Duration(days: days));
-    return 'Ends ${DateFormat('MMM d, yyyy').format(end)}';
+    return AppLocalizations.of(
+      context,
+    )!.durEndsOn(DateFormat('MMM d, yyyy').format(end));
   }
 
   Future<void> _pickCustomDate() async {
@@ -1939,8 +2080,8 @@ class _Step2DurationState extends State<_Step2Duration> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 2: Duration',
-                subtitle: 'How long should this medication be taken?',
+                title: AppLocalizations.of(context)!.stepDurationTitle,
+                subtitle: AppLocalizations.of(context)!.stepDurationSub,
               ),
 
               // ── Unit selector ──
@@ -1957,7 +2098,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                         label: SizedBox(
                           width: double.infinity,
                           child: Text(
-                            _units[i],
+                            _getUnits(context)[i],
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
@@ -2038,7 +2179,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Center(
                     child: Text(
-                      '${_count} ${_units[_unitIndex].toLowerCase()}  •  ${_endDateLabel(_totalDays)}',
+                      '${_count} ${_getUnits(context)[_unitIndex]}  •  ${_endDateLabel(context, _totalDays)}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.teal.shade700,
@@ -2056,7 +2197,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Text(
-                      'OR',
+                      AppLocalizations.of(context)!.orDivider,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade500,
@@ -2095,8 +2236,12 @@ class _Step2DurationState extends State<_Step2Duration> {
                       Expanded(
                         child: Text(
                           _mode == 'custom' && _customDate != null
-                              ? 'Custom: ${DateFormat('MMM d, yyyy').format(_customDate!)}'
-                              : 'Pick a specific end date',
+                              ? AppLocalizations.of(context)!.durCustomSelected(
+                                  DateFormat(
+                                    'MMM d, yyyy',
+                                  ).format(_customDate!),
+                                )
+                              : AppLocalizations.of(context)!.durPickCustom,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: _mode == 'custom'
@@ -2146,7 +2291,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Ongoing (No end date)',
+                          AppLocalizations.of(context)!.durOngoing,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: _mode == 'ongoing'
@@ -2311,8 +2456,8 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 3: Select Days',
-                subtitle: 'Which days should you take this medication?',
+                title: AppLocalizations.of(context)!.stepDaysTitle,
+                subtitle: AppLocalizations.of(context)!.stepDaysSub,
               ),
               if (limited)
                 Container(
@@ -2335,8 +2480,12 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
                         child: Text(
                           widget.durationDays != null &&
                                   widget.durationDays! > 0
-                              ? 'Based on your ${widget.durationDays}-day duration, only the following days apply.'
-                              : 'Based on your selected end date, only the following days apply.',
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.stepDaysBasedOnDuration(widget.durationDays!)
+                              : AppLocalizations.of(
+                                  context,
+                                )!.stepDaysBasedOnEndDate,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.teal.shade800,
@@ -2349,7 +2498,7 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
-                  'Daily Schedule',
+                  AppLocalizations.of(context)!.stepDaysScheduleLabel,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.teal,
@@ -2358,7 +2507,11 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
               ),
               CheckboxListTile(
                 title: Text(
-                  limited ? 'Every day (${allowed.length} days)' : 'Every day',
+                  limited
+                      ? AppLocalizations.of(
+                          context,
+                        )!.stepDaysEveryDayCount(allowed.length)
+                      : AppLocalizations.of(context)!.everyDay,
                 ),
                 value: _selectedDays.contains('Every day'),
                 onChanged: (v) => _onDaySelected(v, 'Every day'),
@@ -2366,7 +2519,9 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
-                  limited ? 'Available Days' : 'Specific Days',
+                  limited
+                      ? AppLocalizations.of(context)!.stepDaysAvailable
+                      : AppLocalizations.of(context)!.stepDaysSpecific,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.teal,
@@ -2375,7 +2530,9 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
               ),
               ...allowed.map(
                 (day) => CheckboxListTile(
-                  title: Text(day),
+                  title: Text(
+                    _translateDay(day, AppLocalizations.of(context)!),
+                  ),
                   value: _selectedDays.contains(day),
                   onChanged: (v) => _onDaySelected(v, day),
                 ),
@@ -2418,6 +2575,22 @@ class _Step4HowManyTimesPerDay extends StatefulWidget {
 }
 
 class _Step4HowManyTimesPerDayState extends State<_Step4HowManyTimesPerDay> {
+  String _getTranslatedFreq(BuildContext context, String englishFreq) {
+    final loc = AppLocalizations.of(context)!;
+    switch (englishFreq) {
+      case 'Once a day':
+        return loc.freqOnce;
+      case 'Twice a day':
+        return loc.freqTwice;
+      case 'Three times a day':
+        return loc.freqThree;
+      case 'Four times a day':
+        return loc.freqFour;
+      default:
+        return loc.freqCustom;
+    }
+  }
+
   String? _selectedFrequency;
   final List<String> _frequencyOptions = [
     'Once a day',
@@ -2449,12 +2622,12 @@ class _Step4HowManyTimesPerDayState extends State<_Step4HowManyTimesPerDay> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 4: Frequency',
-                subtitle: 'Select how often you take this medication',
+                title: AppLocalizations.of(context)!.stepFreqTitle,
+                subtitle: AppLocalizations.of(context)!.stepFreqSub,
               ),
               ..._frequencyOptions.map(
                 (option) => RadioListTile<String>(
-                  title: Text(option),
+                  title: Text(_getTranslatedFreq(context, option)),
                   value: option,
                   groupValue: _selectedFrequency,
                   onChanged: (String? value) =>
@@ -2554,8 +2727,8 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 5: Set Times',
-                subtitle: 'When should you take this medication?',
+                title: AppLocalizations.of(context)!.stepTimesTitle,
+                subtitle: AppLocalizations.of(context)!.stepTimesSub,
               ),
               ...widget.selectedTimes.asMap().entries.map((entry) {
                 final int index = entry.key;
@@ -2570,11 +2743,14 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
                           onTap: () => _pickTime(index),
                           child: InputDecorator(
                             decoration: InputDecoration(
-                              labelText: 'Time ${index + 1}',
+                              labelText: AppLocalizations.of(
+                                context,
+                              )!.timeNumber(index + 1),
                               border: const OutlineInputBorder(),
                             ),
                             child: Text(
-                              time?.format(context) ?? 'Select a time',
+                              time?.format(context) ??
+                                  AppLocalizations.of(context)!.selectATime,
                               style: const TextStyle(fontSize: 16),
                             ),
                           ),
@@ -2685,15 +2861,16 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: 'Step 6: Add Notes',
-                subtitle: 'Any special instructions? (Optional)',
+                title: AppLocalizations.of(context)!.stepNotesTitle,
+                subtitle: AppLocalizations.of(context)!.stepNotesSub,
               ),
               TextField(
                 controller: _notesController,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.notes,
+                  hintText: AppLocalizations.of(context)!.optionalInstructions,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 32),
@@ -2743,39 +2920,45 @@ class _Step8Summary extends StatelessWidget {
     required this.buttonStyle,
   });
 
-  String _durationLabel() {
+  String _durationLabel(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     if (customEndDate != null) {
+      final formatted = DateFormat('MMM d, yyyy').format(customEndDate!);
       if (durationDays != null && durationDays! > 0)
-        return '$durationDays days (until ${DateFormat('MMM d, yyyy').format(customEndDate!)})';
-      return 'Until ${DateFormat('MMM d, yyyy').format(customEndDate!)}';
+        return loc.summaryDurationDaysUntil(durationDays!, formatted);
+      return loc.summaryDurationUntil(formatted);
     }
-    return 'Ongoing (no end date)';
+    return loc.durOngoing;
   }
 
-  String _doseLabel() {
+  String _doseLabel(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final parts = <String>[];
-    if (doseForm != null) parts.add(doseForm!);
+    if (doseForm != null) parts.add(_translateForm(doseForm!, loc));
     if (doseStrength != null && doseStrength!.isNotEmpty)
       parts.add(doseStrength!);
-    return parts.isEmpty ? 'Not specified' : parts.join(' — ');
+    return parts.isEmpty ? loc.summaryNotSpecified : parts.join(' — ');
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final formattedTimes = selectedTimes
         .map((t) => t.format(context))
         .join(', ');
-    final formattedDays = selectedDays.join(', ');
+    final formattedDays = selectedDays
+        .map((d) => _translateDay(d, loc))
+        .join(', ');
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0),
             child: _StepHeader(
-              title: 'Step 8: Summary',
-              subtitle: 'Please review the information before saving.',
+              title: AppLocalizations.of(context)!.stepSummaryTitle,
+              subtitle: AppLocalizations.of(context)!.stepSummarySub,
             ),
           ),
           Card(
@@ -2789,16 +2972,27 @@ class _Step8Summary extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _SummaryTile(
-                    title: 'Medication Name',
-                    value: medicationName ?? 'N/A',
+                    title: loc.summaryMedName,
+                    value: medicationName ?? loc.na,
                   ),
-                  _SummaryTile(title: 'Dose', value: _doseLabel()), // ← NEW
-                  _SummaryTile(title: 'Duration', value: _durationLabel()),
-                  _SummaryTile(title: 'Frequency', value: frequency ?? 'N/A'),
-                  _SummaryTile(title: 'Days', value: formattedDays),
-                  _SummaryTile(title: 'Times', value: formattedTimes),
+                  _SummaryTile(
+                    title: loc.summaryDose,
+                    value: _doseLabel(context),
+                  ),
+                  _SummaryTile(
+                    title: loc.summaryDuration,
+                    value: _durationLabel(context),
+                  ),
+                  _SummaryTile(
+                    title: loc.summaryFrequency,
+                    value: frequency != null
+                        ? _translateFreq(frequency!, loc)
+                        : loc.na,
+                  ),
+                  _SummaryTile(title: loc.summaryDays, value: formattedDays),
+                  _SummaryTile(title: loc.summaryTimes, value: formattedTimes),
                   if (notes != null && notes!.isNotEmpty)
-                    _SummaryTile(title: 'Notes', value: notes!),
+                    _SummaryTile(title: loc.summaryNotes, value: notes!),
                 ],
               ),
             ),
@@ -2809,7 +3003,11 @@ class _Step8Summary extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onSave,
               style: buttonStyle,
-              child: Text(isEditing ? 'Save Changes' : 'Add Medication'),
+              child: Text(
+                isEditing
+                    ? AppLocalizations.of(context)!.saveChangesBtn
+                    : AppLocalizations.of(context)!.addMedBtn,
+              ),
             ),
           ),
         ],

@@ -703,7 +703,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Settings page is not ready yet. In the future, I will open it for you from here.';
 
   @override
-  String helloUser(Object name) {
+  String helloUser(String name) {
     return 'Hello $name';
   }
 
@@ -1123,109 +1123,261 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nameRequired => 'Name is required';
 
   @override
-  String get whatWouldYouLikeToShare => 'What would you like to share today?';
+  String get stepDurationTitle => 'Step 2: Duration';
 
   @override
-  String get chooseAMediaType => 'Choose a media type below';
+  String get stepDurationSub => 'How long should this medication be taken?';
 
   @override
-  String get mon => 'Mon';
+  String get stepDaysTitle => 'Step 3: Select Days';
 
   @override
-  String get tue => 'Tue';
+  String get stepDaysSub => 'Which days should you take this medication?';
 
   @override
-  String get wed => 'Wed';
+  String get stepFreqTitle => 'Step 4: Frequency';
 
   @override
-  String get thu => 'Thu';
+  String get stepFreqSub => 'Select how often you take this medication';
 
   @override
-  String get fri => 'Fri';
+  String get stepDoseTitle => 'Step 5: Dose';
 
   @override
-  String get sat => 'Sat';
+  String get stepDoseSub => 'What form and strength is this medication?';
 
   @override
-  String get sun => 'Sun';
+  String get stepTimesTitle => 'Step 6: Set Times';
 
   @override
-  String get late => 'Late';
+  String get stepTimesSub => 'When should you take this medication?';
 
   @override
-  String get onTime => 'On time';
+  String get stepNotesTitle => 'Step 7: Add Notes';
 
   @override
-  String get unknown => 'Unknown';
+  String get stepNotesSub => 'Any special instructions? (Optional)';
 
   @override
-  String get voiceAlreadyOnHome => 'You are already on the home page.';
+  String get stepSummaryTitle => 'Step 8: Summary';
 
   @override
-  String get confirmLogout => 'Are you sure you want to log out?';
+  String get stepSummarySub => 'Please review the information before saving.';
 
   @override
-  String get medication => 'Medication';
+  String get medFormTitle => 'Medication Form';
 
   @override
-  String get noCaregiversLinked => 'No caregivers linked';
+  String get strengthDoseTitle => 'Strength / Dose';
 
   @override
-  String expiresIn(Object time) {
-    return 'Expires in: $time';
+  String get formCapsule => 'Capsule';
+
+  @override
+  String get formSyrup => 'Syrup';
+
+  @override
+  String get formCream => 'Cream/Ointment';
+
+  @override
+  String get formEyeDrops => 'Eye Drops';
+
+  @override
+  String get formEarDrops => 'Ear Drops';
+
+  @override
+  String get formNasal => 'Nasal Spray';
+
+  @override
+  String get formInjection => 'Injection';
+
+  @override
+  String get formOther => 'Other';
+
+  @override
+  String get durOngoing => 'Ongoing (No end date)';
+
+  @override
+  String get durPickCustom => 'Pick a specific end date';
+
+  @override
+  String get freqOnce => 'Once a day';
+
+  @override
+  String get freqTwice => 'Twice a day';
+
+  @override
+  String get freqThree => 'Three times a day';
+
+  @override
+  String get freqFour => 'Four times a day';
+
+  @override
+  String get freqCustom => 'Custom';
+
+  @override
+  String get scanPreview => 'Scan Preview';
+
+  @override
+  String get scanPrescription => 'Scan Prescription';
+
+  @override
+  String get scanning => 'Scanning...';
+
+  @override
+  String get rescanBtn => 'Rescan';
+
+  @override
+  String get applyBtn => 'Apply';
+
+  @override
+  String get fillAllFieldsBtn => 'Fill all fields';
+
+  @override
+  String get saveChangesBtn => 'Save Changes';
+
+  @override
+  String get addMedBtn => 'Add Medication';
+
+  @override
+  String get medAddedSuccess => 'Medication Added Successfully';
+
+  @override
+  String get medUpdatedSuccess => 'Medication Updated Successfully';
+
+  @override
+  String get summaryMedName => 'Medication Name';
+
+  @override
+  String get summaryDose => 'Dose';
+
+  @override
+  String get summaryDuration => 'Duration';
+
+  @override
+  String get summaryFrequency => 'Frequency';
+
+  @override
+  String get summaryDays => 'Days';
+
+  @override
+  String get summaryTimes => 'Times';
+
+  @override
+  String get summaryNotes => 'Notes';
+
+  @override
+  String get durDays => 'Days';
+
+  @override
+  String get durWeeks => 'Weeks';
+
+  @override
+  String get durMonths => 'Months';
+
+  @override
+  String durEndsOn(String date) {
+    return 'Ends $date';
   }
 
   @override
-  String get editInformation => 'Edit Information';
+  String get durOngoingShort => 'Ongoing';
 
   @override
-  String get nameIsRequired => 'Name is required';
+  String get durCustomShort => 'Custom';
 
   @override
-  String get mobileFormatHint => 'Mobile (05XXXXXXXX)';
+  String durCustomSelected(String date) {
+    return 'Custom: $date';
+  }
 
   @override
-  String get startWith05 => 'Start with 05';
+  String get orDivider => 'OR';
 
   @override
-  String get enter10Digits => 'Enter 10 digits';
+  String get scanNotLabelWarning =>
+      'This doesn\'t look like a medication label. Please take a clear photo of the prescription sticker or medication box.';
 
   @override
-  String get mobileAlreadyUsed => 'Mobile already used';
+  String get scanCouldNotDetect => 'Could not detect:';
 
   @override
-  String get maherAlMuaiqly => 'Maher Al-Muaiqly';
+  String get scanFillManually =>
+      'Please fill them in manually below, or take a clearer photo.';
 
   @override
-  String get saadAlGhamdi => 'Saad Al-Ghamdi';
+  String get scanAllDetected =>
+      'All fields detected successfully! Please verify before applying.';
 
   @override
-  String get alMinshawi => 'Al-Minshawi';
+  String get scanMedNameHint => 'e.g. Fusidic Acid';
 
   @override
-  String get islamicStories => 'Islamic Stories';
+  String scanDaysLimitedHintDays(int count) {
+    return 'Only showing days within your $count-day duration';
+  }
 
   @override
-  String get worldStories => 'World Stories';
+  String get scanDaysLimitedHintCustom =>
+      'Only showing days within your custom duration';
 
   @override
-  String get food => 'Food';
+  String get daySunday => 'Sunday';
 
   @override
-  String get sleep => 'Sleep';
+  String get dayMonday => 'Monday';
 
   @override
-  String get generalHealth => 'General Health';
+  String get dayTuesday => 'Tuesday';
 
   @override
-  String get errorOccurred => 'An error occurred';
+  String get dayWednesday => 'Wednesday';
 
   @override
-  String get tapPlayToStartListening => 'Tap play to start listening';
+  String get dayThursday => 'Thursday';
 
   @override
-  String get mediaLinkMissing => 'Media link is missing';
+  String get dayFriday => 'Friday';
 
   @override
-  String get other => 'Other';
+  String get daySaturday => 'Saturday';
+
+  @override
+  String get stepDaysScheduleLabel => 'Daily Schedule';
+
+  @override
+  String stepDaysEveryDayCount(int count) {
+    return 'Every day ($count days)';
+  }
+
+  @override
+  String get stepDaysAvailable => 'Available Days';
+
+  @override
+  String get stepDaysSpecific => 'Specific Days';
+
+  @override
+  String stepDaysBasedOnDuration(int count) {
+    return 'Based on your $count-day duration, only the following days apply.';
+  }
+
+  @override
+  String get stepDaysBasedOnEndDate =>
+      'Based on your selected end date, only the following days apply.';
+
+  @override
+  String get selectATime => 'Select a time';
+
+  @override
+  String get summaryNotSpecified => 'Not specified';
+
+  @override
+  String summaryDurationDaysUntil(int days, String date) {
+    return '$days days (until $date)';
+  }
+
+  @override
+  String summaryDurationUntil(String date) {
+    return 'Until $date';
+  }
 }

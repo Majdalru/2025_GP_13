@@ -1338,7 +1338,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Hello {name}'**
-  String helloUser(Object name);
+  String helloUser(String name);
 
   /// No description provided for @sos.
   ///
@@ -2072,215 +2072,485 @@ abstract class AppLocalizations {
   /// **'Name is required'**
   String get nameRequired;
 
-  /// No description provided for @whatWouldYouLikeToShare.
+  /// No description provided for @stepDurationTitle.
   ///
   /// In en, this message translates to:
-  /// **'What would you like to share today?'**
-  String get whatWouldYouLikeToShare;
+  /// **'Step 2: Duration'**
+  String get stepDurationTitle;
 
-  /// No description provided for @chooseAMediaType.
+  /// No description provided for @stepDurationSub.
   ///
   /// In en, this message translates to:
-  /// **'Choose a media type below'**
-  String get chooseAMediaType;
+  /// **'How long should this medication be taken?'**
+  String get stepDurationSub;
 
-  /// No description provided for @mon.
+  /// No description provided for @stepDaysTitle.
   ///
   /// In en, this message translates to:
-  /// **'Mon'**
-  String get mon;
+  /// **'Step 3: Select Days'**
+  String get stepDaysTitle;
 
-  /// No description provided for @tue.
+  /// No description provided for @stepDaysSub.
   ///
   /// In en, this message translates to:
-  /// **'Tue'**
-  String get tue;
+  /// **'Which days should you take this medication?'**
+  String get stepDaysSub;
 
-  /// No description provided for @wed.
+  /// No description provided for @stepFreqTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wed'**
-  String get wed;
+  /// **'Step 4: Frequency'**
+  String get stepFreqTitle;
 
-  /// No description provided for @thu.
+  /// No description provided for @stepFreqSub.
   ///
   /// In en, this message translates to:
-  /// **'Thu'**
-  String get thu;
+  /// **'Select how often you take this medication'**
+  String get stepFreqSub;
 
-  /// No description provided for @fri.
+  /// No description provided for @stepDoseTitle.
   ///
   /// In en, this message translates to:
-  /// **'Fri'**
-  String get fri;
+  /// **'Step 5: Dose'**
+  String get stepDoseTitle;
 
-  /// No description provided for @sat.
+  /// No description provided for @stepDoseSub.
   ///
   /// In en, this message translates to:
-  /// **'Sat'**
-  String get sat;
+  /// **'What form and strength is this medication?'**
+  String get stepDoseSub;
 
-  /// No description provided for @sun.
+  /// No description provided for @stepTimesTitle.
   ///
   /// In en, this message translates to:
-  /// **'Sun'**
-  String get sun;
+  /// **'Step 6: Set Times'**
+  String get stepTimesTitle;
 
-  /// No description provided for @late.
+  /// No description provided for @stepTimesSub.
   ///
   /// In en, this message translates to:
-  /// **'Late'**
-  String get late;
+  /// **'When should you take this medication?'**
+  String get stepTimesSub;
 
-  /// No description provided for @onTime.
+  /// No description provided for @stepNotesTitle.
   ///
   /// In en, this message translates to:
-  /// **'On time'**
-  String get onTime;
+  /// **'Step 7: Add Notes'**
+  String get stepNotesTitle;
 
-  /// No description provided for @unknown.
+  /// No description provided for @stepNotesSub.
   ///
   /// In en, this message translates to:
-  /// **'Unknown'**
-  String get unknown;
+  /// **'Any special instructions? (Optional)'**
+  String get stepNotesSub;
 
-  /// No description provided for @voiceAlreadyOnHome.
+  /// No description provided for @stepSummaryTitle.
   ///
   /// In en, this message translates to:
-  /// **'You are already on the home page.'**
-  String get voiceAlreadyOnHome;
+  /// **'Step 8: Summary'**
+  String get stepSummaryTitle;
 
-  /// No description provided for @confirmLogout.
+  /// No description provided for @stepSummarySub.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to log out?'**
-  String get confirmLogout;
+  /// **'Please review the information before saving.'**
+  String get stepSummarySub;
 
-  /// No description provided for @medication.
+  /// No description provided for @medFormTitle.
   ///
   /// In en, this message translates to:
-  /// **'Medication'**
-  String get medication;
+  /// **'Medication Form'**
+  String get medFormTitle;
 
-  /// No description provided for @noCaregiversLinked.
+  /// No description provided for @strengthDoseTitle.
   ///
   /// In en, this message translates to:
-  /// **'No caregivers linked'**
-  String get noCaregiversLinked;
+  /// **'Strength / Dose'**
+  String get strengthDoseTitle;
 
-  /// No description provided for @expiresIn.
+  /// No description provided for @formCapsule.
   ///
   /// In en, this message translates to:
-  /// **'Expires in: {time}'**
-  String expiresIn(Object time);
+  /// **'Capsule'**
+  String get formCapsule;
 
-  /// No description provided for @editInformation.
+  /// No description provided for @formSyrup.
   ///
   /// In en, this message translates to:
-  /// **'Edit Information'**
-  String get editInformation;
+  /// **'Syrup'**
+  String get formSyrup;
 
-  /// No description provided for @nameIsRequired.
+  /// No description provided for @formCream.
   ///
   /// In en, this message translates to:
-  /// **'Name is required'**
-  String get nameIsRequired;
+  /// **'Cream/Ointment'**
+  String get formCream;
 
-  /// No description provided for @mobileFormatHint.
+  /// No description provided for @formEyeDrops.
   ///
   /// In en, this message translates to:
-  /// **'Mobile (05XXXXXXXX)'**
-  String get mobileFormatHint;
+  /// **'Eye Drops'**
+  String get formEyeDrops;
 
-  /// No description provided for @startWith05.
+  /// No description provided for @formEarDrops.
   ///
   /// In en, this message translates to:
-  /// **'Start with 05'**
-  String get startWith05;
+  /// **'Ear Drops'**
+  String get formEarDrops;
 
-  /// No description provided for @enter10Digits.
+  /// No description provided for @formNasal.
   ///
   /// In en, this message translates to:
-  /// **'Enter 10 digits'**
-  String get enter10Digits;
+  /// **'Nasal Spray'**
+  String get formNasal;
 
-  /// No description provided for @mobileAlreadyUsed.
+  /// No description provided for @formInjection.
   ///
   /// In en, this message translates to:
-  /// **'Mobile already used'**
-  String get mobileAlreadyUsed;
+  /// **'Injection'**
+  String get formInjection;
 
-  /// No description provided for @maherAlMuaiqly.
-  ///
-  /// In en, this message translates to:
-  /// **'Maher Al-Muaiqly'**
-  String get maherAlMuaiqly;
-
-  /// No description provided for @saadAlGhamdi.
-  ///
-  /// In en, this message translates to:
-  /// **'Saad Al-Ghamdi'**
-  String get saadAlGhamdi;
-
-  /// No description provided for @alMinshawi.
-  ///
-  /// In en, this message translates to:
-  /// **'Al-Minshawi'**
-  String get alMinshawi;
-
-  /// No description provided for @islamicStories.
-  ///
-  /// In en, this message translates to:
-  /// **'Islamic Stories'**
-  String get islamicStories;
-
-  /// No description provided for @worldStories.
-  ///
-  /// In en, this message translates to:
-  /// **'World Stories'**
-  String get worldStories;
-
-  /// No description provided for @food.
-  ///
-  /// In en, this message translates to:
-  /// **'Food'**
-  String get food;
-
-  /// No description provided for @sleep.
-  ///
-  /// In en, this message translates to:
-  /// **'Sleep'**
-  String get sleep;
-
-  /// No description provided for @generalHealth.
-  ///
-  /// In en, this message translates to:
-  /// **'General Health'**
-  String get generalHealth;
-
-  /// No description provided for @errorOccurred.
-  ///
-  /// In en, this message translates to:
-  /// **'An error occurred'**
-  String get errorOccurred;
-
-  /// No description provided for @tapPlayToStartListening.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap play to start listening'**
-  String get tapPlayToStartListening;
-
-  /// No description provided for @mediaLinkMissing.
-  ///
-  /// In en, this message translates to:
-  /// **'Media link is missing'**
-  String get mediaLinkMissing;
-
-  /// No description provided for @other.
+  /// No description provided for @formOther.
   ///
   /// In en, this message translates to:
   /// **'Other'**
-  String get other;
+  String get formOther;
+
+  /// No description provided for @durOngoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing (No end date)'**
+  String get durOngoing;
+
+  /// No description provided for @durPickCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a specific end date'**
+  String get durPickCustom;
+
+  /// No description provided for @freqOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'Once a day'**
+  String get freqOnce;
+
+  /// No description provided for @freqTwice.
+  ///
+  /// In en, this message translates to:
+  /// **'Twice a day'**
+  String get freqTwice;
+
+  /// No description provided for @freqThree.
+  ///
+  /// In en, this message translates to:
+  /// **'Three times a day'**
+  String get freqThree;
+
+  /// No description provided for @freqFour.
+  ///
+  /// In en, this message translates to:
+  /// **'Four times a day'**
+  String get freqFour;
+
+  /// No description provided for @freqCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get freqCustom;
+
+  /// No description provided for @scanPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Preview'**
+  String get scanPreview;
+
+  /// No description provided for @scanPrescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Prescription'**
+  String get scanPrescription;
+
+  /// No description provided for @scanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning...'**
+  String get scanning;
+
+  /// No description provided for @rescanBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescan'**
+  String get rescanBtn;
+
+  /// No description provided for @applyBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get applyBtn;
+
+  /// No description provided for @fillAllFieldsBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill all fields'**
+  String get fillAllFieldsBtn;
+
+  /// No description provided for @saveChangesBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get saveChangesBtn;
+
+  /// No description provided for @addMedBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Medication'**
+  String get addMedBtn;
+
+  /// No description provided for @medAddedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication Added Successfully'**
+  String get medAddedSuccess;
+
+  /// No description provided for @medUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication Updated Successfully'**
+  String get medUpdatedSuccess;
+
+  /// No description provided for @summaryMedName.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication Name'**
+  String get summaryMedName;
+
+  /// No description provided for @summaryDose.
+  ///
+  /// In en, this message translates to:
+  /// **'Dose'**
+  String get summaryDose;
+
+  /// No description provided for @summaryDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get summaryDuration;
+
+  /// No description provided for @summaryFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get summaryFrequency;
+
+  /// No description provided for @summaryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get summaryDays;
+
+  /// No description provided for @summaryTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'Times'**
+  String get summaryTimes;
+
+  /// No description provided for @summaryNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get summaryNotes;
+
+  /// No description provided for @durDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get durDays;
+
+  /// No description provided for @durWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks'**
+  String get durWeeks;
+
+  /// No description provided for @durMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'Months'**
+  String get durMonths;
+
+  /// No description provided for @durEndsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}'**
+  String durEndsOn(String date);
+
+  /// No description provided for @durOngoingShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing'**
+  String get durOngoingShort;
+
+  /// No description provided for @durCustomShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get durCustomShort;
+
+  /// No description provided for @durCustomSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom: {date}'**
+  String durCustomSelected(String date);
+
+  /// No description provided for @orDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'OR'**
+  String get orDivider;
+
+  /// No description provided for @scanNotLabelWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This doesn\'t look like a medication label. Please take a clear photo of the prescription sticker or medication box.'**
+  String get scanNotLabelWarning;
+
+  /// No description provided for @scanCouldNotDetect.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not detect:'**
+  String get scanCouldNotDetect;
+
+  /// No description provided for @scanFillManually.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill them in manually below, or take a clearer photo.'**
+  String get scanFillManually;
+
+  /// No description provided for @scanAllDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'All fields detected successfully! Please verify before applying.'**
+  String get scanAllDetected;
+
+  /// No description provided for @scanMedNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Fusidic Acid'**
+  String get scanMedNameHint;
+
+  /// No description provided for @scanDaysLimitedHintDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Only showing days within your {count}-day duration'**
+  String scanDaysLimitedHintDays(int count);
+
+  /// No description provided for @scanDaysLimitedHintCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Only showing days within your custom duration'**
+  String get scanDaysLimitedHintCustom;
+
+  /// No description provided for @daySunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get daySunday;
+
+  /// No description provided for @dayMonday.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get dayMonday;
+
+  /// No description provided for @dayTuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get dayTuesday;
+
+  /// No description provided for @dayWednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get dayWednesday;
+
+  /// No description provided for @dayThursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get dayThursday;
+
+  /// No description provided for @dayFriday.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get dayFriday;
+
+  /// No description provided for @daySaturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get daySaturday;
+
+  /// No description provided for @stepDaysScheduleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Schedule'**
+  String get stepDaysScheduleLabel;
+
+  /// No description provided for @stepDaysEveryDayCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day ({count} days)'**
+  String stepDaysEveryDayCount(int count);
+
+  /// No description provided for @stepDaysAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available Days'**
+  String get stepDaysAvailable;
+
+  /// No description provided for @stepDaysSpecific.
+  ///
+  /// In en, this message translates to:
+  /// **'Specific Days'**
+  String get stepDaysSpecific;
+
+  /// No description provided for @stepDaysBasedOnDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your {count}-day duration, only the following days apply.'**
+  String stepDaysBasedOnDuration(int count);
+
+  /// No description provided for @stepDaysBasedOnEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your selected end date, only the following days apply.'**
+  String get stepDaysBasedOnEndDate;
+
+  /// No description provided for @selectATime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a time'**
+  String get selectATime;
+
+  /// No description provided for @summaryNotSpecified.
+  ///
+  /// In en, this message translates to:
+  /// **'Not specified'**
+  String get summaryNotSpecified;
+
+  /// No description provided for @summaryDurationDaysUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days (until {date})'**
+  String summaryDurationDaysUntil(int days, String date);
+
+  /// No description provided for @summaryDurationUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Until {date}'**
+  String summaryDurationUntil(String date);
 }
 
 class _AppLocalizationsDelegate

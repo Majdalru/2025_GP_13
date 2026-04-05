@@ -668,6 +668,130 @@
   "shortPassword": "Min 6 characters",
   "name": "Name",
   "nameRequired": "Name is required",
+  "stepDurationTitle": "Step 2: Duration",
+  "stepDurationSub": "How long should this medication be taken?",
+  "stepDaysTitle": "Step 3: Select Days",
+  "stepDaysSub": "Which days should you take this medication?",
+  "stepFreqTitle": "Step 4: Frequency",
+  "stepFreqSub": "Select how often you take this medication",
+  "stepDoseTitle": "Step 5: Dose",
+  "stepDoseSub": "What form and strength is this medication?",
+  "stepTimesTitle": "Step 6: Set Times",
+  "stepTimesSub": "When should you take this medication?",
+  "stepNotesTitle": "Step 7: Add Notes",
+  "stepNotesSub": "Any special instructions? (Optional)",
+  "stepSummaryTitle": "Step 8: Summary",
+  "stepSummarySub": "Please review the information before saving.",
+  
+  "medFormTitle": "Medication Form",
+  "strengthDoseTitle": "Strength / Dose",
+  "formCapsule": "Capsule",
+  "formSyrup": "Syrup",
+  "formCream": "Cream/Ointment",
+  "formEyeDrops": "Eye Drops",
+  "formEarDrops": "Ear Drops",
+  "formNasal": "Nasal Spray",
+  "formInjection": "Injection",
+  "formOther": "Other",
+  
+  "durOngoing": "Ongoing (No end date)",
+  "durPickCustom": "Pick a specific end date",
+  
+  "freqOnce": "Once a day",
+  "freqTwice": "Twice a day",
+  "freqThree": "Three times a day",
+  "freqFour": "Four times a day",
+  "freqCustom": "Custom",
+  
+  "scanPreview": "Scan Preview",
+  "scanPrescription": "Scan Prescription",
+  "scanning": "Scanning...",
+  "rescanBtn": "Rescan",
+  "applyBtn": "Apply",
+  "fillAllFieldsBtn": "Fill all fields",
+  "saveChangesBtn": "Save Changes",
+  "addMedBtn": "Add Medication",
+  
+  "medAddedSuccess": "Medication Added Successfully",
+  "medUpdatedSuccess": "Medication Updated Successfully",
+
+  "summaryMedName": "Medication Name",
+  "summaryDose": "Dose",
+  "summaryDuration": "Duration",
+  "summaryFrequency": "Frequency",
+  "summaryDays": "Days",
+  "summaryTimes": "Times",
+  "summaryNotes": "Notes",
+  "durDays": "Days",
+  "durWeeks": "Weeks",
+  "durMonths": "Months",
+  "durEndsOn": "Ends {date}",
+  "@durEndsOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "durOngoingShort": "Ongoing",
+  "durCustomShort": "Custom",
+  "durCustomSelected": "Custom: {date}",
+  "@durCustomSelected": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "orDivider": "OR",
+  "scanNotLabelWarning": "This doesn't look like a medication label. Please take a clear photo of the prescription sticker or medication box.",
+  "scanCouldNotDetect": "Could not detect:",
+  "scanFillManually": "Please fill them in manually below, or take a clearer photo.",
+  "scanAllDetected": "All fields detected successfully! Please verify before applying.",
+  "scanMedNameHint": "e.g. Fusidic Acid",
+  "scanDaysLimitedHintDays": "Only showing days within your {count}-day duration",
+  "@scanDaysLimitedHintDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scanDaysLimitedHintCustom": "Only showing days within your custom duration",
+  "daySunday": "Sunday",
+  "dayMonday": "Monday",
+  "dayTuesday": "Tuesday",
+  "dayWednesday": "Wednesday",
+  "dayThursday": "Thursday",
+  "dayFriday": "Friday",
+  "daySaturday": "Saturday",
+  "stepDaysScheduleLabel": "Daily Schedule",
+  "stepDaysEveryDayCount": "Every day ({count} days)",
+  "@stepDaysEveryDayCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "stepDaysAvailable": "Available Days",
+  "stepDaysSpecific": "Specific Days",
+  "stepDaysBasedOnDuration": "Based on your {count}-day duration, only the following days apply.",
+  "@stepDaysBasedOnDuration": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "stepDaysBasedOnEndDate": "Based on your selected end date, only the following days apply.",
+  "selectATime": "Select a time",
+  "summaryNotSpecified": "Not specified",
+  "summaryDurationDaysUntil": "{days} days (until {date})",
+  "@summaryDurationDaysUntil": {
+    "placeholders": {
+      "days": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "summaryDurationUntil": "Until {date}",
+  "@summaryDurationUntil": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  }}
+  
+  "nameRequired": "Name is required",
 "whatWouldYouLikeToShare": "What would you like to share today?",
 "chooseAMediaType": "Choose a media type below",
 "shareVideo": "Share Video",

@@ -356,7 +356,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get upcoming => 'قادمة';
+  String get upcoming => 'القادمة';
 
   @override
   String get nextUp => 'التالي';
@@ -391,7 +391,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get takenLate => 'تم أخذه متأخراً';
 
   @override
-  String get missed => 'فائت';
+  String get missed => 'مفوت';
 
   @override
   String get pastDue => 'متأخر';
@@ -667,11 +667,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceAddMedication => 'حسنًا، سأساعدك في إضافة دواء جديد.';
 
   @override
-  String get voiceEditMedication => 'حسنًا، دعنا نعدّل أحد أدويتك.';
+  String get voiceEditMedication => 'حسنًا، لنقم بتعديل أحد أدويتك.';
 
   @override
-  String get voiceDeleteMedication =>
-      'حسنًا، دعنا نختار الدواء الذي تريد حذفه.';
+  String get voiceDeleteMedication => 'حسنًا، لنختر الدواء الذي تريد حذفه.';
 
   @override
   String get voiceOpeningMedia => 'جاري فتح صفحة الوسائط الخاصة بك.';
@@ -691,11 +690,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get voiceSettingsNotReady =>
-      'صفحة الإعدادات غير جاهزة بعد. مستقبلًا سأفتحها لك من هنا.';
+      'صفحة الإعدادات غير جاهزة بعد. في المستقبل، سأفتحها لك من هنا.';
 
   @override
-  String helloUser(Object name) {
-    return 'مرحبًا $name';
+  String helloUser(String name) {
+    return 'مرحباً $name';
   }
 
   @override
@@ -959,10 +958,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get media => 'الوسائط';
 
   @override
-  String get story => 'قصة';
+  String get story => 'قصص';
 
   @override
-  String get quran => 'القرآن';
+  String get quran => 'قرآن';
 
   @override
   String get health => 'الصحة';
@@ -1113,109 +1112,261 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nameRequired => 'الاسم مطلوب';
 
   @override
-  String get whatWouldYouLikeToShare => 'ماذا تود أن تشارك اليوم؟';
+  String get stepDurationTitle => 'الخطوة ٢: المدة';
 
   @override
-  String get chooseAMediaType => 'اختر نوع الوسائط أدناه';
+  String get stepDurationSub => 'ما هي مدة تناول هذا الدواء؟';
 
   @override
-  String get mon => 'الإثنين';
+  String get stepDaysTitle => 'الخطوة ٣: الأيام';
 
   @override
-  String get tue => 'الثلاثاء';
+  String get stepDaysSub => 'في أي أيام يجب تناول هذا الدواء؟';
 
   @override
-  String get wed => 'الأربعاء';
+  String get stepFreqTitle => 'الخطوة ٤: التكرار';
 
   @override
-  String get thu => 'الخميس';
+  String get stepFreqSub => 'اختر عدد مرات تناول هذا الدواء';
 
   @override
-  String get fri => 'الجمعة';
+  String get stepDoseTitle => 'الخطوة ٥: الجرعة';
 
   @override
-  String get sat => 'السبت';
+  String get stepDoseSub => 'ما هو شكل وجرعة هذا الدواء؟';
 
   @override
-  String get sun => 'الأحد';
+  String get stepTimesTitle => 'الخطوة ٦: الأوقات';
 
   @override
-  String get late => 'متأخر';
+  String get stepTimesSub => 'متى يجب تناول هذا الدواء؟';
 
   @override
-  String get onTime => 'في الوقت';
+  String get stepNotesTitle => 'الخطوة ٧: ملاحظات';
 
   @override
-  String get unknown => 'غير معروف';
+  String get stepNotesSub => 'هل توجد تعليمات خاصة؟ (اختياري)';
 
   @override
-  String get voiceAlreadyOnHome => 'أنت بالفعل في الصفحة الرئيسية.';
+  String get stepSummaryTitle => 'الخطوة ٨: الملخص';
 
   @override
-  String get confirmLogout => 'هل أنت متأكد أنك تريد تسجيل الخروج؟';
+  String get stepSummarySub => 'يرجى مراجعة المعلومات قبل الحفظ.';
 
   @override
-  String get medication => 'الأدوية';
+  String get medFormTitle => 'شكل الدواء';
 
   @override
-  String get noCaregiversLinked => 'لا يوجد مقدمو رعاية مرتبطون';
+  String get strengthDoseTitle => 'الجرعة / التركيز';
 
   @override
-  String expiresIn(Object time) {
-    return 'ينتهي خلال: $time';
+  String get formCapsule => 'كبسولة';
+
+  @override
+  String get formSyrup => 'شراب';
+
+  @override
+  String get formCream => 'كريم / مرهم';
+
+  @override
+  String get formEyeDrops => 'قطرة عين';
+
+  @override
+  String get formEarDrops => 'قطرة أذن';
+
+  @override
+  String get formNasal => 'بخاخ أنف';
+
+  @override
+  String get formInjection => 'حقنة';
+
+  @override
+  String get formOther => 'أخرى';
+
+  @override
+  String get durOngoing => 'مستمر (بدون تاريخ انتهاء)';
+
+  @override
+  String get durPickCustom => 'اختيار تاريخ انتهاء محدد';
+
+  @override
+  String get freqOnce => 'مرة واحدة يومياً';
+
+  @override
+  String get freqTwice => 'مرتين يومياً';
+
+  @override
+  String get freqThree => '٣ مرات يومياً';
+
+  @override
+  String get freqFour => '٤ مرات يومياً';
+
+  @override
+  String get freqCustom => 'مخصص';
+
+  @override
+  String get scanPreview => 'معاينة المسح';
+
+  @override
+  String get scanPrescription => 'مسح الوصفة الطبية';
+
+  @override
+  String get scanning => 'جاري المسح...';
+
+  @override
+  String get rescanBtn => 'إعادة المسح';
+
+  @override
+  String get applyBtn => 'تطبيق';
+
+  @override
+  String get fillAllFieldsBtn => 'أكمل جميع الحقول';
+
+  @override
+  String get saveChangesBtn => 'حفظ التغييرات';
+
+  @override
+  String get addMedBtn => 'إضافة دواء';
+
+  @override
+  String get medAddedSuccess => 'تم إضافة الدواء بنجاح';
+
+  @override
+  String get medUpdatedSuccess => 'تم تحديث الدواء بنجاح';
+
+  @override
+  String get summaryMedName => 'اسم الدواء';
+
+  @override
+  String get summaryDose => 'الجرعة';
+
+  @override
+  String get summaryDuration => 'المدة';
+
+  @override
+  String get summaryFrequency => 'التكرار';
+
+  @override
+  String get summaryDays => 'الأيام';
+
+  @override
+  String get summaryTimes => 'الأوقات';
+
+  @override
+  String get summaryNotes => 'ملاحظات';
+
+  @override
+  String get durDays => 'أيام';
+
+  @override
+  String get durWeeks => 'أسابيع';
+
+  @override
+  String get durMonths => 'أشهر';
+
+  @override
+  String durEndsOn(String date) {
+    return 'ينتهي في $date';
   }
 
   @override
-  String get editInformation => 'تعديل المعلومات';
+  String get durOngoingShort => 'مستمر';
 
   @override
-  String get nameIsRequired => 'الاسم مطلوب';
+  String get durCustomShort => 'مخصص';
 
   @override
-  String get mobileFormatHint => 'رقم الجوال (05XXXXXXXX)';
+  String durCustomSelected(String date) {
+    return 'مخصص: $date';
+  }
 
   @override
-  String get startWith05 => 'يجب أن يبدأ بـ 05';
+  String get orDivider => 'أو';
 
   @override
-  String get enter10Digits => 'أدخل 10 أرقام';
+  String get scanNotLabelWarning =>
+      'هذه الصورة لا تبدو كبطاقة دواء. يرجى التقاط صورة واضحة لملصق الوصفة أو علبة الدواء.';
 
   @override
-  String get mobileAlreadyUsed => 'رقم الجوال مستخدم بالفعل';
+  String get scanCouldNotDetect => 'لم يتم اكتشاف:';
 
   @override
-  String get maherAlMuaiqly => 'ماهر المعيقلي';
+  String get scanFillManually =>
+      'يرجى ملء الحقول يدوياً أدناه، أو التقاط صورة أوضح.';
 
   @override
-  String get saadAlGhamdi => 'سعد الغامدي';
+  String get scanAllDetected =>
+      'تم اكتشاف جميع الحقول بنجاح! يرجى التحقق قبل التطبيق.';
 
   @override
-  String get alMinshawi => 'المنشاوي';
+  String get scanMedNameHint => 'مثال: حمض الفيوسيديك';
 
   @override
-  String get islamicStories => 'قصص إسلامية';
+  String scanDaysLimitedHintDays(int count) {
+    return 'يتم عرض الأيام ضمن مدة $count يوم فقط';
+  }
 
   @override
-  String get worldStories => 'قصص عالمية';
+  String get scanDaysLimitedHintCustom =>
+      'يتم عرض الأيام ضمن المدة المخصصة فقط';
 
   @override
-  String get food => 'الغذاء';
+  String get daySunday => 'الأحد';
 
   @override
-  String get sleep => 'النوم';
+  String get dayMonday => 'الاثنين';
 
   @override
-  String get generalHealth => 'الصحة العامة';
+  String get dayTuesday => 'الثلاثاء';
 
   @override
-  String get errorOccurred => 'حدث خطأ';
+  String get dayWednesday => 'الأربعاء';
 
   @override
-  String get tapPlayToStartListening => 'اضغط تشغيل لبدء الاستماع';
+  String get dayThursday => 'الخميس';
 
   @override
-  String get mediaLinkMissing => 'رابط الوسائط غير موجود';
+  String get dayFriday => 'الجمعة';
 
   @override
-  String get other => 'أخرى';
+  String get daySaturday => 'السبت';
+
+  @override
+  String get stepDaysScheduleLabel => 'الجدول اليومي';
+
+  @override
+  String stepDaysEveryDayCount(int count) {
+    return 'كل يوم ($count أيام)';
+  }
+
+  @override
+  String get stepDaysAvailable => 'الأيام المتاحة';
+
+  @override
+  String get stepDaysSpecific => 'أيام محددة';
+
+  @override
+  String stepDaysBasedOnDuration(int count) {
+    return 'بناءً على مدة $count يوم، الأيام التالية فقط متاحة.';
+  }
+
+  @override
+  String get stepDaysBasedOnEndDate =>
+      'بناءً على تاريخ الانتهاء المحدد، الأيام التالية فقط متاحة.';
+
+  @override
+  String get selectATime => 'اختر وقتاً';
+
+  @override
+  String get summaryNotSpecified => 'غير محدد';
+
+  @override
+  String summaryDurationDaysUntil(int days, String date) {
+    return '$days يوم (حتى $date)';
+  }
+
+  @override
+  String summaryDurationUntil(String date) {
+    return 'حتى $date';
+  }
 }
