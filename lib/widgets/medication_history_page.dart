@@ -362,9 +362,70 @@ class _HistoryCard extends StatelessWidget {
     required this.onDelete,
     required this.onRecover,
   });
+  String _translateFreq(String? freq, AppLocalizations loc) {
+    switch (freq) {
+      case 'Once a day':
+        return loc.freqOnce;
+      case 'Twice a day':
+        return loc.freqTwice;
+      case 'Three times a day':
+        return loc.freqThree;
+      case 'Four times a day':
+        return loc.freqFour;
+      case 'Custom':
+        return loc.freqCustom;
+      default:
+        return freq ?? loc.na;
+    }
+  }
+
+  String _translateDay(String day, AppLocalizations loc) {
+    switch (day) {
+      case 'Every day':
+        return loc.everyDay;
+      case 'Sunday':
+        return loc.daySunday;
+      case 'Monday':
+        return loc.dayMonday;
+      case 'Tuesday':
+        return loc.dayTuesday;
+      case 'Wednesday':
+        return loc.dayWednesday;
+      case 'Thursday':
+        return loc.dayThursday;
+      case 'Friday':
+        return loc.dayFriday;
+      case 'Saturday':
+        return loc.daySaturday;
+      default:
+        return day;
+    }
+  }
+
+  String _translateForm(String? form, AppLocalizations loc) {
+    switch (form) {
+      case 'Capsule':
+        return loc.formCapsule;
+      case 'Syrup':
+        return loc.formSyrup;
+      case 'Cream/Ointment':
+        return loc.formCream;
+      case 'Eye Drops':
+        return loc.formEyeDrops;
+      case 'Ear Drops':
+        return loc.formEarDrops;
+      case 'Nasal Spray':
+        return loc.formNasal;
+      case 'Injection':
+        return loc.formInjection;
+      default:
+        return form ?? loc.formOther;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final isExpired = reason == 'expired';
     final reasonColor = isExpired
         ? Colors.orange.shade700
@@ -466,7 +527,7 @@ class _HistoryCard extends StatelessWidget {
                     size: isElderlyView ? 28 : 22,
                   ),
                   onPressed: onDelete,
-                  tooltip: 'Remove from history',
+                  tooltip: loc.removeFromHistory,
                 ),
               ],
             ),
@@ -484,8 +545,8 @@ class _HistoryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _detailRow(
-                    AppLocalizations.of(context)!.frequency,
-                    medication.frequency ?? 'N/A',
+                    loc.frequency,
+                    _translateFreq(medication.frequency, loc),
                     fontSize,
                   ),
                   const SizedBox(height: 4),
@@ -493,9 +554,10 @@ class _HistoryCard extends StatelessWidget {
                       (medication.doseStrength != null &&
                           medication.doseStrength!.isNotEmpty)) ...[
                     _detailRow(
-                      AppLocalizations.of(context)!.dose,
+                      loc.dose,
                       [
-                        if (medication.doseForm != null) medication.doseForm!,
+                        if (medication.doseForm != null)
+                          _translateForm(medication.doseForm, loc),
                         if (medication.doseStrength != null &&
                             medication.doseStrength!.isNotEmpty)
                           medication.doseStrength!,
@@ -505,20 +567,22 @@ class _HistoryCard extends StatelessWidget {
                     const SizedBox(height: 4),
                   ],
                   _detailRow(
-                    AppLocalizations.of(context)!.days,
-                    medication.days.join(', '),
+                    loc.days,
+                    medication.days
+                        .map((d) => _translateDay(d, loc))
+                        .join(', '),
                     fontSize,
                   ),
                   const SizedBox(height: 4),
                   _detailRow(
-                    AppLocalizations.of(context)!.times,
-                    timeString.isNotEmpty ? timeString : 'N/A',
+                    loc.times,
+                    timeString.isNotEmpty ? timeString : loc.na,
                     fontSize,
                   ),
                   if (medication.endDate != null) ...[
                     const SizedBox(height: 4),
                     _detailRow(
-                      AppLocalizations.of(context)!.endDate,
+                      loc.endDate,
                       DateFormat(
                         'MMM d, yyyy',
                       ).format(medication.endDate!.toDate()),
@@ -528,11 +592,7 @@ class _HistoryCard extends StatelessWidget {
                   if (medication.notes != null &&
                       medication.notes!.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    _detailRow(
-                      AppLocalizations.of(context)!.notes,
-                      medication.notes!,
-                      fontSize,
-                    ),
+                    _detailRow(loc.notes, medication.notes!, fontSize),
                   ],
                 ],
               ),

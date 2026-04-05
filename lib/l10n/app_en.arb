@@ -789,9 +789,8 @@
     "placeholders": {
       "date": { "type": "String" }
     }
-  }}
-  
-  "nameRequired": "Name is required",
+  },
+"nameRequired": "Name is required",
 "whatWouldYouLikeToShare": "What would you like to share today?",
 "chooseAMediaType": "Choose a media type below",
 "shareVideo": "Share Video",
@@ -863,5 +862,27 @@
 "story": "Story",
 "quran": "Quran",
 "health": "Health",
-"caregiver": "Caregiver"
+"caregiver": "Caregiver",
+"strengthHintCapsule": "e.g. 500 mg, 1 tablet",
+"strengthHintSyrup": "e.g. 5 ml, 10 ml",
+"strengthHintCream": "e.g. apply thin layer, 0.5%",
+"strengthHintDrops": "e.g. 2 drops",
+"strengthHintNasal": "e.g. 1 spray each nostril",
+"strengthHintInjection": "e.g. 0.5 ml, 10 units",
+"strengthHintDefault": "e.g. 500 mg, 5 ml, 2 puffs",
+"selectFormToContinue": "Please select a medication form to continue",
+"selectFormToContinue": "Please select a medication form to continue",
+"cardExpired": "Expired ({date})",
+"@cardExpired": {
+  "placeholders": { "date": { "type": "String" } }
+},
+"cardEndsToday": "Ends today",
+"cardEndsTomorrow": "Ends tomorrow",
+"cardUntilDate": "Until {date} ({days} days left)",
+"@cardUntilDate": {
+  "placeholders": {
+    "date": { "type": "String" },
+    "days": { "type": "int" }
   }
+}
+}

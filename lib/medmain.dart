@@ -125,7 +125,13 @@ class _MedmainState extends State<Medmain> with SingleTickerProviderStateMixin {
       debugPrint('❌ Error deleting medication: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting medication: $e')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.errorDeletingMedication(e.toString()),
+            ),
+          ),
         );
       }
     }
@@ -483,23 +489,70 @@ class MedicationCard extends StatelessWidget {
     );
   }
 
-  // ← NEW: helper to format duration for card display
-  String _durationDisplay() {
-    if (medication.endDate == null) return 'Ongoing';
+  // ← helper to translate frequency
+  String _translateFreq(String? freq, AppLocalizations loc) {
+    switch (freq) {
+      case 'Once a day':
+        return loc.freqOnce;
+      case 'Twice a day':
+        return loc.freqTwice;
+      case 'Three times a day':
+        return loc.freqThree;
+      case 'Four times a day':
+        return loc.freqFour;
+      case 'Custom':
+        return loc.freqCustom;
+      default:
+        return freq ?? loc.na;
+    }
+  }
+
+  // ← helper to translate day name
+  String _translateDay(String day, AppLocalizations loc) {
+    switch (day) {
+      case 'Every day':
+        return loc.everyDay;
+      case 'Sunday':
+        return loc.daySunday;
+      case 'Monday':
+        return loc.dayMonday;
+      case 'Tuesday':
+        return loc.dayTuesday;
+      case 'Wednesday':
+        return loc.dayWednesday;
+      case 'Thursday':
+        return loc.dayThursday;
+      case 'Friday':
+        return loc.dayFriday;
+      case 'Saturday':
+        return loc.daySaturday;
+      default:
+        return day;
+    }
+  }
+
+  // ← helper to format duration for card display
+  String _durationDisplay(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    if (medication.endDate == null) return loc.durOngoingShort;
     final endDt = medication.endDate!.toDate();
     final now = DateTime.now();
     final daysLeft = endDt.difference(now).inDays;
     final formattedDate = DateFormat('MMM d, yyyy').format(endDt);
-    if (daysLeft < 0) return 'Expired ($formattedDate)';
-    if (daysLeft == 0) return 'Ends today';
-    if (daysLeft == 1) return 'Ends tomorrow';
-    return 'Until $formattedDate ($daysLeft days left)';
+    if (daysLeft < 0) return loc.cardExpired(formattedDate);
+    if (daysLeft == 0) return loc.cardEndsToday;
+    if (daysLeft == 1) return loc.cardEndsTomorrow;
+    return loc.cardUntilDate(formattedDate, daysLeft);
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final timeString = medication.times
         .map((t) => t.format(context))
+        .join(', ');
+    final translatedDays = medication.days
+        .map((d) => _translateDay(d, loc))
         .join(', ');
     final labelStyle = DefaultTextStyle.of(context).style.copyWith(
       fontSize: 16,
@@ -553,9 +606,9 @@ class MedicationCard extends StatelessWidget {
               text: TextSpan(
                 style: valueStyle,
                 children: <TextSpan>[
-                  TextSpan(text: 'Duration: ', style: labelStyle),
+                  TextSpan(text: '${loc.summaryDuration}: ', style: labelStyle),
                   TextSpan(
-                    text: _durationDisplay(),
+                    text: _durationDisplay(context),
                     style: valueStyle.copyWith(
                       color:
                           medication.endDate != null &&
@@ -576,8 +629,11 @@ class MedicationCard extends StatelessWidget {
               text: TextSpan(
                 style: valueStyle,
                 children: <TextSpan>[
-                  TextSpan(text: 'Frequency: ', style: labelStyle),
-                  TextSpan(text: medication.frequency ?? 'N/A'),
+                  TextSpan(
+                    text: '${loc.summaryFrequency}: ',
+                    style: labelStyle,
+                  ),
+                  TextSpan(text: _translateFreq(medication.frequency, loc)),
                 ],
               ),
             ),
@@ -585,8 +641,8 @@ class MedicationCard extends StatelessWidget {
               text: TextSpan(
                 style: valueStyle,
                 children: <TextSpan>[
-                  TextSpan(text: 'Days: ', style: labelStyle),
-                  TextSpan(text: medication.days.join(', ')),
+                  TextSpan(text: '${loc.summaryDays}: ', style: labelStyle),
+                  TextSpan(text: translatedDays),
                 ],
               ),
             ),
@@ -595,7 +651,7 @@ class MedicationCard extends StatelessWidget {
               text: TextSpan(
                 style: valueStyle,
                 children: <TextSpan>[
-                  TextSpan(text: 'Times: ', style: labelStyle),
+                  TextSpan(text: '${loc.summaryTimes}: ', style: labelStyle),
                   TextSpan(text: timeString),
                 ],
               ),
@@ -603,7 +659,7 @@ class MedicationCard extends StatelessWidget {
             const SizedBox(height: 8),
             if (medication.notes != null && medication.notes!.isNotEmpty)
               Text(
-                'Notes: ${medication.notes}',
+                '${loc.summaryNotes}: ${medication.notes}',
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
           ],

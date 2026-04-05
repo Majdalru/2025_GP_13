@@ -703,7 +703,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Settings page is not ready yet. In the future, I will open it for you from here.';
 
   @override
-  String helloUser(String name) {
+  String helloUser(Object name) {
     return 'Hello $name';
   }
 
@@ -1379,5 +1379,153 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String summaryDurationUntil(String date) {
     return 'Until $date';
+  }
+
+  @override
+  String get whatWouldYouLikeToShare => 'What would you like to share today?';
+
+  @override
+  String get chooseAMediaType => 'Choose a media type below';
+
+  @override
+  String get mon => 'Mon';
+
+  @override
+  String get tue => 'Tue';
+
+  @override
+  String get wed => 'Wed';
+
+  @override
+  String get thu => 'Thu';
+
+  @override
+  String get fri => 'Fri';
+
+  @override
+  String get sat => 'Sat';
+
+  @override
+  String get sun => 'Sun';
+
+  @override
+  String get late => 'Late';
+
+  @override
+  String get onTime => 'On time';
+
+  @override
+  String get unknown => 'Unknown';
+
+  @override
+  String get voiceAlreadyOnHome => 'You are already on the home page.';
+
+  @override
+  String get confirmLogout => 'Are you sure you want to log out?';
+
+  @override
+  String get medication => 'Medication';
+
+  @override
+  String get noCaregiversLinked => 'No caregivers linked';
+
+  @override
+  String expiresIn(Object time) {
+    return 'Expires in: $time';
+  }
+
+  @override
+  String get editInformation => 'Edit Information';
+
+  @override
+  String get nameIsRequired => 'Name is required';
+
+  @override
+  String get mobileFormatHint => 'Mobile (05XXXXXXXX)';
+
+  @override
+  String get startWith05 => 'Start with 05';
+
+  @override
+  String get enter10Digits => 'Enter 10 digits';
+
+  @override
+  String get mobileAlreadyUsed => 'Mobile already used';
+
+  @override
+  String get maherAlMuaiqly => 'Maher Al-Muaiqly';
+
+  @override
+  String get saadAlGhamdi => 'Saad Al-Ghamdi';
+
+  @override
+  String get alMinshawi => 'Al-Minshawi';
+
+  @override
+  String get islamicStories => 'Islamic Stories';
+
+  @override
+  String get worldStories => 'World Stories';
+
+  @override
+  String get food => 'Food';
+
+  @override
+  String get sleep => 'Sleep';
+
+  @override
+  String get generalHealth => 'General Health';
+
+  @override
+  String get errorOccurred => 'An error occurred';
+
+  @override
+  String get tapPlayToStartListening => 'Tap play to start listening';
+
+  @override
+  String get mediaLinkMissing => 'Media link is missing';
+
+  @override
+  String get other => 'Other';
+
+  @override
+  String get strengthHintCapsule => 'e.g. 500 mg, 1 tablet';
+
+  @override
+  String get strengthHintSyrup => 'e.g. 5 ml, 10 ml';
+
+  @override
+  String get strengthHintCream => 'e.g. apply thin layer, 0.5%';
+
+  @override
+  String get strengthHintDrops => 'e.g. 2 drops';
+
+  @override
+  String get strengthHintNasal => 'e.g. 1 spray each nostril';
+
+  @override
+  String get strengthHintInjection => 'e.g. 0.5 ml, 10 units';
+
+  @override
+  String get strengthHintDefault => 'e.g. 500 mg, 5 ml, 2 puffs';
+
+  @override
+  String get selectFormToContinue =>
+      'Please select a medication form to continue';
+
+  @override
+  String cardExpired(String date) {
+    return 'Expired ($date)';
+  }
+
+  @override
+  String get cardEndsToday => 'Ends today';
+
+  @override
+  String get cardEndsTomorrow => 'Ends tomorrow';
+
+  @override
+  String cardUntilDate(String date, int days) {
+    return 'Until $date ($days days left)';
   }
 }

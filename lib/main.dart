@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // This is the custom navy color from your addmed.dart file (revert)
 const Color customNavyColor = Color.fromRGBO(13, 45, 93, 1);
@@ -20,6 +21,7 @@ void main() async {
   );
 
   await NotificationService().initialize();
+  await initializeDateFormatting('ar', null);
 
   runApp(
     MultiProvider(

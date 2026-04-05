@@ -62,7 +62,10 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
 
     // Handle initial voice command coming from home (add / edit / delete)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+      final localeProvider = Provider.of<LocaleProvider>(
+        context,
+        listen: false,
+      );
       final isArabic = localeProvider.isArabic;
 
       switch (widget.initialCommand) {
@@ -132,11 +135,12 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   // ============================
 
   Future<void> _deleteMedication(Medication medicationToDelete) async {
+    final loc = AppLocalizations.of(context)!;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)!.deleted,
+            loc.deleted,
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
@@ -318,9 +322,9 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                               ),
                             ),
                             icon: const Icon(Icons.history, size: 26),
-                            label: const Text(
-                              'History',
-                              style: TextStyle(fontSize: 20),
+                            label: Text(
+                              AppLocalizations.of(context)!.medicationHistory,
+                              style: const TextStyle(fontSize: 20),
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF5FA5A0),
@@ -583,7 +587,7 @@ class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
       ),
       child: Row(
         children: [
-          _buildTab(0, "Today's Meds"),
+          _buildTab(0, AppLocalizations.of(context)!.todaysMeds),
           _buildTab(1, AppLocalizations.of(context)!.medications),
         ],
       ),
@@ -643,6 +647,7 @@ class MedicationCard extends StatelessWidget {
   });
 
   Future<void> _showDeleteConfirmation(BuildContext context) async {
+    final loc = AppLocalizations.of(context)!;
     return showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -650,9 +655,9 @@ class MedicationCard extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text(
-            'Confirm Deletion',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          title: Text(
+            loc.confirmDeletion,
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           content: Text(
             AppLocalizations.of(
@@ -663,7 +668,7 @@ class MedicationCard extends StatelessWidget {
           actions: <Widget>[
             TextButton(
               child: Text(
-                AppLocalizations.of(context)!.cancel,
+                loc.cancel,
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -673,7 +678,7 @@ class MedicationCard extends StatelessWidget {
             ),
             TextButton(
               child: Text(
-                AppLocalizations.of(context)!.delete,
+                loc.delete,
                 style: const TextStyle(
                   color: Colors.red,
                   fontSize: 20,
@@ -691,42 +696,108 @@ class MedicationCard extends StatelessWidget {
     );
   }
 
-  String _durationDisplay() {
-    if (medication.endDate == null) return 'Ongoing';
+  String _translateFreq(String? freq, AppLocalizations loc) {
+    switch (freq) {
+      case 'Once a day':
+        return loc.freqOnce;
+      case 'Twice a day':
+        return loc.freqTwice;
+      case 'Three times a day':
+        return loc.freqThree;
+      case 'Four times a day':
+        return loc.freqFour;
+      case 'Custom':
+        return loc.freqCustom;
+      default:
+        return freq ?? loc.na;
+    }
+  }
+
+  String _translateDay(String day, AppLocalizations loc) {
+    switch (day) {
+      case 'Every day':
+        return loc.everyDay;
+      case 'Sunday':
+        return loc.daySunday;
+      case 'Monday':
+        return loc.dayMonday;
+      case 'Tuesday':
+        return loc.dayTuesday;
+      case 'Wednesday':
+        return loc.dayWednesday;
+      case 'Thursday':
+        return loc.dayThursday;
+      case 'Friday':
+        return loc.dayFriday;
+      case 'Saturday':
+        return loc.daySaturday;
+      default:
+        return day;
+    }
+  }
+
+  String _translateForm(String? form, AppLocalizations loc) {
+    switch (form) {
+      case 'Capsule':
+        return loc.formCapsule;
+      case 'Syrup':
+        return loc.formSyrup;
+      case 'Cream/Ointment':
+        return loc.formCream;
+      case 'Eye Drops':
+        return loc.formEyeDrops;
+      case 'Ear Drops':
+        return loc.formEarDrops;
+      case 'Nasal Spray':
+        return loc.formNasal;
+      case 'Injection':
+        return loc.formInjection;
+      default:
+        return form ?? loc.formOther;
+    }
+  }
+
+  String _durationDisplay(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    if (medication.endDate == null) return loc.durOngoingShort;
     final endDt = medication.endDate!.toDate();
     final now = DateTime.now();
     final daysLeft = endDt.difference(now).inDays;
     final formattedDate = DateFormat('MMM d, yyyy').format(endDt);
-    if (daysLeft < 0) return 'Expired ($formattedDate)';
-    if (daysLeft == 0) return 'Ends today';
-    if (daysLeft == 1) return 'Ends tomorrow';
-    return 'Until $formattedDate ($daysLeft days left)';
+    if (daysLeft < 0) return loc.cardExpired(formattedDate);
+    if (daysLeft == 0) return loc.cardEndsToday;
+    if (daysLeft == 1) return loc.cardEndsTomorrow;
+    return loc.cardUntilDate(formattedDate, daysLeft);
   }
 
-  String _doseDisplay() {
+  String _doseDisplay(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final parts = <String>[];
-    if (medication.doseForm != null) parts.add(medication.doseForm!);
-    if (medication.doseStrength != null &&
-        medication.doseStrength!.isNotEmpty) {
+    if (medication.doseForm != null)
+      parts.add(_translateForm(medication.doseForm, loc));
+    if (medication.doseStrength != null && medication.doseStrength!.isNotEmpty)
       parts.add(medication.doseStrength!);
-    }
-    return parts.isEmpty ? 'Not specified' : parts.join(' — ');
+    return parts.isEmpty ? loc.summaryNotSpecified : parts.join(' — ');
   }
 
   @override
   Widget build(BuildContext context) {
-    final timeString = medication.times.map((t) => t.format(context)).join(', ');
+    final loc = AppLocalizations.of(context)!;
+    final timeString = medication.times
+        .map((t) => t.format(context))
+        .join(', ');
+    final translatedDays = medication.days
+        .map((d) => _translateDay(d, loc))
+        .join(', ');
     final labelStyle = DefaultTextStyle.of(context).style.copyWith(
       fontSize: 22,
       fontWeight: FontWeight.bold,
       color: const Color(0xFF1B3A52),
       letterSpacing: 0.3,
     );
-    final valueStyle = DefaultTextStyle.of(context).style.copyWith(
-      fontSize: 22,
-      color: const Color(0xFF212121),
-      height: 1.4,
-    );
+    final valueStyle = DefaultTextStyle.of(
+      context,
+    ).style.copyWith(fontSize: 22, color: const Color(0xFF212121), height: 1.4);
 
     return Card(
       elevation: 6,
@@ -791,9 +862,12 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
-                        TextSpan(text: 'Duration: ', style: labelStyle),
                         TextSpan(
-                          text: _durationDisplay(),
+                          text: '${loc.summaryDuration}: ',
+                          style: labelStyle,
+                        ),
+                        TextSpan(
+                          text: _durationDisplay(context),
                           style: valueStyle.copyWith(
                             color:
                                 medication.endDate != null &&
@@ -814,8 +888,11 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
-                        TextSpan(text: 'Dose: ', style: labelStyle),
-                        TextSpan(text: _doseDisplay()),
+                        TextSpan(
+                          text: '${loc.summaryDose}: ',
+                          style: labelStyle,
+                        ),
+                        TextSpan(text: _doseDisplay(context)),
                       ],
                     ),
                   ),
@@ -823,11 +900,10 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
+                        TextSpan(text: '${loc.frequency}: ', style: labelStyle),
                         TextSpan(
-                          text: '${AppLocalizations.of(context)!.frequency}: ',
-                          style: labelStyle,
+                          text: _translateFreq(medication.frequency, loc),
                         ),
-                        TextSpan(text: medication.frequency ?? 'N/A'),
                       ],
                     ),
                   ),
@@ -835,11 +911,8 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
-                        TextSpan(
-                          text: '${AppLocalizations.of(context)!.days}: ',
-                          style: labelStyle,
-                        ),
-                        TextSpan(text: medication.days.join(', ')),
+                        TextSpan(text: '${loc.days}: ', style: labelStyle),
+                        TextSpan(text: translatedDays),
                       ],
                     ),
                   ),
@@ -848,10 +921,7 @@ class MedicationCard extends StatelessWidget {
                     text: TextSpan(
                       style: valueStyle,
                       children: <TextSpan>[
-                        TextSpan(
-                          text: '${AppLocalizations.of(context)!.times}: ',
-                          style: labelStyle,
-                        ),
+                        TextSpan(text: '${loc.times}: ', style: labelStyle),
                         TextSpan(text: timeString),
                       ],
                     ),
@@ -862,10 +932,7 @@ class MedicationCard extends StatelessWidget {
                       text: TextSpan(
                         style: valueStyle,
                         children: <TextSpan>[
-                          TextSpan(
-                            text: '${AppLocalizations.of(context)!.notes}: ',
-                            style: labelStyle,
-                          ),
+                          TextSpan(text: '${loc.notes}: ', style: labelStyle),
                           TextSpan(text: medication.notes!),
                         ],
                       ),
@@ -880,7 +947,7 @@ class MedicationCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit, size: 28),
-                    label: Text(AppLocalizations.of(context)!.edit),
+                    label: Text(loc.edit),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: const Color(0xFF5FA5A0),
@@ -902,7 +969,7 @@ class MedicationCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: () => _showDeleteConfirmation(context),
                     icon: const Icon(Icons.delete, size: 28),
-                    label: Text(AppLocalizations.of(context)!.delete),
+                    label: Text(loc.delete),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: const Color(0xFFC62828),

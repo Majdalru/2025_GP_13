@@ -213,7 +213,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
   String _formatEndDate(int days) {
     final end = DateTime.now().add(Duration(days: days));
-    return DateFormat('MMM d, yyyy').format(end);
+    final locale = Localizations.localeOf(context).languageCode;
+    return DateFormat.yMMMd(locale).format(end);
   }
 
   Future<bool?> _showEditableScanSheet({required MedicationScanResult result}) {
@@ -672,16 +673,23 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                 },
                                 children: List.generate(
                                   ocrMaxVals[ocrDurUnit],
-                                  (i) => Center(
-                                    child: Text(
-                                      '${i + 1}',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.teal.shade800,
+                                  (i) {
+                                    final locale = Localizations.localeOf(
+                                      context,
+                                    ).languageCode;
+                                    return Center(
+                                      child: Text(
+                                        NumberFormat.decimalPattern(
+                                          locale,
+                                        ).format(i + 1),
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.teal.shade800,
+                                        ),
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -759,8 +767,10 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                         Text(
                                           ocrDurMode == 'custom' &&
                                                   scanCustomEndDate != null
-                                              ? DateFormat(
-                                                  'MMM d',
+                                              ? DateFormat.MMMd(
+                                                  Localizations.localeOf(
+                                                    context,
+                                                  ).languageCode,
                                                 ).format(scanCustomEndDate!)
                                               : AppLocalizations.of(
                                                   context,
@@ -782,13 +792,23 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                       lastDate: now.add(
                                         const Duration(days: 365),
                                       ),
-                                      builder: (ctx, child) => Theme(
-                                        data: Theme.of(ctx).copyWith(
-                                          colorScheme: Theme.of(ctx).colorScheme
-                                              .copyWith(primary: Colors.teal),
-                                        ),
-                                        child: child!,
-                                      ),
+                                      builder: (ctx, child) =>
+                                          Localizations.override(
+                                            context: ctx,
+                                            locale: Localizations.localeOf(
+                                              context,
+                                            ),
+                                            child: Theme(
+                                              data: Theme.of(ctx).copyWith(
+                                                colorScheme: Theme.of(ctx)
+                                                    .colorScheme
+                                                    .copyWith(
+                                                      primary: Colors.teal,
+                                                    ),
+                                              ),
+                                              child: child!,
+                                            ),
+                                          ),
                                     );
                                     if (picked != null) {
                                       setSheetState(() {
@@ -815,8 +835,10 @@ class _AddMedScreenState extends State<AddMedScreen> {
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
                                 AppLocalizations.of(context)!.durEndsOn(
-                                  DateFormat(
-                                    'MMM d, yyyy',
+                                  DateFormat.yMMMd(
+                                    Localizations.localeOf(
+                                      context,
+                                    ).languageCode,
                                   ).format(scanCustomEndDate!),
                                 ),
                                 style: TextStyle(
@@ -1761,23 +1783,24 @@ class _Step2DoseState extends State<_Step2Dose> {
   ];
 
   /// Suggest a contextual strength hint based on the selected form.
-  String get _strengthHint {
+  String _strengthHint(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     switch (_selectedForm) {
       case 'Capsule':
-        return 'e.g. 500 mg, 1 tablet';
+        return loc.strengthHintCapsule;
       case 'Syrup':
-        return 'e.g. 5 ml, 10 ml';
+        return loc.strengthHintSyrup;
       case 'Cream/Ointment':
-        return 'e.g. apply thin layer, 0.5%';
+        return loc.strengthHintCream;
       case 'Eye Drops':
       case 'Ear Drops':
-        return 'e.g. 2 drops';
+        return loc.strengthHintDrops;
       case 'Nasal Spray':
-        return 'e.g. 1 spray each nostril';
+        return loc.strengthHintNasal;
       case 'Injection':
-        return 'e.g. 0.5 ml, 10 units';
+        return loc.strengthHintInjection;
       default:
-        return 'e.g. 500 mg, 5 ml, 2 puffs';
+        return loc.strengthHintDefault;
     }
   }
 
@@ -1896,7 +1919,7 @@ class _Step2DoseState extends State<_Step2Dose> {
                 controller: _strengthCtrl,
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
-                  hintText: _strengthHint,
+                  hintText: _strengthHint(context),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1927,7 +1950,7 @@ class _Step2DoseState extends State<_Step2Dose> {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      'Please select a medication form to continue',
+                      AppLocalizations.of(context)!.selectFormToContinue,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade500,
@@ -2023,9 +2046,10 @@ class _Step2DurationState extends State<_Step2Duration> {
 
   String _endDateLabel(BuildContext context, int days) {
     final end = DateTime.now().add(Duration(days: days));
+    final locale = Localizations.localeOf(context).languageCode;
     return AppLocalizations.of(
       context,
-    )!.durEndsOn(DateFormat('MMM d, yyyy').format(end));
+    )!.durEndsOn(DateFormat.yMMMd(locale).format(end));
   }
 
   Future<void> _pickCustomDate() async {
@@ -2035,11 +2059,17 @@ class _Step2DurationState extends State<_Step2Duration> {
       initialDate: _customDate ?? now.add(const Duration(days: 7)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: Colors.teal),
+      builder: (ctx, child) => Localizations.override(
+        context: ctx,
+        locale: Localizations.localeOf(context),
+        child: Theme(
+          data: Theme.of(ctx).copyWith(
+            colorScheme: Theme.of(
+              ctx,
+            ).colorScheme.copyWith(primary: Colors.teal),
+          ),
+          child: child!,
         ),
-        child: child!,
       ),
     );
     if (picked != null) {
@@ -2157,19 +2187,21 @@ class _Step2DurationState extends State<_Step2Duration> {
                     onSelectedItemChanged: (index) {
                       setState(() => _count = index + 1);
                     },
-                    children: List.generate(
-                      _maxValues[_unitIndex],
-                      (i) => Center(
+                    children: List.generate(_maxValues[_unitIndex], (i) {
+                      final locale = Localizations.localeOf(
+                        context,
+                      ).languageCode;
+                      return Center(
                         child: Text(
-                          '${i + 1}',
+                          NumberFormat.decimalPattern(locale).format(i + 1),
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w600,
                             color: Colors.teal.shade800,
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                   ),
                 ),
 
@@ -2237,8 +2269,10 @@ class _Step2DurationState extends State<_Step2Duration> {
                         child: Text(
                           _mode == 'custom' && _customDate != null
                               ? AppLocalizations.of(context)!.durCustomSelected(
-                                  DateFormat(
-                                    'MMM d, yyyy',
+                                  DateFormat.yMMMd(
+                                    Localizations.localeOf(
+                                      context,
+                                    ).languageCode,
                                   ).format(_customDate!),
                                 )
                               : AppLocalizations.of(context)!.durPickCustom,
@@ -2686,17 +2720,21 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
       context: context,
       initialTime: widget.selectedTimes[index] ?? TimeOfDay.now(),
       builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.teal,
-              onPrimary: Colors.white,
+        return Localizations.override(
+          context: context,
+          locale: Localizations.localeOf(context),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: Colors.teal,
+                onPrimary: Colors.white,
+              ),
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(foregroundColor: Colors.teal),
+              ),
             ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: Colors.teal),
-            ),
+            child: child!,
           ),
-          child: child!,
         );
       },
     );
@@ -2922,8 +2960,9 @@ class _Step8Summary extends StatelessWidget {
 
   String _durationLabel(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).languageCode;
     if (customEndDate != null) {
-      final formatted = DateFormat('MMM d, yyyy').format(customEndDate!);
+      final formatted = DateFormat.yMMMd(locale).format(customEndDate!);
       if (durationDays != null && durationDays! > 0)
         return loc.summaryDurationDaysUntil(durationDays!, formatted);
       return loc.summaryDurationUntil(formatted);

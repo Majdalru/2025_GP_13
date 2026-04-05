@@ -791,8 +791,7 @@
     "placeholders": {
       "date": { "type": "String" }
     }
-  }}
-
+  },
 "nameRequired": "الاسم مطلوب",
 "whatWouldYouLikeToShare": "ماذا تود أن تشارك اليوم؟",
 "chooseAMediaType": "اختر نوع الوسائط أدناه",
@@ -865,5 +864,27 @@
 "story": "قصة",
 "quran": "القرآن",
 "health": "الصحة",
-"caregiver": "مقدم الرعاية"
+"caregiver": "مقدم الرعاية",
+"strengthHintCapsule": "مثال: ٥٠٠ مجم، قرص واحد",
+"strengthHintSyrup": "مثال: ٥ مل، ١٠ مل",
+"strengthHintCream": "مثال: طبقة رقيقة، ٠.٥٪",
+"strengthHintDrops": "مثال: قطرتان",
+"strengthHintNasal": "مثال: بخة واحدة في كل فتحة أنف",
+"strengthHintInjection": "مثال: ٠.٥ مل، ١٠ وحدات",
+"strengthHintDefault": "مثال: ٥٠٠ مجم، ٥ مل، ٢ بخة",
+"selectFormToContinue": "يرجى اختيار شكل الدواء للمتابعة",
+"selectFormToContinue": "يرجى اختيار شكل الدواء للمتابعة",
+"cardExpired": "منتهي ({date})",
+"@cardExpired": {
+  "placeholders": { "date": { "type": "String" } }
+},
+"cardEndsToday": "ينتهي اليوم",
+"cardEndsTomorrow": "ينتهي غداً",
+"cardUntilDate": "حتى {date} ({days} أيام متبقية)",
+"@cardUntilDate": {
+  "placeholders": {
+    "date": { "type": "String" },
+    "days": { "type": "int" }
+  }
+}
 }
