@@ -272,9 +272,22 @@ debugPrint('docs count = ${snapshot.data?.docs.length}');
                   }
 
                   final docs = snapshot.data?.docs ?? [];
-                  final allItems = docs
-                      .map((doc) => AudioItem.fromDoc(doc))
-                      .toList();
+                  final filteredDocs = (widget.category == 'Story' || widget.category == 'Health')
+    ? docs.where((doc) {
+        final data = doc.data();
+        final itemLang = data['language'];
+
+        if (lang == 'ar') {
+          return itemLang == 'ar'; // عربي فقط
+        } else {
+          return itemLang != 'ar'; // إنجليزي فقط
+        }
+      }).toList()
+    : docs;
+
+final allItems = filteredDocs
+    .map((doc) => AudioItem.fromDoc(doc))
+    .toList();
 
                   final query = searchQuery.toLowerCase().trim();
                   final selectedTag = _selectedTag;

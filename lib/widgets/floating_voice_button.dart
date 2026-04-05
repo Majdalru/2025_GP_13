@@ -357,6 +357,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         return "Getting today's news.";
     }
   }
+  
 
   @override
   void dispose() {

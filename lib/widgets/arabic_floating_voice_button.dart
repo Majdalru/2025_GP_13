@@ -205,7 +205,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "أستطيع مساعدتك في معرفة الطقس او التنقل داخل التطبيق. ",
+        "أستطيع مساعدتك في معرفة الطقس الاخبار او التنقل داخل التطبيق. ",
       );
     }
 
@@ -296,7 +296,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
     } else {
       final String errorMessage =
           widget.customErrorResponse ??
-          "لم أفهم طلبك. جرّب السؤال عن الطقس او قول الأدوية أو الوسائط أو الصفحة الرئيسية.";
+          "لم أفهم طلبك. جرّب السؤال عن الطقس او الأخبار او قول الأدوية أو الوسائط أو الصفحة الرئيسية.";
 
       await _speak(errorMessage);
 
@@ -344,7 +344,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
       case VoiceCommand.weather:
         return "جاري معرفة حالة الطقس.";
       case VoiceCommand.news:
-        return "جاري جلب الأخبار.";
+        return "جاري جلب عناوين بعض الأخبار.";
     }
   }
 
