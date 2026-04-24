@@ -205,7 +205,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "أستطيع مساعدتك في معرفة الطقس الاخبار او التنقل داخل التطبيق. ",
+        "أستطيع مساعدتك في التنقل داخل التطبيق، أو معرفة الأخبار، أو معرفة الطقس.",
       );
     }
 
@@ -296,7 +296,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
     } else {
       final String errorMessage =
           widget.customErrorResponse ??
-          "لم أفهم طلبك. جرّب السؤال عن الطقس او الأخبار او قول الأدوية أو الوسائط أو الصفحة الرئيسية.";
+          "لم أفهم طلبك. يمكنك قول الأدوية، أو الوسائط، أو الصفحة الرئيسية، أو السؤال عن الأخبار أو الطقس.";
 
       await _speak(errorMessage);
 

@@ -11,6 +11,7 @@ import '../../services/weather_service.dart';
 import '../../services/news_service.dart';
 import 'media_page.dart';
 import 'elderly_med.dart';
+import 'daily_library_page.dart';
 
 import 'favorites_manager.dart';
 import '../../Screens/login_page.dart';
@@ -556,6 +557,7 @@ Future<void> getWeather() async {
       ),
 
       body: SafeArea(
+        child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(25),
           child: Column(
@@ -1076,9 +1078,60 @@ Future<void> getWeather() async {
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
+
+const SizedBox(height:2),
+
+Card(
+  color: kSurface,
+  elevation: 4,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(25),
+    side: const BorderSide(color: kPrimary, width: 2),
+  ),
+  child: InkWell(
+    borderRadius: BorderRadius.circular(25),
+    onTap: () {
+      Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const DailyLibraryPage(),
+    ),
+  );
+},
+    splashColor: kPrimary.withOpacity(0.15),
+    highlightColor: Colors.transparent,
+    child: Container(
+      width: double.infinity,
+      height: 145, // 
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.wb_sunny,
+            size: 70,
+            color: kPrimary,
+          ),
+          const SizedBox(width: 24),
+          const Expanded(
+            child: Text(
+              "Daily Library",
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w700,
+                color: kPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  ),
+),
             ],
           ),
         ),
+      ),
       ),
     );
   }
