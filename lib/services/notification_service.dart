@@ -24,7 +24,7 @@ class NotificationService {
 
     // إعدادات Android
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    
+
     // إعدادات iOS
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -45,18 +45,19 @@ class NotificationService {
     // طلب الأذونات
     await _requestPermissions();
 
-    // إنشاء notification channel لـ Android
-    await _createNotificationChannel();
+    // إنشاء notification channels
+    await _createMedicationNotificationChannel();
+    await _createEmergencyNotificationChannel();
 
     _initialized = true;
     debugPrint('✅ NotificationService initialized');
   }
 
-  /// إنشاء notification channel لـ Android
-  Future<void> _createNotificationChannel() async {
+  /// إنشاء notification channel للأدوية
+  Future<void> _createMedicationNotificationChannel() async {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'medication_channel', // id
-      'Medication Reminders', // name
+      'medication_channel',
+      'Medication Reminders',
       description: 'Notifications for medication reminders',
       importance: Importance.max,
       playSound: true,
@@ -68,8 +69,28 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
-    
-    debugPrint('✅ Notification channel created');
+
+    debugPrint('✅ Medication notification channel created');
+  }
+
+  /// إنشاء notification channel للطوارئ
+  Future<void> _createEmergencyNotificationChannel() async {
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'emergency_channel',
+      'Emergency Alerts',
+      description: 'Urgent notifications for elderly emergency alerts',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    await _notifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    debugPrint('✅ Emergency notification channel created');
   }
 
   /// طلب أذونات التنبيهات
@@ -80,16 +101,15 @@ class NotificationService {
       debugPrint('📱 Notification permission: $status');
     }
 
-    // طلب إذن Exact Alarm (مهم جداً للتنبيهات المجدولة)
+    // طلب إذن Exact Alarm للتنبيهات المجدولة
     if (await Permission.scheduleExactAlarm.isDenied) {
       final status = await Permission.scheduleExactAlarm.request();
       debugPrint('⏰ Exact alarm permission: $status');
     }
-    
-    // تحقق من الحالة النهائية
+
     final notifStatus = await Permission.notification.status;
     final alarmStatus = await Permission.scheduleExactAlarm.status;
-    
+
     if (notifStatus.isGranted && alarmStatus.isGranted) {
       debugPrint('✅ All permissions granted');
     } else {
@@ -145,19 +165,7 @@ class NotificationService {
     debugPrint('📅 Scheduled notification #$id for ${scheduledTime.toString()}');
   }
 
-  /// إلغاء تنبيه معين
-  Future<void> cancelNotification(int id) async {
-    await _notifications.cancel(id);
-    debugPrint('❌ Cancelled notification #$id');
-  }
-
-  /// إلغاء جميع التنبيهات
-  Future<void> cancelAllNotifications() async {
-    await _notifications.cancelAll();
-    debugPrint('❌ Cancelled all notifications');
-  }
-
-  /// عرض تنبيه فوري (بدون جدولة)
+  /// عرض تنبيه فوري عام
   Future<void> showImmediateNotification({
     required int id,
     required String title,
@@ -175,15 +183,70 @@ class NotificationService {
           channelDescription: 'Notifications for medication reminders',
           importance: Importance.max,
           priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
         ),
-        iOS: DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
       payload: payload,
     );
+
     debugPrint('🔔 Showed immediate notification #$id');
   }
 
-  /// الحصول على جميع التنبيهات المجدولة (للتأكد)
+  /// عرض تنبيه فوري للطوارئ
+  Future<void> showEmergencyNotification({
+    required int id,
+    required String elderlyName,
+    required String elderlyId,
+  }) async {
+    await _notifications.show(
+      id,
+      'Emergency Alert',
+      '$elderlyName needs help. Tap to view location.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'emergency_channel',
+          'Emergency Alerts',
+          channelDescription: 'Urgent notifications for elderly emergency alerts',
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
+          ticker: 'Emergency Alert',
+          category: AndroidNotificationCategory.alarm,
+          visibility: NotificationVisibility.public,
+          fullScreenIntent: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: 'emergency_$elderlyId',
+    );
+
+    debugPrint('🚨 Showed emergency notification #$id');
+  }
+
+  /// إلغاء تنبيه معين
+  Future<void> cancelNotification(int id) async {
+    await _notifications.cancel(id);
+    debugPrint('❌ Cancelled notification #$id');
+  }
+
+  /// إلغاء جميع التنبيهات
+  Future<void> cancelAllNotifications() async {
+    await _notifications.cancelAll();
+    debugPrint('❌ Cancelled all notifications');
+  }
+
+  /// الحصول على جميع التنبيهات المجدولة
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     return await _notifications.pendingNotificationRequests();
   }

@@ -152,6 +152,124 @@ String getSaudiCity(double lat, double lon, bool isArabic) {
   // fallback
   return isArabic ? 'منطقتك' : 'your location';
 }
+Future<void> saveElderlyLocation() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      debugPrint("No user logged in");
+      return;
+    }
+
+    final position = await locationService.getCurrentLocation();
+
+    await FirebaseFirestore.instance
+        .collection('elderly_locations')
+        .doc(user.uid)
+        .set({
+      'latitude': position.latitude,
+      'longitude': position.longitude,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    debugPrint(
+      "Elderly location saved: ${position.latitude}, ${position.longitude}",
+    );
+  } catch (e) {
+    debugPrint("Error saving elderly location: $e");
+  }
+}
+
+
+Future<void> sendEmergencyAlert() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      debugPrint("No user logged in");
+      return;
+    }
+
+    final position = await locationService.getCurrentLocation();
+
+    await FirebaseFirestore.instance
+        .collection('elderly_locations')
+        .doc(user.uid)
+        .set({
+      'latitude': position.latitude,
+      'longitude': position.longitude,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    final alertRef =
+    await FirebaseFirestore.instance.collection('emergency_alerts').add({
+     'elderlyId': user.uid,
+     'elderlyName': fullName ?? 'Elderly',
+     'latitude': position.latitude,
+     'longitude': position.longitude,
+     'createdAt': FieldValue.serverTimestamp(),
+     'status': 'active',
+    });
+
+    debugPrint("🚨 Emergency alert saved with ID: ${alertRef.id}");
+
+    if (!mounted) return;
+
+    showDialog(
+  context: context,
+  barrierDismissible: false,
+  builder: (context) {
+    return AlertDialog(
+      backgroundColor: Colors.red.shade50,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Row(
+        children: const [
+          Icon(Icons.check_circle, color: Colors.green, size: 28),
+          SizedBox(width: 10),
+          Text(
+            "Alert Sent",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+      content: const Text(
+        "Your emergency alert has been sent to the caregiver.\nHelp is on the way.",
+        style: TextStyle(fontSize: 16),
+      ),
+      actions: [
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.red,
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text("OK"),
+        ),
+      ],
+    );
+  },
+);
+
+    debugPrint(
+      "Emergency alert sent: ${position.latitude}, ${position.longitude}",
+    );
+  } catch (e) {
+    debugPrint("Error sending emergency alert: $e");
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error sending emergency alert: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
 Future<void> getWeather() async {
   try {
     final position = await locationService.getCurrentLocation();
@@ -227,6 +345,7 @@ Future<void> getWeather() async {
     super.initState();
     _listenToUserDoc();
     favoritesManager.init();
+    saveElderlyLocation();
   }
  
   //here test news
@@ -704,6 +823,8 @@ Future<void> getWeather() async {
                                 await _arabicVoice.speak(
                                   AppLocalizations.of(context)!.voiceSosPreamble,
                                 );
+                                await sendEmergencyAlert();
+                                if (!mounted) return;
                                 showDialog(
                                   context: context,
                                   builder: (context) {
@@ -865,6 +986,8 @@ Future<void> getWeather() async {
                                 await _voice.speak(
                                   AppLocalizations.of(context)!.voiceSosPreamble,
                                 );
+                                await sendEmergencyAlert();
+                                if (!mounted) return;
                                 showDialog(
                                   context: context,
                                   builder: (context) {
@@ -1017,7 +1140,10 @@ Future<void> getWeather() async {
                   ),
                   elevation: 6,
                 ),
-                onPressed: () => HapticFeedback.heavyImpact(),
+                onPressed: () async {
+                  HapticFeedback.heavyImpact();
+                  await sendEmergencyAlert();
+                },
                 child: Text(
                   AppLocalizations.of(context)!.sos,
                   style: const TextStyle(

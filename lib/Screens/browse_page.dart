@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
-import '../medmain.dart'; // Corrected import
+import '../medmain.dart';
 import 'meds_summary_page.dart';
 import 'location_page.dart';
 import 'share_content_page.dart';
-import 'home_shell.dart'; // Import to get the ElderlyProfile model
+import 'home_shell.dart';
 
 class BrowsePage extends StatelessWidget {
-  // Accept the selected profile from HomeShell
   final ElderlyProfile? selectedProfile;
 
   const BrowsePage({super.key, this.selectedProfile});
+
+  void _showSelectProfileMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)!.pleaseSelectElderlyProfileFirst,
+        ),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +33,6 @@ class BrowsePage extends StatelessWidget {
         icon: Icons.medication,
         color: cs.secondary,
         onTap: () {
-          // Check if a profile is selected before navigating
           if (selectedProfile != null) {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -31,18 +40,11 @@ class BrowsePage extends StatelessWidget {
               ),
             );
           } else {
-            // Show a message if no profile is selected
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)!.pleaseSelectElderlyProfileFirst,
-                ),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            _showSelectProfileMessage(context);
           }
         },
       ),
+
       _BrowseItem(
         title: AppLocalizations.of(context)!.summary,
         subtitle: AppLocalizations.of(context)!.monthlyOverview,
@@ -57,33 +59,39 @@ class BrowsePage extends StatelessWidget {
               ),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)!.pleaseSelectElderlyProfileFirst,
-                ),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            _showSelectProfileMessage(context);
           }
         },
       ),
+
       _BrowseItem(
         title: AppLocalizations.of(context)!.location,
         subtitle: AppLocalizations.of(context)!.liveLocation,
         icon: Icons.location_on,
         color: Colors.teal,
-        onTap: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const LocationPage())),
+        onTap: () {
+          if (selectedProfile != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => LocationPage(
+                  elderlyId: selectedProfile!.uid,
+                ),
+              ),
+            );
+          } else {
+            _showSelectProfileMessage(context);
+          }
+        },
       ),
+
       _BrowseItem(
         title: AppLocalizations.of(context)!.manageAccess,
         subtitle: '',
         icon: Icons.manage_accounts_rounded,
         color: Colors.indigo,
-        onTap: null, // Not tappable
+        onTap: null,
       ),
+
       _BrowseItem(
         title: AppLocalizations.of(context)!.shareWithElderly,
         subtitle: AppLocalizations.of(context)!.shareLifeUpdates,
@@ -98,13 +106,7 @@ class BrowsePage extends StatelessWidget {
               ),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)!.pleaseSelectElderlyProfile,
-                ),
-              ),
-            );
+            _showSelectProfileMessage(context);
           }
         },
       ),
@@ -172,9 +174,8 @@ class _BrowseCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        splashFactory: tappable
-            ? InkRipple.splashFactory
-            : NoSplash.splashFactory,
+        splashFactory:
+            tappable ? InkRipple.splashFactory : NoSplash.splashFactory,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

@@ -232,48 +232,7 @@ class HomePage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [Colors.red.shade600, Colors.red.shade400],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.red.shade200.withOpacity(.35),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onTapEmergency,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              child: Row(
-                children: [
-                  const Icon(Icons.sos, color: Colors.white, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context)!.emergencyAlert,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward, color: Colors.white),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
+      
         Card(
           elevation: 0,
           clipBehavior: Clip.antiAlias,
