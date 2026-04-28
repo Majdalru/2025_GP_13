@@ -28,8 +28,7 @@ class MediaPage extends StatefulWidget {
 }
 
 class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
-
-   String _localizedCategoryName(String category) {
+  String _localizedCategoryName(String category) {
     final loc = AppLocalizations.of(context)!;
 
     switch (category) {
@@ -47,7 +46,10 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         return category;
     }
   }
-  Future<QuerySnapshot<Map<String, dynamic>>> _getMediaByCategory(String category) {
+
+  Future<QuerySnapshot<Map<String, dynamic>>> _getMediaByCategory(
+    String category,
+  ) {
     final lang = Localizations.localeOf(context).languageCode;
 
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
@@ -60,6 +62,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
     return query.get();
   }
+
   final VoiceAssistantService _voiceService = VoiceAssistantService();
   final ArabicVoiceAssistantService _arabicVoiceService =
       ArabicVoiceAssistantService();
@@ -358,8 +361,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 _isListeningState
                     ? Icons.mic
                     : _isSpeakingState
-                        ? Icons.volume_up
-                        : Icons.mic_none,
+                    ? Icons.volume_up
+                    : Icons.mic_none,
                 color: Colors.white,
                 size: 40,
               ),
@@ -565,23 +568,23 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     ])) {
       return 'noah';
     }
-     if (_containsAnyNormalized(normalizedUtter, [
-    'نوح',
-    'سيدنا نوح',
-    'قصة نوح',
-    'قصة سيدنا نوح',
-  ])) {
-    return 'نوح'; //  عربي
-  }
+    if (_containsAnyNormalized(normalizedUtter, [
+      'نوح',
+      'سيدنا نوح',
+      'قصة نوح',
+      'قصة سيدنا نوح',
+    ])) {
+      return 'نوح'; //  عربي
+    }
 
-  if (_containsAnyNormalized(normalizedUtter, [
-    'زهران',
-    'القاضي زهران',
-    'قصة القاضي',
-    'قصة القاضي زهران',
-  ])) {
-    return 'زهران'; //  عربي
-  }
+    if (_containsAnyNormalized(normalizedUtter, [
+      'زهران',
+      'القاضي زهران',
+      'قصة القاضي',
+      'قصة القاضي زهران',
+    ])) {
+      return 'زهران'; //  عربي
+    }
 
     return null;
   }
@@ -623,7 +626,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       case VoiceCommand.addMedication:
       case VoiceCommand.editMedication:
       case VoiceCommand.deleteMedication:
-        await _speak(AppLocalizations.of(context)!.manageMedicationsInstruction);
+        await _speak(
+          AppLocalizations.of(context)!.manageMedicationsInstruction,
+        );
         break;
 
       case VoiceCommand.sos:
@@ -633,8 +638,13 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       case VoiceCommand.goToSettings:
         await _speak(AppLocalizations.of(context)!.settingsNotAvailableHere);
         break;
-      
-       
+
+      case VoiceCommand.todayMedications:
+        await _speak(AppLocalizations.of(context)!.goingBackToHome);
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        break;
     }
   }
 
@@ -668,7 +678,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         final globalCmd = await _analyzeCommand(categoryAnswer);
         if (globalCmd != null &&
             (globalCmd == VoiceCommand.goToHome ||
-                
                 globalCmd == VoiceCommand.goToMedication ||
                 globalCmd == VoiceCommand.addMedication ||
                 globalCmd == VoiceCommand.editMedication ||
@@ -697,9 +706,9 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
       final spokenCategory = _localizedCategoryName(matchedCategory);
 
-await _speak(
-  AppLocalizations.of(context)!.specificOrRandomPrompt(spokenCategory),
-);
+      await _speak(
+        AppLocalizations.of(context)!.specificOrRandomPrompt(spokenCategory),
+      );
 
       String? modeAnswer = await _listen(seconds: 6);
       debugPrint("User said mode: $modeAnswer");
@@ -715,7 +724,18 @@ await _speak(
       if (modeLower.contains("specific") ||
           modeLower.contains("choose") ||
           modeLower.contains("search") ||
-          _containsAnyNormalized(modeLower, ['معين', 'سوره', 'مشي','محدد','قصة','نصيحة','شي محدد','شي معين','ابغى','اريد'])) {
+          _containsAnyNormalized(modeLower, [
+            'معين',
+            'سوره',
+            'مشي',
+            'محدد',
+            'قصة',
+            'نصيحة',
+            'شي محدد',
+            'شي معين',
+            'ابغى',
+            'اريد',
+          ])) {
         await _speak(AppLocalizations.of(context)!.sayAudioOrVideoName);
 
         String? titleQuery = await _listen(seconds: 6);
@@ -734,9 +754,11 @@ await _speak(
         }
       } else {
         await _speak(
-  AppLocalizations.of(context)!.playingRandomFromCategory(spokenCategory),
-);
-        
+          AppLocalizations.of(
+            context,
+          )!.playingRandomFromCategory(spokenCategory),
+        );
+
         await _playRandomForCategory(matchedCategory);
       }
     } catch (e) {
@@ -843,7 +865,9 @@ await _speak(
       if (category == 'Favorites') {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
-          await _speak(AppLocalizations.of(context)!.mustBeLoggedInForFavorites);
+          await _speak(
+            AppLocalizations.of(context)!.mustBeLoggedInForFavorites,
+          );
           return;
         }
         qs = await FirebaseFirestore.instance
@@ -853,7 +877,6 @@ await _speak(
             .get();
       } else {
         qs = await _getMediaByCategory(category);
-          
       }
 
       if (qs.docs.isEmpty) {
@@ -879,7 +902,9 @@ await _speak(
       if (category == 'Favorites') {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
-          await _speak(AppLocalizations.of(context)!.mustBeLoggedInForFavorites);
+          await _speak(
+            AppLocalizations.of(context)!.mustBeLoggedInForFavorites,
+          );
           return;
         }
         qs = await FirebaseFirestore.instance
@@ -889,7 +914,6 @@ await _speak(
             .get();
       } else {
         qs = await _getMediaByCategory(category);
-            
       }
 
       final searchLower = searchTitle.toLowerCase();

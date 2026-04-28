@@ -62,7 +62,6 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       duration: const Duration(milliseconds: 3000),
     );
 
-    
     _voiceService.setOnListeningStateChange(_handleServiceStateChange);
 
     _loadUserInfo();
@@ -212,7 +211,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "I can help you check the weather, news or navigate through the app.",
+        "I can help you check the weather, news, today's medications, or navigate through the app.",
       );
     }
 
@@ -353,11 +352,12 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         return "Opening settings.";
       case VoiceCommand.weather:
         return "Checking today's weather.";
-       case VoiceCommand.news:
+      case VoiceCommand.news:
         return "Getting today's news.";
+      case VoiceCommand.todayMedications:
+        return "Checking your medications for today.";
     }
   }
-  
 
   @override
   void dispose() {
@@ -366,7 +366,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     _rotateController.dispose();
     _tts.stop();
     _beepPlayer.dispose();
-    _voiceService.setOnListeningStateChange(null); 
+    _voiceService.setOnListeningStateChange(null);
     super.dispose();
   }
 

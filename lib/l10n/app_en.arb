@@ -406,6 +406,8 @@
   "sos": "SOS",
   "errorNotLoggedIn2": "Error: Not logged in.",
   "everyDay": "Every day",
+  "selectAll": "Select All",
+  "summaryStartDate": "Starts on",
   "mustBeLoggedInToSave": "You must be logged in to save.",
   "errorUpdatingMedication": "Error updating medication: {error}",
   "@errorUpdatingMedication": {
@@ -423,7 +425,16 @@
       }
     }
   },
-  "change": "Change",
+   "change": "Change",
+  "startDateLabel": "Start date",
+  "startDateToday": "Today ({date})",
+  "@startDateToday": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "startedInPast": "This medication started in the past. Reminders will begin from today.",
+  "startFuture": "Medication will start on the selected future date.",
   "addAnotherTime": "Add another time",
   "clearAllTimes": "Clear All Times",
   "pleaseSelectAllRequiredTimes": "Please select all required times.",
@@ -680,8 +691,22 @@
   "stepTimesSub": "When should you take this medication?",
   "stepNotesTitle": "Step 7: Add Notes",
   "stepNotesSub": "Any special instructions? (Optional)",
+  "stepRefillQuestion": "Would you like to receive a reminder 3 days before this medication ends?",
+  "summaryRefillReminder": "Refill Reminder",
+  "stepRefillYes": "Yes, remind me",
+  "stepRefillNo": "No thanks",
+  "stepRefillOnlyIfDuration": "This option is only available when a specific end date is set.",
+  "stepRefillNotificationTitle": "💊 Medication Ending Soon",
+  "stepRefillNotificationBody": "{medName} ends in 3 days. Please arrange a refill.",
+  "@stepRefillNotificationBody": {
+    "placeholders": {
+      "medName": { "type": "String" }
+    }
+  },
   "stepSummaryTitle": "Step 8: Summary",
   "stepSummarySub": "Please review the information before saving.",
+  
+
   
   "medFormTitle": "Medication Form",
   "strengthDoseTitle": "Strength / Dose",

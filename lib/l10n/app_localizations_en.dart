@@ -717,6 +717,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get everyDay => 'Every day';
 
   @override
+  String get selectAll => 'Select All';
+
+  @override
+  String get summaryStartDate => 'Starts on';
+
+  @override
   String get mustBeLoggedInToSave => 'You must be logged in to save.';
 
   @override
@@ -731,6 +737,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get change => 'Change';
+
+  @override
+  String get startDateLabel => 'Start date';
+
+  @override
+  String startDateToday(String date) {
+    return 'Today ($date)';
+  }
+
+  @override
+  String get startedInPast =>
+      'This medication started in the past. Reminders will begin from today.';
+
+  @override
+  String get startFuture =>
+      'Medication will start on the selected future date.';
 
   @override
   String get addAnotherTime => 'Add another time';
@@ -1157,6 +1179,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stepNotesSub => 'Any special instructions? (Optional)';
+
+  @override
+  String get stepRefillQuestion =>
+      'Would you like to receive a reminder 3 days before this medication ends?';
+
+  @override
+  String get summaryRefillReminder => 'Refill Reminder';
+
+  @override
+  String get stepRefillYes => 'Yes, remind me';
+
+  @override
+  String get stepRefillNo => 'No thanks';
+
+  @override
+  String get stepRefillOnlyIfDuration =>
+      'This option is only available when a specific end date is set.';
+
+  @override
+  String get stepRefillNotificationTitle => '💊 Medication Ending Soon';
+
+  @override
+  String stepRefillNotificationBody(String medName) {
+    return '$medName ends in 3 days. Please arrange a refill.';
+  }
 
   @override
   String get stepSummaryTitle => 'Step 8: Summary';

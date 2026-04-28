@@ -449,12 +449,14 @@ class MedicationCard extends StatelessWidget {
   final Medication medication;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final bool isCaregiver;
 
   const MedicationCard({
     super.key,
     required this.medication,
     required this.onEdit,
     required this.onDelete,
+    this.isCaregiver = false,
   });
 
   Future<void> _showDeleteConfirmation(BuildContext context) async {
@@ -529,6 +531,20 @@ class MedicationCard extends StatelessWidget {
       default:
         return day;
     }
+  }
+
+  // ← helper to format start date
+  String _startDateDisplay(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    final start = medication.createdAt.toDate();
+    final now = DateTime.now();
+    final isToday =
+        start.year == now.year &&
+        start.month == now.month &&
+        start.day == now.day;
+    final locale = Localizations.localeOf(context).languageCode;
+    final formatted = DateFormat.yMMMd(locale).format(start);
+    return isToday ? loc.startDateToday(formatted) : formatted;
   }
 
   // ← helper to format duration for card display
@@ -606,6 +622,18 @@ class MedicationCard extends StatelessWidget {
               text: TextSpan(
                 style: valueStyle,
                 children: <TextSpan>[
+                  TextSpan(
+                    text: '${AppLocalizations.of(context)!.summaryStartDate}: ',
+                    style: labelStyle,
+                  ),
+                  TextSpan(text: _startDateDisplay(context)),
+                ],
+              ),
+            ),
+            RichText(
+              text: TextSpan(
+                style: valueStyle,
+                children: <TextSpan>[
                   TextSpan(text: '${loc.summaryDuration}: ', style: labelStyle),
                   TextSpan(
                     text: _durationDisplay(context),
@@ -662,6 +690,39 @@ class MedicationCard extends StatelessWidget {
                 '${loc.summaryNotes}: ${medication.notes}',
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
+            if (isCaregiver && medication.refillReminder) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.teal.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.notifications_active_outlined,
+                      size: 14,
+                      color: Colors.teal.shade700,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      loc.summaryRefillReminder,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.teal.shade800,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

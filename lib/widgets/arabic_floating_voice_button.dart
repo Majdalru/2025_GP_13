@@ -205,7 +205,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "أستطيع مساعدتك في التنقل داخل التطبيق، أو معرفة الأخبار، أو معرفة الطقس.",
+        "أستطيع مساعدتك في التنقل داخل التطبيق، أو معرفة الأخبار، أو الطقس، أو معرفة أدويتك لليوم.",
       );
     }
 
@@ -345,6 +345,8 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
         return "جاري معرفة حالة الطقس.";
       case VoiceCommand.news:
         return "جاري جلب عناوين بعض الأخبار.";
+      case VoiceCommand.todayMedications:
+        return "جاري التحقق من أدويتك لليوم.";
     }
   }
 
@@ -434,8 +436,8 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
                           _isListening
                               ? Icons.mic
                               : _isSpeaking
-                                  ? Icons.volume_up
-                                  : Icons.mic_none,
+                              ? Icons.volume_up
+                              : Icons.mic_none,
                           color: Colors.white,
                           size: 40,
                         ),

@@ -708,6 +708,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get everyDay => 'كل يوم';
 
   @override
+  String get selectAll => 'تحديد الكل';
+
+  @override
+  String get summaryStartDate => 'يبدأ في';
+
+  @override
   String get mustBeLoggedInToSave => 'يجب تسجيل الدخول للحفظ.';
 
   @override
@@ -722,6 +728,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get change => 'تغيير';
+
+  @override
+  String get startDateLabel => 'تاريخ البداية';
+
+  @override
+  String startDateToday(String date) {
+    return 'اليوم ($date)';
+  }
+
+  @override
+  String get startedInPast =>
+      'بدأ هذا الدواء في الماضي. ستبدأ التذكيرات من اليوم.';
+
+  @override
+  String get startFuture => 'سيبدأ الدواء في التاريخ المحدد.';
 
   @override
   String get addAnotherTime => 'إضافة وقت آخر';
@@ -1147,6 +1168,31 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get stepNotesSub => 'هل توجد تعليمات خاصة؟ (اختياري)';
+
+  @override
+  String get stepRefillQuestion =>
+      'هل تريد تلقي تذكير قبل ٣ أيام من انتهاء هذا الدواء؟';
+
+  @override
+  String get summaryRefillReminder => 'تذكير بإعادة التعبئة';
+
+  @override
+  String get stepRefillYes => 'نعم، ذكّرني';
+
+  @override
+  String get stepRefillNo => 'لا، شكراً';
+
+  @override
+  String get stepRefillOnlyIfDuration =>
+      'هذا الخيار متاح فقط عند تحديد تاريخ انتهاء.';
+
+  @override
+  String get stepRefillNotificationTitle => '💊 الدواء على وشك الانتهاء';
+
+  @override
+  String stepRefillNotificationBody(String medName) {
+    return '$medName ينتهي خلال ٣ أيام. يرجى تجهيز الجرعة البديلة.';
+  }
 
   @override
   String get stepSummaryTitle => 'الخطوة ٨: الملخص';

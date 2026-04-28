@@ -406,6 +406,8 @@
   "sos": "طوارئ",
   "errorNotLoggedIn2": "خطأ: لم تقم بتسجيل الدخول.",
   "everyDay": "كل يوم",
+  "selectAll": "تحديد الكل",
+  "summaryStartDate": "يبدأ في",
   "mustBeLoggedInToSave": "يجب تسجيل الدخول للحفظ.",
   "errorUpdatingMedication": "خطأ في تحديث الدواء: {error}",
   "@errorUpdatingMedication": {
@@ -423,7 +425,16 @@
       }
     }
   },
-  "change": "تغيير",
+ "change": "تغيير",
+  "startDateLabel": "تاريخ البداية",
+  "startDateToday": "اليوم ({date})",
+  "@startDateToday": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "startedInPast": "بدأ هذا الدواء في الماضي. ستبدأ التذكيرات من اليوم.",
+  "startFuture": "سيبدأ الدواء في التاريخ المحدد.",
   "addAnotherTime": "إضافة وقت آخر",
   "clearAllTimes": "مسح كل الأوقات",
   "pleaseSelectAllRequiredTimes": "يرجى تحديد كافة الأوقات المطلوبة.",
@@ -437,6 +448,7 @@
       }
     }
   },
+
   "location": "الموقع",
   "liveLocation": "الموقع المباشر وآخر ظهور",
   "save": "حفظ",
@@ -682,8 +694,22 @@
   "stepTimesSub": "متى يجب تناول هذا الدواء؟",
   "stepNotesTitle": "الخطوة ٧: ملاحظات",
   "stepNotesSub": "هل توجد تعليمات خاصة؟ (اختياري)",
+  "stepRefillQuestion": "هل تريد تلقي تذكير قبل ٣ أيام من انتهاء هذا الدواء؟",
+  "summaryRefillReminder": "تذكير بإعادة التعبئة",
+  "stepRefillYes": "نعم، ذكّرني",
+  "stepRefillNo": "لا، شكراً",
+  "stepRefillOnlyIfDuration": "هذا الخيار متاح فقط عند تحديد تاريخ انتهاء.",
+  "stepRefillNotificationTitle": "💊 الدواء على وشك الانتهاء",
+  "stepRefillNotificationBody": "{medName} ينتهي خلال ٣ أيام. يرجى تجهيز الجرعة البديلة.",
+  "@stepRefillNotificationBody": {
+    "placeholders": {
+      "medName": { "type": "String" }
+    }
+  },
   "stepSummaryTitle": "الخطوة ٨: الملخص",
   "stepSummarySub": "يرجى مراجعة المعلومات قبل الحفظ.",
+  
+
   
   "medFormTitle": "شكل الدواء",
   "strengthDoseTitle": "الجرعة / التركيز",

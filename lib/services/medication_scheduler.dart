@@ -90,6 +90,10 @@ class MedicationScheduler {
       int scheduledCount = 0;
       for (final med in activeMeds) {
         await _scheduleMedication(elderlyId, med);
+        // Schedule refill reminder if enabled and end date exists
+        if (med.refillReminder && med.endDate != null) {
+          await _scheduleRefillReminder(elderlyId, med);
+        }
         scheduledCount++;
       }
 
@@ -414,6 +418,64 @@ class MedicationScheduler {
       debugPrint(
         '❌ Error sending caregiver ON TIME notification for $elderlyId: $e',
       );
+    }
+  }
+
+  /// Schedule a 10:00 AM caregiver notification 3 days before medication ends
+  Future<void> _scheduleRefillReminder(String elderlyId, Medication med) async {
+    try {
+      final endDate = med.endDate!.toDate();
+      final reminderDate = DateTime(
+        endDate.year,
+        endDate.month,
+        endDate.day,
+      ).subtract(const Duration(days: 3));
+
+      // Fire at 10:00 AM on the reminder date
+      final scheduledTime = DateTime(
+        reminderDate.year,
+        reminderDate.month,
+        reminderDate.day,
+        10,
+        0,
+      );
+
+      final now = DateTime.now();
+      if (scheduledTime.isBefore(now)) {
+        debugPrint(
+          '⏭️ Refill reminder for ${med.name} is in the past, skipping.',
+        );
+        return;
+      }
+
+      // Fetch caregiver(s) linked to this elderly user
+      final caregiversSnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'caregiver')
+          .where('elderlyIds', arrayContains: elderlyId)
+          .get();
+
+      if (caregiversSnapshot.docs.isEmpty) {
+        debugPrint('ℹ️ [Refill] No caregivers found for $elderlyId.');
+        return;
+      }
+
+      // Generate a stable ID for this reminder
+      final notifId = '$elderlyId-${med.id}-refill'.hashCode.abs() % 2147483647;
+
+      await _notificationService.scheduleNotification(
+        id: notifId,
+        title: '💊 Medication Ending Soon',
+        body: '${med.name} ends in 3 days. Please arrange a refill.',
+        scheduledTime: scheduledTime,
+        payload: 'refill:$elderlyId:${med.id}',
+      );
+
+      debugPrint(
+        '🔔 Scheduled refill reminder #$notifId for ${med.name} at ${scheduledTime.toString()}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error scheduling refill reminder for ${med.name}: $e');
     }
   }
 

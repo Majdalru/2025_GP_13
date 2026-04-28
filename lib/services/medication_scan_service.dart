@@ -382,7 +382,7 @@ class MedicationScanService {
           amount = '1';
         }
       }
-      return _PatientDoseParse(dose: '$amount capsule', form: 'Capsule');
+      return _PatientDoseParse(dose: '$amount capsule', form: 'Tablet');
     }
 
     // قرص واحد / اقراص / ٢ قرص
@@ -401,7 +401,7 @@ class MedicationScanService {
       } else {
         amount = '1';
       }
-      return _PatientDoseParse(dose: '$amount tablet', form: 'Capsule');
+      return _PatientDoseParse(dose: '$amount tablet', form: 'Tablet');
     }
 
     // كبسوله واحده / كبسولتين / ٢ كبسولات
@@ -565,9 +565,11 @@ class MedicationScanService {
     }
 
     // Arabic form keywords (on normalized text: ة→ه)
-    // أقراص / حبوب → Tablet
+    // أقراص / حبوب / حبه → Tablet
     if (t.contains('\u0627\u0642\u0631\u0627\u0635') ||
-        t.contains('\u062d\u0628\u0648\u0628'))
+        t.contains('\u062d\u0628\u0648\u0628') ||
+        t.contains('\u062d\u0628\u0647') ||
+        t.contains('\u0642\u0631\u0635'))
       return 'Tablet';
     // كبسولات / كبسوله → Capsule
     if (t.contains('\u0643\u0628\u0633\u0648\u0644')) return 'Capsule';
@@ -776,6 +778,25 @@ class MedicationScanService {
       '(\u0645\u0631\u0647\\s+\u0648\u0627\u062d\u062f\u0647|\u0645\u0631\u0647)\\s+$dailySuffix',
     ).hasMatch(text))
       return _FreqParse(frequency: 'Once a day');
+    // مره كل يوم (once every day)
+    if (RegExp(
+      '\u0645\u0631\u0647\\s+\u0643\u0644\\s+\u064a\u0648\u0645',
+    ).hasMatch(text))
+      return _FreqParse(frequency: 'Once a day');
+    // مرتين كل يوم
+    if (RegExp(
+      '\u0645\u0631\u062a\u064a\u0646\\s+\u0643\u0644\\s+\u064a\u0648\u0645',
+    ).hasMatch(text))
+      return _FreqParse(frequency: 'Twice a day');
+    // N مرات كل يوم
+    final arTimesEveryDay = RegExp(
+      '(\\d|[\\u062b\\u0627\\u0631\\u0628\\u0639])\\s*\u0645\u0631\u0627\u062a\\s+\u0643\u0644\\s+\u064a\u0648\u0645',
+    ).firstMatch(text);
+    if (arTimesEveryDay != null) {
+      final n = int.tryParse(arTimesEveryDay.group(1) ?? '');
+      if (n != null && n >= 1 && n <= 4)
+        return _FreqParse(frequency: _mapTimesPerDayToUi(n));
+    }
     if (RegExp('\u0645\u0631\u062a\u064a\u0646\\s+$dailySuffix').hasMatch(text))
       return _FreqParse(frequency: 'Twice a day');
     if (RegExp(

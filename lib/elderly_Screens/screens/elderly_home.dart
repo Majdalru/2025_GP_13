@@ -85,233 +85,246 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   // news
   final newsService = NewsService();
 
-Future<void> getNews() async {
-  try {
-    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-    final bool isArabic = localeProvider.isArabic;
+  Future<void> getNews() async {
+    try {
+      final localeProvider = Provider.of<LocaleProvider>(
+        context,
+        listen: false,
+      );
+      final bool isArabic = localeProvider.isArabic;
 
-    final news = await newsService.getTopHeadlines(
-      languageCode: isArabic ? 'ar' : 'en',
-      country: isArabic ? 'sa' : null,
-      maxResults: 3,
-      category: 'health',
-    );
+      final news = await newsService.getTopHeadlines(
+        languageCode: isArabic ? 'ar' : 'en',
+        country: isArabic ? 'sa' : null,
+        maxResults: 3,
+        category: 'health',
+      );
 
-    if (news.isEmpty) {
+      if (news.isEmpty) {
+        if (isArabic) {
+          await _arabicVoice.speak("عذرًا، لم أجد أخبارًا الآن.");
+        } else {
+          await _voice.speak("Sorry, I could not find any news right now.");
+        }
+        return;
+      }
+
       if (isArabic) {
-        await _arabicVoice.speak("عذرًا، لم أجد أخبارًا الآن.");
+        String speech = "أهم الأخبار اليوم: ";
+        for (int i = 0; i < news.length; i++) {
+          speech += "الخبر ${i + 1}: ${news[i]['title']}. ";
+        }
+        await _arabicVoice.speak(speech);
       } else {
-        await _voice.speak("Sorry, I could not find any news right now.");
+        String speech = "Here are today's top news headlines. ";
+        for (int i = 0; i < news.length; i++) {
+          speech += "News ${i + 1}: ${news[i]['title']}. ";
+        }
+        await _voice.speak(speech);
       }
-      return;
-    }
+    } catch (e) {
+      final localeProvider = Provider.of<LocaleProvider>(
+        context,
+        listen: false,
+      );
+      final bool isArabic = localeProvider.isArabic;
 
-    if (isArabic) {
-      String speech = "أهم الأخبار اليوم: ";
-      for (int i = 0; i < news.length; i++) {
-        speech += "الخبر ${i + 1}: ${news[i]['title']}. ";
+      if (isArabic) {
+        await _arabicVoice.speak("عذرًا، حدثت مشكلة أثناء جلب الأخبار.");
+      } else {
+        await _voice.speak("Sorry, there was a problem fetching the news.");
       }
-      await _arabicVoice.speak(speech);
-    } else {
-      String speech = "Here are today's top news headlines. ";
-      for (int i = 0; i < news.length; i++) {
-        speech += "News ${i + 1}: ${news[i]['title']}. ";
+    }
+  }
+
+  // done
+  final locationService = LocationService();
+  final weatherService = WeatherService();
+  String getSaudiCity(double lat, double lon, bool isArabic) {
+    // الرياض
+    if (lat >= 24 && lat <= 26 && lon >= 45 && lon <= 47) {
+      return isArabic ? 'الرياض' : 'Riyadh';
+    }
+
+    // مكة
+    if (lat >= 21 && lat <= 22.5 && lon >= 39 && lon <= 40.5) {
+      return isArabic ? 'مكة' : 'Makkah';
+    }
+
+    // المدينة
+    if (lat >= 24 && lat <= 25.5 && lon >= 39 && lon <= 40.5) {
+      return isArabic ? 'المدينة' : 'Madinah';
+    }
+
+    // fallback
+    return isArabic ? 'منطقتك' : 'your location';
+  }
+
+  Future<void> saveElderlyLocation() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        debugPrint("No user logged in");
+        return;
       }
-      await _voice.speak(speech);
+
+      final position = await locationService.getCurrentLocation();
+
+      await FirebaseFirestore.instance
+          .collection('elderly_locations')
+          .doc(user.uid)
+          .set({
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+      debugPrint(
+        "Elderly location saved: ${position.latitude}, ${position.longitude}",
+      );
+    } catch (e) {
+      debugPrint("Error saving elderly location: $e");
     }
-  } catch (e) {
-    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-    final bool isArabic = localeProvider.isArabic;
-
-    if (isArabic) {
-      await _arabicVoice.speak("عذرًا، حدثت مشكلة أثناء جلب الأخبار.");
-    } else {
-      await _voice.speak("Sorry, there was a problem fetching the news.");
-    }
-  }
-}
-// done 
-final locationService = LocationService();
-final weatherService = WeatherService();
-String getSaudiCity(double lat, double lon, bool isArabic) {
-  // الرياض
-  if (lat >= 24 && lat <= 26 && lon >= 45 && lon <= 47) {
-    return isArabic ? 'الرياض' : 'Riyadh';
   }
 
-  // مكة
-  if (lat >= 21 && lat <= 22.5 && lon >= 39 && lon <= 40.5) {
-    return isArabic ? 'مكة' : 'Makkah';
-  }
+  Future<void> sendEmergencyAlert() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
 
-  // المدينة
-  if (lat >= 24 && lat <= 25.5 && lon >= 39 && lon <= 40.5) {
-    return isArabic ? 'المدينة' : 'Madinah';
-  }
+      if (user == null) {
+        debugPrint("No user logged in");
+        return;
+      }
 
-  // fallback
-  return isArabic ? 'منطقتك' : 'your location';
-}
-Future<void> saveElderlyLocation() async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
+      final position = await locationService.getCurrentLocation();
 
-    if (user == null) {
-      debugPrint("No user logged in");
-      return;
-    }
+      await FirebaseFirestore.instance
+          .collection('elderly_locations')
+          .doc(user.uid)
+          .set({
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
 
-    final position = await locationService.getCurrentLocation();
+      final alertRef = await FirebaseFirestore.instance
+          .collection('emergency_alerts')
+          .add({
+            'elderlyId': user.uid,
+            'elderlyName': fullName ?? 'Elderly',
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'createdAt': FieldValue.serverTimestamp(),
+            'status': 'active',
+          });
 
-    await FirebaseFirestore.instance
-        .collection('elderly_locations')
-        .doc(user.uid)
-        .set({
-      'latitude': position.latitude,
-      'longitude': position.longitude,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      debugPrint("🚨 Emergency alert saved with ID: ${alertRef.id}");
 
-    debugPrint(
-      "Elderly location saved: ${position.latitude}, ${position.longitude}",
-    );
-  } catch (e) {
-    debugPrint("Error saving elderly location: $e");
-  }
-}
+      if (!mounted) return;
 
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: Colors.red.shade50,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Colors.green, size: 28),
+                SizedBox(width: 10),
+                Text(
+                  "Alert Sent",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: const Text(
+              "Your emergency alert has been sent to the caregiver.\nHelp is on the way.",
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
 
-Future<void> sendEmergencyAlert() async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
+      debugPrint(
+        "Emergency alert sent: ${position.latitude}, ${position.longitude}",
+      );
+    } catch (e) {
+      debugPrint("Error sending emergency alert: $e");
 
-    if (user == null) {
-      debugPrint("No user logged in");
-      return;
-    }
+      if (!mounted) return;
 
-    final position = await locationService.getCurrentLocation();
-
-    await FirebaseFirestore.instance
-        .collection('elderly_locations')
-        .doc(user.uid)
-        .set({
-      'latitude': position.latitude,
-      'longitude': position.longitude,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    final alertRef =
-    await FirebaseFirestore.instance.collection('emergency_alerts').add({
-     'elderlyId': user.uid,
-     'elderlyName': fullName ?? 'Elderly',
-     'latitude': position.latitude,
-     'longitude': position.longitude,
-     'createdAt': FieldValue.serverTimestamp(),
-     'status': 'active',
-    });
-
-    debugPrint("🚨 Emergency alert saved with ID: ${alertRef.id}");
-
-    if (!mounted) return;
-
-    showDialog(
-  context: context,
-  barrierDismissible: false,
-  builder: (context) {
-    return AlertDialog(
-      backgroundColor: Colors.red.shade50,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      title: Row(
-        children: const [
-          Icon(Icons.check_circle, color: Colors.green, size: 28),
-          SizedBox(width: 10),
-          Text(
-            "Alert Sent",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-      content: const Text(
-        "Your emergency alert has been sent to the caregiver.\nHelp is on the way.",
-        style: TextStyle(fontSize: 16),
-      ),
-      actions: [
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.red,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text("OK"),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error sending emergency alert: $e"),
+          backgroundColor: Colors.red,
         ),
-      ],
-    );
-  },
-);
-
-    debugPrint(
-      "Emergency alert sent: ${position.latitude}, ${position.longitude}",
-    );
-  } catch (e) {
-    debugPrint("Error sending emergency alert: $e");
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error sending emergency alert: $e"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
-
-Future<void> getWeather() async {
-  try {
-    final position = await locationService.getCurrentLocation();
-
-    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-    final bool isArabic = localeProvider.isArabic;
-    final lang = isArabic ? 'ar' : 'en';
-
-    final weather = await weatherService.getCurrentWeather(
-      lat: position.latitude,
-      lon: position.longitude,
-      lang: lang,
-    );
-
-    final city =  getSaudiCity(
-  position.latitude,
-  position.longitude,
-  isArabic,
-);
-    final temp = weather['current']['temp_c'];
-    final condition = weather['current']['condition']['text'];
-
-    if (isArabic) {
-      await _arabicVoice.speak(
-        "الطقس اليوم في $city، $condition، ودرجة الحرارة $temp درجة مئوية",
-      );
-    } else {
-      await _voice.speak(
-        "Today's weather in $city is $condition with a temperature of $temp degrees Celsius",
       );
     }
-  } catch (e) {
-    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-    final bool isArabic = localeProvider.isArabic;
+  }
 
-    if (isArabic) {
-      await _arabicVoice.speak("عذرًا، لم أتمكن من جلب الطقس الآن.");
-    } else {
-      await _voice.speak("Sorry, I couldn't get the weather right now.");
+  Future<void> getWeather() async {
+    try {
+      final position = await locationService.getCurrentLocation();
+
+      final localeProvider = Provider.of<LocaleProvider>(
+        context,
+        listen: false,
+      );
+      final bool isArabic = localeProvider.isArabic;
+      final lang = isArabic ? 'ar' : 'en';
+
+      final weather = await weatherService.getCurrentWeather(
+        lat: position.latitude,
+        lon: position.longitude,
+        lang: lang,
+      );
+
+      final city = getSaudiCity(
+        position.latitude,
+        position.longitude,
+        isArabic,
+      );
+      final temp = weather['current']['temp_c'];
+      final condition = weather['current']['condition']['text'];
+
+      if (isArabic) {
+        await _arabicVoice.speak(
+          "الطقس اليوم في $city، $condition، ودرجة الحرارة $temp درجة مئوية",
+        );
+      } else {
+        await _voice.speak(
+          "Today's weather in $city is $condition with a temperature of $temp degrees Celsius",
+        );
+      }
+    } catch (e) {
+      final localeProvider = Provider.of<LocaleProvider>(
+        context,
+        listen: false,
+      );
+      final bool isArabic = localeProvider.isArabic;
+
+      if (isArabic) {
+        await _arabicVoice.speak("عذرًا، لم أتمكن من جلب الطقس الآن.");
+      } else {
+        await _voice.speak("Sorry, I couldn't get the weather right now.");
+      }
     }
   }
-}
+
   String _translateGender(String? g) {
     if (g == null || g.isEmpty) {
       return AppLocalizations.of(context)!.na;
@@ -347,7 +360,7 @@ Future<void> getWeather() async {
     favoritesManager.init();
     saveElderlyLocation();
   }
- 
+
   //here test news
 
   void _showTopBanner(
@@ -415,8 +428,10 @@ Future<void> getWeather() async {
 
             final first = (data['firstName'] ?? '').toString().trim();
             final last = (data['lastName'] ?? '').toString().trim();
-            final newFullName =
-                [first, last].where((s) => s.isNotEmpty).join(' ');
+            final newFullName = [
+              first,
+              last,
+            ].where((s) => s.isNotEmpty).join(' ');
             final newGender = (data['gender'] ?? '').toString();
             final newPhone = (data['phone'] ?? '').toString();
 
@@ -677,587 +692,619 @@ Future<void> getWeather() async {
 
       body: SafeArea(
         child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(25),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(
-                        Icons.menu,
-                        size: 42,
-                        color: Colors.black,
+          child: Padding(
+            padding: const EdgeInsets.all(25),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Builder(
+                      builder: (context) => IconButton(
+                        icon: const Icon(
+                          Icons.menu,
+                          size: 42,
+                          color: Colors.black,
+                        ),
+                        splashRadius: 28,
+                        onPressed: () => Scaffold.of(context).openDrawer(),
                       ),
-                      splashRadius: 28,
-                      onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
-                  ),
 
-                  isArabic
-                      ? ArabicFloatingVoiceButton(
-                          onCommand: (command) async {
-                            final uid = FirebaseAuth.instance.currentUser?.uid;
+                    isArabic
+                        ? ArabicFloatingVoiceButton(
+                            onCommand: (command) async {
+                              final uid =
+                                  FirebaseAuth.instance.currentUser?.uid;
 
-                            debugPrint(
-                              '🎯 Arabic voice command received in ElderlyHomePage: $command',
-                            );
+                              debugPrint(
+                                '🎯 Arabic voice command received in ElderlyHomePage: $command',
+                              );
 
-                            switch (command) {
-                              case VoiceCommand.goToMedication:
-                                if (uid != null) {
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ElderlyMedicationPage(
-                                        elderlyId: uid,
+                              switch (command) {
+                                case VoiceCommand.goToMedication:
+                                  if (uid != null) {
+                                    if (!mounted) return;
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ElderlyMedicationPage(
+                                          elderlyId: uid,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                } else {
-                                  await _arabicVoice.speak(
-                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                  );
-                                }
-                                break;
-
-                              case VoiceCommand.addMedication:
-                                if (uid == null) {
-                                  await _arabicVoice.speak(
-                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                  );
-                                  return;
-                                }
-                                await _arabicVoice.speak(
-                                  'حسنًا، سأساعدك في إضافة دواء جديد.',
-                                );
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ElderlyMedicationPage(
-                                      elderlyId: uid,
-                                      initialCommand:
-                                          VoiceCommand.addMedication,
-                                    ),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.editMedication:
-                                if (uid == null) {
-                                  await _arabicVoice.speak(
-                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                  );
-                                  return;
-                                }
-                                await _arabicVoice.speak(
-                                  'حسنًا، لنعدّل أحد أدويتك.',
-                                );
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ElderlyMedicationPage(
-                                      elderlyId: uid,
-                                      initialCommand:
-                                          VoiceCommand.editMedication,
-                                    ),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.deleteMedication:
-                                if (uid == null) {
-                                  await _arabicVoice.speak(
-                                    'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                  );
-                                  return;
-                                }
-                                await _arabicVoice.speak(
-                                  'حسنًا، لنحدد الدواء الذي تريد حذفه.',
-                                );
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ElderlyMedicationPage(
-                                      elderlyId: uid,
-                                      initialCommand:
-                                          VoiceCommand.deleteMedication,
-                                    ),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.goToMedia:
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const MediaPage(),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.goToHome:
-                                await _arabicVoice.speak(
-                                  'أنت بالفعل في الصفحة الرئيسية.',
-                                );
-                                break;
-
-                              case VoiceCommand.weather:
-                                 await getWeather();
-                                break;
-
-                              case VoiceCommand.news:
-                                await getNews();
+                                    );
+                                  } else {
+                                    await _arabicVoice.speak(
+                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                    );
+                                  }
                                   break;
 
-                              case VoiceCommand.sos:
-                                if (!mounted) return;
-                                await _arabicVoice.speak(
-                                  AppLocalizations.of(context)!.voiceSosPreamble,
-                                );
-                                await sendEmergencyAlert();
-                                if (!mounted) return;
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.emergencyTitle,
-                                      ),
-                                      content: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.emergencyFlowDesc,
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context),
-                                          child: Text(
-                                            AppLocalizations.of(context)!.ok,
-                                          ),
-                                        ),
-                                      ],
+                                case VoiceCommand.addMedication:
+                                  if (uid == null) {
+                                    await _arabicVoice.speak(
+                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
                                     );
-                                  },
-                                );
-                                break;
-
-                              case VoiceCommand.goToSettings:
-                                await _arabicVoice.speak(
-                                  'صفحة الإعدادات غير جاهزة الآن. لاحقًا سأتمكن من فتحها لك من هنا.',
-                                );
-                                break;
-                            }
-                          },
-                        )
-                      : FloatingVoiceButton(
-                          onCommand: (command) async {
-                            final uid = FirebaseAuth.instance.currentUser?.uid;
-
-                            debugPrint(
-                              '🎯 Voice command received in ElderlyHomePage: $command',
-                            );
-
-                            switch (command) {
-                              case VoiceCommand.goToMedication:
-                                if (uid != null) {
+                                    return;
+                                  }
+                                  await _arabicVoice.speak(
+                                    'حسنًا، سأساعدك في إضافة دواء جديد.',
+                                  );
                                   if (!mounted) return;
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => ElderlyMedicationPage(
                                         elderlyId: uid,
+                                        initialCommand:
+                                            VoiceCommand.addMedication,
                                       ),
                                     ),
                                   );
-                                } else {
-                                  await _voice.speak(
-                                    "I could not find your account. Please log in again.",
-                                  );
-                                }
-                                break;
+                                  break;
 
-                              case VoiceCommand.addMedication:
-                                if (uid == null) {
-                                  await _voice.speak(
-                                    "I could not find your account. Please log in again.",
-                                  );
-                                  return;
-                                }
-                                await _voice.speak(
-                                  "Okay, I will help you add a new medication.",
-                                );
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ElderlyMedicationPage(
-                                      elderlyId: uid,
-                                      initialCommand:
-                                          VoiceCommand.addMedication,
-                                    ),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.editMedication:
-                                if (uid == null) {
-                                  await _voice.speak(
-                                    "I could not find your account. Please log in again.",
-                                  );
-                                  return;
-                                }
-                                await _voice.speak(
-                                  "Okay, let us edit one of your medications.",
-                                );
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ElderlyMedicationPage(
-                                      elderlyId: uid,
-                                      initialCommand:
-                                          VoiceCommand.editMedication,
-                                    ),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.deleteMedication:
-                                if (uid == null) {
-                                  await _voice.speak(
-                                    "I could not find your account. Please log in again.",
-                                  );
-                                  return;
-                                }
-                                await _voice.speak(
-                                  "Okay, let us choose which medication to delete.",
-                                );
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ElderlyMedicationPage(
-                                      elderlyId: uid,
-                                      initialCommand:
-                                          VoiceCommand.deleteMedication,
-                                    ),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.goToMedia:
-                                if (!mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const MediaPage(),
-                                  ),
-                                );
-                                break;
-
-                              case VoiceCommand.goToHome:
-                                await _voice.speak(
-                                  "You are already on the home page.",
-                                );
-                                break;
-
-                              case VoiceCommand.weather:
-                                await getWeather();
-                               break;
-
-                              case VoiceCommand.news:
-                               await getNews();
-                               break;
-
-                              case VoiceCommand.sos:
-                                if (!mounted) return;
-                                await _voice.speak(
-                                  AppLocalizations.of(context)!.voiceSosPreamble,
-                                );
-                                await sendEmergencyAlert();
-                                if (!mounted) return;
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.emergencyTitle,
-                                      ),
-                                      content: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.emergencyFlowDesc,
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context),
-                                          child: Text(
-                                            AppLocalizations.of(context)!.ok,
-                                          ),
-                                        ),
-                                      ],
+                                case VoiceCommand.editMedication:
+                                  if (uid == null) {
+                                    await _arabicVoice.speak(
+                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
                                     );
-                                  },
-                                );
-                                break;
+                                    return;
+                                  }
+                                  await _arabicVoice.speak(
+                                    'حسنًا، لنعدّل أحد أدويتك.',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ElderlyMedicationPage(
+                                        elderlyId: uid,
+                                        initialCommand:
+                                            VoiceCommand.editMedication,
+                                      ),
+                                    ),
+                                  );
+                                  break;
 
-                              case VoiceCommand.goToSettings:
-                                await _voice.speak(
-                                  "Settings page is not ready yet. In the future, I will open it for you from here.",
-                                );
-                                break;
-                            }
-                          },
-                        ),
+                                case VoiceCommand.deleteMedication:
+                                  if (uid == null) {
+                                    await _arabicVoice.speak(
+                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                    );
+                                    return;
+                                  }
+                                  await _arabicVoice.speak(
+                                    'حسنًا، لنحدد الدواء الذي تريد حذفه.',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ElderlyMedicationPage(
+                                        elderlyId: uid,
+                                        initialCommand:
+                                            VoiceCommand.deleteMedication,
+                                      ),
+                                    ),
+                                  );
+                                  break;
 
-                  IconButton(
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Colors.black,
-                      size: 36,
-                    ),
-                    splashRadius: 28,
-                    onPressed: () {
-                      HapticFeedback.selectionClick();
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          backgroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            side: const BorderSide(color: kPrimary, width: 2),
-                          ),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                AppLocalizations.of(context)!.confirmLogout,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w700,
-                                  color: kPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  TextButton(
-                                    style: TextButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      side: const BorderSide(
-                                        color: kPrimary,
-                                        width: 2,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 30,
-                                        vertical: 16,
-                                      ),
+                                case VoiceCommand.goToMedia:
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const MediaPage(),
                                     ),
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text(
-                                      AppLocalizations.of(context)!.no,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        color: kPrimary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  ElevatedButton(
-                                    style: kBigButton(
-                                      kAccentRed,
-                                      pad: const EdgeInsets.symmetric(
-                                        horizontal: 36,
-                                        vertical: 18,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      FirebaseAuth.instance.signOut();
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => const LoginPage(),
+                                  );
+                                  break;
+
+                                case VoiceCommand.goToHome:
+                                  await _arabicVoice.speak(
+                                    'أنت بالفعل في الصفحة الرئيسية.',
+                                  );
+                                  break;
+
+                                case VoiceCommand.weather:
+                                  await getWeather();
+                                  break;
+
+                                case VoiceCommand.news:
+                                  await getNews();
+                                  break;
+
+                                case VoiceCommand.sos:
+                                  if (!mounted) return;
+                                  await _arabicVoice.speak(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.voiceSosPreamble,
+                                  );
+                                  await sendEmergencyAlert();
+                                  if (!mounted) return;
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.emergencyTitle,
                                         ),
-                                        (_) => false,
+                                        content: Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.emergencyFlowDesc,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: Text(
+                                              AppLocalizations.of(context)!.ok,
+                                            ),
+                                          ),
+                                        ],
                                       );
                                     },
-                                    child: Text(
-                                      AppLocalizations.of(context)!.yes,
-                                      style: kButtonText,
+                                  );
+                                  break;
+
+                                case VoiceCommand.goToSettings:
+                                  await _arabicVoice.speak(
+                                    'صفحة الإعدادات غير جاهزة الآن. لاحقًا سأتمكن من فتحها لك من هنا.',
+                                  );
+                                  break;
+                                case VoiceCommand
+                                    .todayMedications: // 👈 add this
+                                  final uid =
+                                      FirebaseAuth.instance.currentUser?.uid;
+                                  if (uid == null) {
+                                    await _arabicVoice.speak(
+                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                    );
+                                    return;
+                                  }
+                                  await _arabicVoice.runTodayMedicationsFlow(
+                                    uid,
+                                  );
+                                  break;
+                              }
+                            },
+                          )
+                        : FloatingVoiceButton(
+                            onCommand: (command) async {
+                              final uid =
+                                  FirebaseAuth.instance.currentUser?.uid;
+
+                              debugPrint(
+                                '🎯 Voice command received in ElderlyHomePage: $command',
+                              );
+
+                              switch (command) {
+                                case VoiceCommand.goToMedication:
+                                  if (uid != null) {
+                                    if (!mounted) return;
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ElderlyMedicationPage(
+                                          elderlyId: uid,
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    await _voice.speak(
+                                      "I could not find your account. Please log in again.",
+                                    );
+                                  }
+                                  break;
+
+                                case VoiceCommand.addMedication:
+                                  if (uid == null) {
+                                    await _voice.speak(
+                                      "I could not find your account. Please log in again.",
+                                    );
+                                    return;
+                                  }
+                                  await _voice.speak(
+                                    "Okay, I will help you add a new medication.",
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ElderlyMedicationPage(
+                                        elderlyId: uid,
+                                        initialCommand:
+                                            VoiceCommand.addMedication,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                  );
+                                  break;
+
+                                case VoiceCommand.editMedication:
+                                  if (uid == null) {
+                                    await _voice.speak(
+                                      "I could not find your account. Please log in again.",
+                                    );
+                                    return;
+                                  }
+                                  await _voice.speak(
+                                    "Okay, let us edit one of your medications.",
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ElderlyMedicationPage(
+                                        elderlyId: uid,
+                                        initialCommand:
+                                            VoiceCommand.editMedication,
+                                      ),
+                                    ),
+                                  );
+                                  break;
+
+                                case VoiceCommand.deleteMedication:
+                                  if (uid == null) {
+                                    await _voice.speak(
+                                      "I could not find your account. Please log in again.",
+                                    );
+                                    return;
+                                  }
+                                  await _voice.speak(
+                                    "Okay, let us choose which medication to delete.",
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ElderlyMedicationPage(
+                                        elderlyId: uid,
+                                        initialCommand:
+                                            VoiceCommand.deleteMedication,
+                                      ),
+                                    ),
+                                  );
+                                  break;
+
+                                case VoiceCommand.goToMedia:
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const MediaPage(),
+                                    ),
+                                  );
+                                  break;
+
+                                case VoiceCommand.goToHome:
+                                  await _voice.speak(
+                                    "You are already on the home page.",
+                                  );
+                                  break;
+
+                                case VoiceCommand.weather:
+                                  await getWeather();
+                                  break;
+
+                                case VoiceCommand.news:
+                                  await getNews();
+                                  break;
+
+                                case VoiceCommand.sos:
+                                  if (!mounted) return;
+                                  await _voice.speak(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.voiceSosPreamble,
+                                  );
+                                  await sendEmergencyAlert();
+                                  if (!mounted) return;
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.emergencyTitle,
+                                        ),
+                                        content: Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.emergencyFlowDesc,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: Text(
+                                              AppLocalizations.of(context)!.ok,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                  break;
+
+                                case VoiceCommand.goToSettings:
+                                  await _voice.speak(
+                                    "Settings page is not ready yet. In the future, I will open it for you from here.",
+                                  );
+                                  break;
+                                case VoiceCommand
+                                    .todayMedications: // 👈 add this
+                                  final uid =
+                                      FirebaseAuth.instance.currentUser?.uid;
+                                  if (uid == null) {
+                                    await _voice.speak(
+                                      "I could not find your account. Please log in again.",
+                                    );
+                                    return;
+                                  }
+                                  await _voice.runTodayMedicationsFlow(uid);
+                                  break;
+                              }
+                            },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
 
-              const SizedBox(height: 65),
-              Text(
-                AppLocalizations.of(
-                  context,
-                )!.helloUser(fullName?.split(' ').first ?? ''),
-                style: const TextStyle(
-                  fontSize: 42,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 6, 10, 65),
-                ),
-              ),
-              const SizedBox(height: 55),
-
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kAccentRed,
-                  minimumSize: const Size(double.infinity, 100),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  elevation: 6,
-                ),
-                onPressed: () async {
-                  HapticFeedback.heavyImpact();
-                  await sendEmergencyAlert();
-                },
-                child: Text(
-                  AppLocalizations.of(context)!.sos,
-                  style: const TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 3,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _HomeCard(
-                      icon: Icons.video_library,
-                      title: AppLocalizations.of(context)!.media,
-                      onTap: () {
+                    IconButton(
+                      icon: const Icon(
+                        Icons.logout,
+                        color: Colors.black,
+                        size: 36,
+                      ),
+                      splashRadius: 28,
+                      onPressed: () {
                         HapticFeedback.selectionClick();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MediaPage(),
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              side: const BorderSide(color: kPrimary, width: 2),
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  AppLocalizations.of(context)!.confirmLogout,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w700,
+                                    color: kPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    TextButton(
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        side: const BorderSide(
+                                          color: kPrimary,
+                                          width: 2,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 30,
+                                          vertical: 16,
+                                        ),
+                                      ),
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text(
+                                        AppLocalizations.of(context)!.no,
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          color: kPrimary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    ElevatedButton(
+                                      style: kBigButton(
+                                        kAccentRed,
+                                        pad: const EdgeInsets.symmetric(
+                                          horizontal: 36,
+                                          vertical: 18,
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        FirebaseAuth.instance.signOut();
+                                        Navigator.pushAndRemoveUntil(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const LoginPage(),
+                                          ),
+                                          (_) => false,
+                                        );
+                                      },
+                                      child: Text(
+                                        AppLocalizations.of(context)!.yes,
+                                        style: kButtonText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
                     ),
+                  ],
+                ),
+
+                const SizedBox(height: 65),
+                Text(
+                  AppLocalizations.of(
+                    context,
+                  )!.helloUser(fullName?.split(' ').first ?? ''),
+                  style: const TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromARGB(255, 6, 10, 65),
                   ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: _HomeCard(
-                      icon: Icons.medical_services,
-                      title: AppLocalizations.of(context)!.medication,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
-                        if (uid != null) {
+                ),
+                const SizedBox(height: 55),
+
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kAccentRed,
+                    minimumSize: const Size(double.infinity, 100),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 6,
+                  ),
+                  onPressed: () async {
+                    HapticFeedback.heavyImpact();
+                    await sendEmergencyAlert();
+                  },
+                  child: Text(
+                    AppLocalizations.of(context)!.sos,
+                    style: const TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HomeCard(
+                        icon: Icons.video_library,
+                        title: AppLocalizations.of(context)!.media,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  ElderlyMedicationPage(elderlyId: uid),
+                              builder: (_) => const MediaPage(),
                             ),
                           );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(context)!.errorNotLoggedIn2,
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: _HomeCard(
+                        icon: Icons.medical_services,
+                        title: AppLocalizations.of(context)!.medication,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          final uid = FirebaseAuth.instance.currentUser?.uid;
+                          if (uid != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ElderlyMedicationPage(elderlyId: uid),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.errorNotLoggedIn2,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                const SizedBox(height: 2),
+
+                Card(
+                  color: kSurface,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                    side: const BorderSide(color: kPrimary, width: 2),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(25),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DailyLibraryPage(),
+                        ),
+                      );
+                    },
+                    splashColor: kPrimary.withOpacity(0.15),
+                    highlightColor: Colors.transparent,
+                    child: Container(
+                      width: double.infinity,
+                      height: 145, //
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.wb_sunny, size: 70, color: kPrimary),
+                          const SizedBox(width: 24),
+                          const Expanded(
+                            child: Text(
+                              "Daily Library",
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                                color: kPrimary,
                               ),
                             ),
-                          );
-                        }
-                      },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-const SizedBox(height:2),
-
-Card(
-  color: kSurface,
-  elevation: 4,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(25),
-    side: const BorderSide(color: kPrimary, width: 2),
-  ),
-  child: InkWell(
-    borderRadius: BorderRadius.circular(25),
-    onTap: () {
-      Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const DailyLibraryPage(),
-    ),
-  );
-},
-    splashColor: kPrimary.withOpacity(0.15),
-    highlightColor: Colors.transparent,
-    child: Container(
-      width: double.infinity,
-      height: 145, // 
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.wb_sunny,
-            size: 70,
-            color: kPrimary,
-          ),
-          const SizedBox(width: 24),
-          const Expanded(
-            child: Text(
-              "Daily Library",
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w700,
-                color: kPrimary,
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    ),
-  ),
-),
-            ],
-          ),
         ),
-      ),
       ),
     );
   }
@@ -1690,13 +1737,12 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
 
                 DropdownButtonFormField<String>(
                   value: _selectedGender,
-                  decoration: kInput(
-                    AppLocalizations.of(context)!.gender,
-                  ).copyWith(
-                    filled: true,
-                    fillColor: Colors.white,
-                    errorStyle: const TextStyle(fontSize: 18),
-                  ),
+                  decoration: kInput(AppLocalizations.of(context)!.gender)
+                      .copyWith(
+                        filled: true,
+                        fillColor: Colors.white,
+                        errorStyle: const TextStyle(fontSize: 18),
+                      ),
                   dropdownColor: Colors.white,
                   style: kBodyText,
                   items: [
@@ -1815,8 +1861,9 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
                     if (!available) {
                       if (!mounted) return;
                       setState(() {
-                        _phoneUsedError =
-                            AppLocalizations.of(context)!.mobileAlreadyUsed;
+                        _phoneUsedError = AppLocalizations.of(
+                          context,
+                        )!.mobileAlreadyUsed;
                       });
                       _formKey.currentState!.validate();
                       return;

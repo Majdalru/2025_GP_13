@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'models/medication.dart';
 import 'services/medication_scheduler.dart';
@@ -13,6 +14,19 @@ import 'package:intl/intl.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 // ── Translation helpers (used across multiple widgets) ──
+
+/// Converts ASCII digits 0-9 to Arabic-Indic (٠-٩).
+/// Only converts when locale is Arabic; otherwise returns the string as-is.
+String _toArabicNumerals(String input, BuildContext context) {
+  if (Localizations.localeOf(context).languageCode != 'ar') return input;
+  const en = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  const ar = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  var result = input;
+  for (int i = 0; i < en.length; i++) {
+    result = result.replaceAll(en[i], ar[i]);
+  }
+  return result;
+}
 
 String _translateDay(String englishDay, AppLocalizations loc) {
   switch (englishDay) {
@@ -107,10 +121,12 @@ class _AddMedScreenState extends State<AddMedScreen> {
   String? _doseStrength; // ← NEW
   int? _durationDays;
   DateTime? _customEndDate; // ← NEW: for custom date pick or preset calc
+  DateTime? _startDate; // ← custom start date (null = today)
   List<String> _selectedDays = [];
   String? _frequency;
   List<TimeOfDay?> _selectedTimes = [];
   String? _notes;
+  bool _refillReminder = false; // ← notify caregiver 3 days before end
 
   // Scan (camera + OCR)
   final ImagePicker _picker = ImagePicker();
@@ -133,6 +149,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       _frequency = med.frequency;
       _selectedTimes = List<TimeOfDay?>.from(med.times);
       _notes = med.notes;
+      _refillReminder = med.refillReminder; // ← restore toggle
 
       // ← NEW: restore duration from endDate
       if (med.endDate != null) {
@@ -202,7 +219,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
     if (_durationDays != null && _durationDays! > 0) {
       final startDate = _isEditing
           ? widget.medicationToEdit!.createdAt.toDate()
-          : DateTime.now();
+          : (_startDate ?? DateTime.now());
       final end = startDate.add(Duration(days: _durationDays!));
       return Timestamp.fromDate(
         DateTime(end.year, end.month, end.day, endHour, endMinute, 0),
@@ -212,7 +229,8 @@ class _AddMedScreenState extends State<AddMedScreen> {
   }
 
   String _formatEndDate(int days) {
-    final end = DateTime.now().add(Duration(days: days));
+    final base = _startDate ?? DateTime.now();
+    final end = base.add(Duration(days: days));
     final locale = Localizations.localeOf(context).languageCode;
     return DateFormat.yMMMd(locale).format(end);
   }
@@ -234,6 +252,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
     int? selectedDuration = result.durationDays;
     DateTime? scanCustomEndDate;
+    DateTime scanStartDate = DateTime.now(); // ← start date for scan sheet
 
     // Wheel picker state for OCR duration
     int ocrDurUnit = 0; // 0=Days, 1=Weeks, 2=Months
@@ -278,20 +297,18 @@ class _AddMedScreenState extends State<AddMedScreen> {
       'Saturday',
     ];
 
-    // Compute which day-names fall within the duration window
     List<String> getAllowedDays() {
       int? totalDays;
       if (selectedDuration != null && selectedDuration! > 0) {
         totalDays = selectedDuration;
       } else if (selectedDuration == -1 && scanCustomEndDate != null) {
-        totalDays = scanCustomEndDate!.difference(DateTime.now()).inDays + 1;
+        totalDays = scanCustomEndDate!.difference(scanStartDate).inDays + 1;
       }
       // Ongoing or ≥7 → all days reachable
       if (totalDays == null || totalDays >= 7) return allDays.sublist(1);
-      final now = DateTime.now();
       final daySet = <String>{};
       for (int i = 0; i < totalDays; i++) {
-        final date = now.add(Duration(days: i));
+        final date = scanStartDate.add(Duration(days: i));
         daySet.add(DateFormat('EEEE').format(date));
       }
       return allDays.sublist(1).where((d) => daySet.contains(d)).toList();
@@ -300,8 +317,10 @@ class _AddMedScreenState extends State<AddMedScreen> {
     // Auto-select days within duration window
     void constrainDays() {
       final allowed = getAllowedDays();
+      final isLimited = allowed.length < 7;
       selectedDays.removeWhere((d) => d != 'Every day' && !allowed.contains(d));
-      if (selectedDays.contains('Every day') && allowed.length < 7) {
+      // In limited mode expand 'Every day' to real day names
+      if (isLimited && selectedDays.contains('Every day')) {
         selectedDays = List.from(allowed);
       }
     }
@@ -345,13 +364,26 @@ class _AddMedScreenState extends State<AddMedScreen> {
                       void toggleDay(String d) {
                         setSheetState(() {
                           final allowed = getAllowedDays();
+                          final isLimited = allowed.length < 7;
 
                           if (d == 'Every day') {
-                            final isOn = selectedDays.contains('Every day');
-                            if (!isOn) {
-                              selectedDays = ['Every day', ...allowed];
+                            if (isLimited) {
+                              // "Select All" — store real day names
+                              final allSelected = allowed.every(
+                                (x) => selectedDays.contains(x),
+                              );
+                              if (!allSelected) {
+                                selectedDays = List.from(allowed);
+                              } else {
+                                selectedDays.clear();
+                              }
                             } else {
-                              selectedDays.clear();
+                              final isOn = selectedDays.contains('Every day');
+                              if (!isOn) {
+                                selectedDays = ['Every day', ...allowed];
+                              } else {
+                                selectedDays.clear();
+                              }
                             }
                             return;
                           }
@@ -362,12 +394,18 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             selectedDays.add(d);
                           }
 
-                          // if all allowed days selected -> mark as Every day
-                          if (allowed.every((x) => selectedDays.contains(x)) &&
-                              allowed.length == 7) {
-                            selectedDays = ['Every day', ...allowed];
+                          if (isLimited) {
+                            // no 'Every day' string in limited mode
                           } else {
-                            selectedDays.remove('Every day');
+                            // if all 7 days selected → mark as Every day
+                            if (allowed.every(
+                                  (x) => selectedDays.contains(x),
+                                ) &&
+                                allowed.length == 7) {
+                              selectedDays = ['Every day', ...allowed];
+                            } else {
+                              selectedDays.remove('Every day');
+                            }
                           }
                         });
                       }
@@ -572,6 +610,108 @@ class _AddMedScreenState extends State<AddMedScreen> {
                             ),
                           ),
                           const SizedBox(height: 14),
+                          // ── Start Date ──
+                          Text(
+                            AppLocalizations.of(context)!.startDateLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () async {
+                              final isAr =
+                                  Localizations.localeOf(
+                                    context,
+                                  ).languageCode ==
+                                  'ar';
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: scanStartDate,
+                                firstDate: DateTime.now().subtract(
+                                  const Duration(days: 365),
+                                ),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 365),
+                                ),
+                                locale: isAr ? const Locale('ar') : null,
+                                builder: (ctx, child) => Localizations.override(
+                                  context: ctx,
+                                  locale: isAr
+                                      ? const Locale('ar')
+                                      : Localizations.localeOf(ctx),
+                                  delegates:
+                                      GlobalMaterialLocalizations.delegates,
+                                  child: Theme(
+                                    data: Theme.of(ctx).copyWith(
+                                      colorScheme: Theme.of(ctx).colorScheme
+                                          .copyWith(primary: Colors.teal),
+                                    ),
+                                    child: child!,
+                                  ),
+                                ),
+                              );
+                              if (picked != null) {
+                                setSheetState(() {
+                                  scanStartDate = DateTime(
+                                    picked.year,
+                                    picked.month,
+                                    picked.day,
+                                  );
+                                  constrainDays();
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10,
+                                horizontal: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 18,
+                                    color: Colors.teal.shade700,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      (() {
+                                        final now = DateTime.now();
+                                        final isToday =
+                                            scanStartDate.year == now.year &&
+                                            scanStartDate.month == now.month &&
+                                            scanStartDate.day == now.day;
+                                        final formatted = DateFormat.yMMMd(
+                                          Localizations.localeOf(
+                                            context,
+                                          ).languageCode,
+                                        ).format(scanStartDate);
+                                        return isToday
+                                            ? AppLocalizations.of(
+                                                context,
+                                              )!.startDateToday(formatted)
+                                            : formatted;
+                                      })(),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                  Text(
+                                    AppLocalizations.of(context)!.change,
+                                    style: TextStyle(
+                                      color: Colors.teal.shade700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
 
                           // ═══════════ Duration (NEW) ═══════════
                           // ═══════════ Duration (NEW) ═══════════
@@ -674,14 +814,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                 children: List.generate(
                                   ocrMaxVals[ocrDurUnit],
                                   (i) {
-                                    final locale = Localizations.localeOf(
-                                      context,
-                                    ).languageCode;
                                     return Center(
                                       child: Text(
-                                        NumberFormat.decimalPattern(
-                                          locale,
-                                        ).format(i + 1),
+                                        _toArabicNumerals('${i + 1}', context),
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.w600,
@@ -693,7 +828,6 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                 ),
                               ),
                             ),
-
                           if (ocrDurMode == 'wheel')
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
@@ -783,6 +917,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                   selected: ocrDurMode == 'custom',
                                   onSelected: (_) async {
                                     final now = DateTime.now();
+                                    final isAr =
+                                        Localizations.localeOf(
+                                          context,
+                                        ).languageCode ==
+                                        'ar';
                                     final picked = await showDatePicker(
                                       context: context,
                                       initialDate:
@@ -792,12 +931,16 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                       lastDate: now.add(
                                         const Duration(days: 365),
                                       ),
+                                      locale: isAr ? const Locale('ar') : null,
                                       builder: (ctx, child) =>
                                           Localizations.override(
                                             context: ctx,
-                                            locale: Localizations.localeOf(
-                                              context,
-                                            ),
+                                            locale: isAr
+                                                ? const Locale('ar')
+                                                : Localizations.localeOf(ctx),
+                                            delegates:
+                                                GlobalMaterialLocalizations
+                                                    .delegates,
                                             child: Theme(
                                               data: Theme.of(ctx).copyWith(
                                                 colorScheme: Theme.of(ctx)
@@ -909,16 +1052,26 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     spacing: 8,
                                     runSpacing: 8,
                                     children: [
-                                      if (!isLimited)
-                                        FilterChip(
-                                          label: Text(loc.everyDay),
-                                          selected: selectedDays.contains(
-                                            'Every day',
-                                          ),
-                                          onSelected: (_) =>
-                                              toggleDay('Every day'),
-                                          selectedColor: Colors.teal.shade100,
+                                      // "Every day" when unlimited, "Select All" when limited
+                                      FilterChip(
+                                        label: Text(
+                                          isLimited
+                                              ? loc.selectAll
+                                              : loc.everyDay,
                                         ),
+                                        selected: isLimited
+                                            ? allowed.isNotEmpty &&
+                                                  allowed.every(
+                                                    (x) => selectedDays
+                                                        .contains(x),
+                                                  )
+                                            : selectedDays.contains(
+                                                'Every day',
+                                              ),
+                                        onSelected: (_) =>
+                                            toggleDay('Every day'),
+                                        selectedColor: Colors.teal.shade100,
+                                      ),
                                       ...allowed.map((d) {
                                         final selected = selectedDays.contains(
                                           d,
@@ -1001,8 +1154,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
 
                                               setState(() {
                                                 _medicationName = name;
-                                                _doseForm =
-                                                    selectedForm; // ← NEW
+                                                _doseForm = selectedForm;
                                                 _doseStrength =
                                                     strengthCtrl.text
                                                         .trim()
@@ -1010,25 +1162,38 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                                     ? strengthCtrl.text.trim()
                                                     : null;
                                                 _notes = notesCtrl.text.trim();
-
                                                 _selectedDays =
                                                     List<String>.from(
                                                       selectedDays,
                                                     );
-
                                                 _frequency = selectedFreq;
+
+                                                // Apply start date from scan sheet
+                                                final now = DateTime.now();
+                                                final isToday =
+                                                    scanStartDate.year ==
+                                                        now.year &&
+                                                    scanStartDate.month ==
+                                                        now.month &&
+                                                    scanStartDate.day ==
+                                                        now.day;
+                                                _startDate = isToday
+                                                    ? null
+                                                    : scanStartDate;
 
                                                 if (selectedDuration != null &&
                                                     selectedDuration! > 0) {
                                                   _durationDays =
                                                       selectedDuration;
                                                   _customEndDate =
-                                                      DateTime.now().add(
-                                                        Duration(
-                                                          days:
-                                                              selectedDuration!,
-                                                        ),
-                                                      );
+                                                      (_startDate ??
+                                                              DateTime.now())
+                                                          .add(
+                                                            Duration(
+                                                              days:
+                                                                  selectedDuration!,
+                                                            ),
+                                                          );
                                                 } else if (selectedDuration ==
                                                         -1 &&
                                                     scanCustomEndDate != null) {
@@ -1113,7 +1278,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       if (!mounted) return;
 
       // ✅ after apply: go to dose step so user can verify/fill dose info
-      // Steps: 0=Name, 1=Duration, 2=Days, 3=Frequency, 4=Dose, 5=Times, 6=Notes, 7=Summary
+      // Steps: 0=Name, 1=Duration, 2=Days, 3=Frequency, 4=Times, 5=Dose, 6=Notes, 7=Summary
       // Only skip earlier if a critical earlier step is totally empty
       int targetPage;
       if (_medicationName == null || _medicationName!.isEmpty) {
@@ -1125,7 +1290,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       } else if (_frequency == null) {
         targetPage = 3; // frequency not set
       } else {
-        targetPage = 4; // dose step — verify/fill from scan
+        targetPage = 4; // times step — verify/fill from scan
       }
       _pageController.jumpToPage(targetPage);
       setState(() => _currentPageIndex = targetPage);
@@ -1173,6 +1338,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
         frequency: _frequency,
         times: _selectedTimes.whereType<TimeOfDay>().toList(),
         notes: _notes,
+        refillReminder: _refillReminder,
         addedBy: currentUser.uid,
         createdAt: widget.medicationToEdit!.createdAt,
         updatedAt: Timestamp.now(),
@@ -1248,10 +1414,14 @@ class _AddMedScreenState extends State<AddMedScreen> {
         frequency: _frequency,
         times: _selectedTimes.whereType<TimeOfDay>().toList(),
         notes: _notes,
+        refillReminder: _refillReminder,
         addedBy: currentUser.uid,
-        createdAt: Timestamp.now(),
+        // Use custom start date as createdAt so scheduler aligns correctly
+        createdAt: _startDate != null
+            ? Timestamp.fromDate(_startDate!)
+            : Timestamp.now(),
         updatedAt: Timestamp.now(),
-        endDate: endDate, // ← NEW
+        endDate: endDate,
       );
 
       try {
@@ -1487,11 +1657,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   medicationName: _medicationName,
                   initialDurationDays: _durationDays,
                   initialCustomEndDate: _customEndDate,
+                  initialStartDate: _startDate,
                   buttonStyle: tealButtonStyle,
-                  onNext: (days, customDate) {
+                  onNext: (days, customDate, startDate) {
                     setState(() {
                       _durationDays = days;
                       _customEndDate = customDate;
+                      _startDate = startDate;
                     });
                     _goToNextPage();
                   },
@@ -1504,6 +1676,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   durationDays: _durationDays,
                   customEndDate: _customEndDate,
                   initialDays: _selectedDays,
+                  startDate: _startDate,
                   buttonStyle: tealButtonStyle,
                   onNext: (days) {
                     setState(() => _selectedDays = days);
@@ -1519,19 +1692,6 @@ class _AddMedScreenState extends State<AddMedScreen> {
                       _initializeTimesForFrequency(freq);
                     }
                     setState(() => _frequency = freq);
-                    _goToNextPage();
-                  },
-                ),
-                _Step2Dose(
-                  medicationName: _medicationName,
-                  initialForm: _doseForm,
-                  initialStrength: _doseStrength,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (form, strength) {
-                    setState(() {
-                      _doseForm = form;
-                      _doseStrength = strength;
-                    });
                     _goToNextPage();
                   },
                 ),
@@ -1552,12 +1712,31 @@ class _AddMedScreenState extends State<AddMedScreen> {
                     _goToNextPage();
                   },
                 ),
+                _Step2Dose(
+                  medicationName: _medicationName,
+                  initialForm: _doseForm,
+                  initialStrength: _doseStrength,
+                  buttonStyle: tealButtonStyle,
+                  onNext: (form, strength) {
+                    setState(() {
+                      _doseForm = form;
+                      _doseStrength = strength;
+                    });
+                    _goToNextPage();
+                  },
+                ),
+
                 _Step6AddNotes(
                   medicationName: _medicationName,
                   initialNotes: _notes,
+                  initialRefillReminder: _refillReminder,
+                  hasEndDate: _durationDays != null || _customEndDate != null,
                   buttonStyle: tealButtonStyle,
-                  onNext: (notes) {
-                    setState(() => _notes = notes);
+                  onNext: (notes, remind) {
+                    setState(() {
+                      _notes = notes;
+                      _refillReminder = remind;
+                    });
                     _goToNextPage();
                   },
                 ),
@@ -1570,10 +1749,12 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   doseStrength: _doseStrength,
                   durationDays: _durationDays,
                   customEndDate: _customEndDate,
+                  startDate: _startDate,
                   selectedDays: _selectedDays,
                   frequency: _frequency,
                   selectedTimes: _selectedTimes.whereType<TimeOfDay>().toList(),
                   notes: _notes,
+                  refillReminder: _refillReminder,
                   isEditing: _isEditing,
                   buttonStyle: tealButtonStyle,
                   onSave: _saveMedication,
@@ -1856,8 +2037,8 @@ class _Step2DoseState extends State<_Step2Dose> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: AppLocalizations.of(context)!.stepDoseTitle,
-                subtitle: AppLocalizations.of(context)!.stepDoseSub,
+                title: AppLocalizations.of(context)!.stepTimesTitle,
+                subtitle: AppLocalizations.of(context)!.stepTimesSub,
               ),
 
               // ── Form grid ──
@@ -1972,12 +2153,20 @@ class _Step2Duration extends StatefulWidget {
   final String? medicationName;
   final int? initialDurationDays;
   final DateTime? initialCustomEndDate;
+  final DateTime? initialStartDate;
+
   final ButtonStyle buttonStyle;
-  final void Function(int? durationDays, DateTime? customEndDate) onNext;
+  final void Function(
+    int? durationDays,
+    DateTime? customEndDate,
+    DateTime? startDate,
+  )
+  onNext;
   const _Step2Duration({
     this.medicationName,
     this.initialDurationDays,
     this.initialCustomEndDate,
+    this.initialStartDate,
     required this.buttonStyle,
     required this.onNext,
   });
@@ -1991,6 +2180,7 @@ class _Step2DurationState extends State<_Step2Duration> {
   late FixedExtentScrollController _wheelCtrl;
   int _count = 7;
   DateTime? _customDate;
+  late DateTime _startDate; // defaults to today
 
   static const _maxValues = [30, 12, 12];
 
@@ -2004,6 +2194,7 @@ class _Step2DurationState extends State<_Step2Duration> {
     super.initState();
     final init = widget.initialDurationDays;
     _customDate = widget.initialCustomEndDate;
+    _startDate = widget.initialStartDate ?? DateTime.now();
 
     if (init == null || init == 0) {
       _mode = 'ongoing';
@@ -2033,6 +2224,40 @@ class _Step2DurationState extends State<_Step2Duration> {
     super.dispose();
   }
 
+  bool _isToday(DateTime d) {
+    final now = DateTime.now();
+    return d.year == now.year && d.month == now.month && d.day == now.day;
+  }
+
+  Future<void> _pickStartDate() async {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: isAr ? const Locale('ar') : null,
+      builder: (ctx, child) => Localizations.override(
+        context: ctx,
+        locale: isAr ? const Locale('ar') : Localizations.localeOf(ctx),
+        delegates: GlobalMaterialLocalizations.delegates,
+        child: Theme(
+          data: Theme.of(ctx).copyWith(
+            colorScheme: Theme.of(
+              ctx,
+            ).colorScheme.copyWith(primary: Colors.teal),
+          ),
+          child: child!,
+        ),
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = DateTime(picked.year, picked.month, picked.day);
+      });
+    }
+  }
+
   int get _totalDays {
     switch (_unitIndex) {
       case 1:
@@ -2045,23 +2270,26 @@ class _Step2DurationState extends State<_Step2Duration> {
   }
 
   String _endDateLabel(BuildContext context, int days) {
-    final end = DateTime.now().add(Duration(days: days));
+    final end = _startDate.add(Duration(days: days));
     final locale = Localizations.localeOf(context).languageCode;
+    final formatted = DateFormat.yMMMd(locale).format(end);
     return AppLocalizations.of(
       context,
-    )!.durEndsOn(DateFormat.yMMMd(locale).format(end));
+    )!.durEndsOn(_toArabicNumerals(formatted, context));
   }
 
   Future<void> _pickCustomDate() async {
-    final now = DateTime.now();
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final picked = await showDatePicker(
       context: context,
-      initialDate: _customDate ?? now.add(const Duration(days: 7)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
+      initialDate: _customDate ?? _startDate.add(const Duration(days: 7)),
+      firstDate: _startDate,
+      lastDate: _startDate.add(const Duration(days: 365)),
+      locale: isAr ? const Locale('ar') : null,
       builder: (ctx, child) => Localizations.override(
         context: ctx,
-        locale: Localizations.localeOf(context),
+        locale: isAr ? const Locale('ar') : Localizations.localeOf(ctx),
+        delegates: GlobalMaterialLocalizations.delegates,
         child: Theme(
           data: Theme.of(ctx).copyWith(
             colorScheme: Theme.of(
@@ -2113,6 +2341,117 @@ class _Step2DurationState extends State<_Step2Duration> {
                 title: AppLocalizations.of(context)!.stepDurationTitle,
                 subtitle: AppLocalizations.of(context)!.stepDurationSub,
               ),
+              // ── Start Date Picker ──
+              GestureDetector(
+                onTap: _pickStartDate,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _isToday(_startDate)
+                        ? Colors.grey.shade50
+                        : Colors.teal.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isToday(_startDate)
+                          ? Colors.grey.shade300
+                          : Colors.teal.shade400,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 20,
+                        color: _isToday(_startDate)
+                            ? Colors.grey.shade600
+                            : Colors.teal.shade700,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AppLocalizations.of(context)!.startDateLabel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            Text(
+                              _isToday(_startDate)
+                                  ? AppLocalizations.of(
+                                      context,
+                                    )!.startDateToday(
+                                      DateFormat.yMMMd(
+                                        Localizations.localeOf(
+                                          context,
+                                        ).languageCode,
+                                      ).format(_startDate),
+                                    )
+                                  : DateFormat.yMMMd(
+                                      Localizations.localeOf(
+                                        context,
+                                      ).languageCode,
+                                    ).format(_startDate),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: _isToday(_startDate)
+                                    ? Colors.grey.shade800
+                                    : Colors.teal.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _pickStartDate,
+                        child: Text(
+                          AppLocalizations.of(context)!.change,
+                          style: TextStyle(color: Colors.teal.shade700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              if (!_isToday(_startDate))
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.orange.shade700,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _startDate.isBefore(DateTime.now())
+                              ? AppLocalizations.of(context)!.startedInPast
+                              : AppLocalizations.of(context)!.startFuture,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
               // ── Unit selector ──
               Row(
@@ -2188,12 +2527,9 @@ class _Step2DurationState extends State<_Step2Duration> {
                       setState(() => _count = index + 1);
                     },
                     children: List.generate(_maxValues[_unitIndex], (i) {
-                      final locale = Localizations.localeOf(
-                        context,
-                      ).languageCode;
                       return Center(
                         child: Text(
-                          NumberFormat.decimalPattern(locale).format(i + 1),
+                          _toArabicNumerals('${i + 1}', context),
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w600,
@@ -2211,7 +2547,7 @@ class _Step2DurationState extends State<_Step2Duration> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Center(
                     child: Text(
-                      '${_count} ${_getUnits(context)[_unitIndex]}  •  ${_endDateLabel(context, _totalDays)}',
+                      '${NumberFormat.decimalPattern(Localizations.localeOf(context).languageCode).format(_count)} ${_getUnits(context)[_unitIndex]}  •  ${_endDateLabel(context, _totalDays)}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.teal.shade700,
@@ -2343,19 +2679,20 @@ class _Step2DurationState extends State<_Step2Duration> {
               ElevatedButton(
                 onPressed: canProceed
                     ? () {
+                        final startDate = _isToday(_startDate)
+                            ? null
+                            : _startDate;
                         if (_mode == 'ongoing') {
-                          widget.onNext(null, null);
+                          widget.onNext(null, null, startDate);
                           return;
                         }
                         if (_mode == 'custom') {
-                          widget.onNext(-1, _customDate);
+                          widget.onNext(-1, _customDate, startDate);
                           return;
                         }
                         final days = _totalDays;
-                        final endDate = DateTime.now().add(
-                          Duration(days: days),
-                        );
-                        widget.onNext(days, endDate);
+                        final endDate = _startDate.add(Duration(days: days));
+                        widget.onNext(days, endDate, startDate);
                       }
                     : null,
                 style: widget.buttonStyle,
@@ -2377,6 +2714,7 @@ class _Step3SelectDays extends StatefulWidget {
   final List<String>? initialDays;
   final int? durationDays;
   final DateTime? customEndDate;
+  final DateTime? startDate; // used for _allowedDays calc only
   final ButtonStyle buttonStyle;
   const _Step3SelectDays({
     super.key,
@@ -2385,6 +2723,7 @@ class _Step3SelectDays extends StatefulWidget {
     this.initialDays,
     this.durationDays,
     this.customEndDate,
+    this.startDate,
     required this.buttonStyle,
   });
   @override
@@ -2402,6 +2741,7 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
     'Saturday',
   ];
   List<String> _selectedDays = [];
+  late DateTime _effectiveStart; // today or user-picked start date
 
   /// Compute which day-names are reachable within the duration.
   List<String> get _allowedDays {
@@ -2409,15 +2749,14 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
     if (widget.durationDays != null && widget.durationDays! > 0) {
       totalDays = widget.durationDays;
     } else if (widget.durationDays == -1 && widget.customEndDate != null) {
-      totalDays = widget.customEndDate!.difference(DateTime.now()).inDays + 1;
+      totalDays = widget.customEndDate!.difference(_effectiveStart).inDays + 1;
     }
     // Ongoing or ≥7 → all days reachable
     if (totalDays == null || totalDays >= 7) return _allDays;
 
-    final now = DateTime.now();
     final daySet = <String>{};
     for (int i = 0; i < totalDays; i++) {
-      final date = now.add(Duration(days: i));
+      final date = _effectiveStart.add(Duration(days: i));
       daySet.add(DateFormat('EEEE').format(date));
     }
     // Return in canonical week order
@@ -2428,7 +2767,7 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
     if (widget.durationDays == null) return false;
     if (widget.durationDays! > 0 && widget.durationDays! < 7) return true;
     if (widget.durationDays == -1 && widget.customEndDate != null) {
-      return widget.customEndDate!.difference(DateTime.now()).inDays + 1 < 7;
+      return widget.customEndDate!.difference(_effectiveStart).inDays + 1 < 7;
     }
     return false;
   }
@@ -2436,9 +2775,9 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
   @override
   void initState() {
     super.initState();
+    _effectiveStart = widget.startDate ?? DateTime.now();
     if (widget.initialDays != null)
       _selectedDays = List.from(widget.initialDays!);
-    // Remove any previously selected days that are no longer allowed
     _selectedDays.removeWhere(
       (d) => d != 'Every day' && !_allowedDays.contains(d),
     );
@@ -2447,25 +2786,44 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
     }
   }
 
+  /// Returns "Every day" label or "Select All" depending on duration context
+  String _topCheckboxLabel(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    return _isDurationLimited ? loc.selectAll : loc.everyDay;
+  }
+
   void _onDaySelected(bool? value, String day) {
     final allowed = _allowedDays;
     setState(() {
       if (day == 'Every day') {
-        if (value == true) {
-          _selectedDays = ['Every day', ...allowed];
+        if (_isDurationLimited) {
+          // "Select All" in limited mode — store real day names only
+          if (value == true) {
+            _selectedDays = List.from(allowed);
+          } else {
+            _selectedDays.clear();
+          }
         } else {
-          _selectedDays.clear();
+          // True "Every day" in unlimited mode
+          if (value == true) {
+            _selectedDays = ['Every day', ...allowed];
+          } else {
+            _selectedDays.clear();
+          }
         }
       } else {
         if (value == true) {
           _selectedDays.add(day);
-          _selectedDays.remove('Every day');
         } else {
           _selectedDays.remove(day);
         }
-        // If all allowed days selected, add "Every day"
-        if (allowed.every((d) => _selectedDays.contains(d))) {
-          _selectedDays = ['Every day', ...allowed];
+        if (_isDurationLimited) {
+          // no 'Every day' string in limited mode — checkbox driven by all-selected check
+        } else {
+          _selectedDays.remove('Every day');
+          if (allowed.every((d) => _selectedDays.contains(d))) {
+            _selectedDays = ['Every day', ...allowed];
+          }
         }
       }
     });
@@ -2493,6 +2851,7 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
                 title: AppLocalizations.of(context)!.stepDaysTitle,
                 subtitle: AppLocalizations.of(context)!.stepDaysSub,
               ),
+
               if (limited)
                 Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -2540,14 +2899,11 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
                 ),
               ),
               CheckboxListTile(
-                title: Text(
-                  limited
-                      ? AppLocalizations.of(
-                          context,
-                        )!.stepDaysEveryDayCount(allowed.length)
-                      : AppLocalizations.of(context)!.everyDay,
-                ),
-                value: _selectedDays.contains('Every day'),
+                title: Text(_topCheckboxLabel(context)),
+                value: _isDurationLimited
+                    ? allowed.isNotEmpty &&
+                          allowed.every((d) => _selectedDays.contains(d))
+                    : _selectedDays.contains('Every day'),
                 onChanged: (v) => _onDaySelected(v, 'Every day'),
               ),
               Padding(
@@ -2716,16 +3072,18 @@ class _Step5SetTimes extends StatefulWidget {
 
 class _Step4SetTimesState extends State<_Step5SetTimes> {
   Future<void> _pickTime(int index) async {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: widget.selectedTimes[index] ?? TimeOfDay.now(),
-      builder: (BuildContext context, Widget? child) {
+      builder: (BuildContext ctx, Widget? child) {
         return Localizations.override(
-          context: context,
-          locale: Localizations.localeOf(context),
+          context: ctx,
+          locale: isAr ? const Locale('ar') : Localizations.localeOf(ctx),
+          delegates: GlobalMaterialLocalizations.delegates,
           child: Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: Theme.of(context).colorScheme.copyWith(
+            data: Theme.of(ctx).copyWith(
+              colorScheme: Theme.of(ctx).colorScheme.copyWith(
                 primary: Colors.teal,
                 onPrimary: Colors.white,
               ),
@@ -2765,8 +3123,8 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: AppLocalizations.of(context)!.stepTimesTitle,
-                subtitle: AppLocalizations.of(context)!.stepTimesSub,
+                title: AppLocalizations.of(context)!.stepDoseTitle,
+                subtitle: AppLocalizations.of(context)!.stepDoseSub,
               ),
               ...widget.selectedTimes.asMap().entries.map((entry) {
                 final int index = entry.key;
@@ -2853,14 +3211,18 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
 // =====================
 class _Step6AddNotes extends StatefulWidget {
   final String? medicationName;
-  final ValueChanged<String?> onNext;
+  final void Function(String? notes, bool refillReminder) onNext;
   final String? initialNotes;
+  final bool initialRefillReminder;
+  final bool hasEndDate;
   final ButtonStyle buttonStyle;
 
   const _Step6AddNotes({
     this.medicationName,
     required this.onNext,
     this.initialNotes,
+    required this.initialRefillReminder,
+    required this.hasEndDate,
     required this.buttonStyle,
   });
 
@@ -2870,11 +3232,13 @@ class _Step6AddNotes extends StatefulWidget {
 
 class _Step6AddNotesState extends State<_Step6AddNotes> {
   late final TextEditingController _notesController;
+  late bool _refillReminder;
 
   @override
   void initState() {
     super.initState();
     _notesController = TextEditingController(text: widget.initialNotes);
+    _refillReminder = widget.initialRefillReminder;
   }
 
   @override
@@ -2885,6 +3249,7 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Card(
@@ -2899,23 +3264,194 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: AppLocalizations.of(context)!.stepNotesTitle,
-                subtitle: AppLocalizations.of(context)!.stepNotesSub,
+                title: loc.stepNotesTitle,
+                subtitle: loc.stepNotesSub,
               ),
+
+              // ── Notes field ──
               TextField(
                 controller: _notesController,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context)!.notes,
-                  hintText: AppLocalizations.of(context)!.optionalInstructions,
+                  labelText: loc.notes,
+                  hintText: loc.optionalInstructions,
                   border: const OutlineInputBorder(),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // ── Refill Reminder box ──
+              Container(
+                decoration: BoxDecoration(
+                  color: widget.hasEndDate
+                      ? Colors.teal.shade50
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: widget.hasEndDate
+                        ? Colors.teal.shade200
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                padding: const EdgeInsets.all(14),
+                child: widget.hasEndDate
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.notifications_active_outlined,
+                                color: Colors.teal.shade700,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  loc.stepRefillQuestion,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.teal.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _refillReminder = true),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _refillReminder
+                                          ? Colors.teal
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: _refillReminder
+                                            ? Colors.teal
+                                            : Colors.grey.shade300,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Icon(
+                                          Icons.notifications_active,
+                                          color: _refillReminder
+                                              ? Colors.white
+                                              : Colors.grey.shade400,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          loc.stepRefillYes,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: _refillReminder
+                                                ? Colors.white
+                                                : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _refillReminder = false),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: !_refillReminder
+                                          ? const Color(0xFF9A9999)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: !_refillReminder
+                                            ? const Color(0xFF9A9999)
+                                            : Colors.grey.shade300,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Icon(
+                                          Icons.notifications_off_outlined,
+                                          color: !_refillReminder
+                                              ? Colors.white
+                                              : Colors.grey.shade400,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          loc.stepRefillNo,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: !_refillReminder
+                                                ? Colors.white
+                                                : Colors.grey.shade500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.grey.shade500,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              loc.stepRefillOnlyIfDuration,
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () => widget.onNext(_notesController.text),
+                onPressed: () => widget.onNext(
+                  _notesController.text.trim().isEmpty
+                      ? null
+                      : _notesController.text.trim(),
+                  _refillReminder,
+                ),
                 style: widget.buttonStyle,
-                child: Text(AppLocalizations.of(context)!.next),
+                child: Text(loc.next),
               ),
             ],
           ),
@@ -2934,10 +3470,12 @@ class _Step8Summary extends StatelessWidget {
   final String? doseStrength; // ← NEW
   final int? durationDays;
   final DateTime? customEndDate;
+  final DateTime? startDate; // ← custom start date
   final List<String> selectedDays;
   final String? frequency;
   final List<TimeOfDay> selectedTimes;
   final String? notes;
+  final bool refillReminder;
   final VoidCallback onSave;
   final bool isEditing;
   final ButtonStyle buttonStyle;
@@ -2949,10 +3487,12 @@ class _Step8Summary extends StatelessWidget {
     this.doseStrength,
     this.durationDays,
     this.customEndDate,
+    this.startDate,
     required this.selectedDays,
     this.frequency,
     required this.selectedTimes,
     this.notes,
+    required this.refillReminder,
     required this.onSave,
     required this.isEditing,
     required this.buttonStyle,
@@ -2982,12 +3522,15 @@ class _Step8Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).languageCode;
     final formattedTimes = selectedTimes
         .map((t) => t.format(context))
         .join(', ');
     final formattedDays = selectedDays
         .map((d) => _translateDay(d, loc))
         .join(', ');
+    final effectiveStart = startDate ?? DateTime.now();
+    final startLabel = DateFormat.yMMMd(locale).format(effectiveStart);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -3018,6 +3561,7 @@ class _Step8Summary extends StatelessWidget {
                     title: loc.summaryDose,
                     value: _doseLabel(context),
                   ),
+                  _SummaryTile(title: loc.summaryStartDate, value: startLabel),
                   _SummaryTile(
                     title: loc.summaryDuration,
                     value: _durationLabel(context),
@@ -3032,6 +3576,12 @@ class _Step8Summary extends StatelessWidget {
                   _SummaryTile(title: loc.summaryTimes, value: formattedTimes),
                   if (notes != null && notes!.isNotEmpty)
                     _SummaryTile(title: loc.summaryNotes, value: notes!),
+                  _SummaryTile(
+                    title: loc.summaryRefillReminder,
+                    value: refillReminder
+                        ? loc.stepRefillYes
+                        : loc.stepRefillNo,
+                  ),
                 ],
               ),
             ),

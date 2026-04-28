@@ -14,7 +14,8 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// API KEY
-const String _openAIApiKey =''; // TODO: Add your API Key here safely (e.g. environment variable)
+const String _openAIApiKey =
+    ''; // TODO: Add your API Key here safely (e.g. environment variable)
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -231,7 +232,7 @@ class VoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'User may speak English or Arabic. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, weather, news, none. '
+                  'goToMedia, goToHome, sos, goToSettings, weather, news, todayMedications, none. '
                   'You MUST respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -290,12 +291,12 @@ class VoiceAssistantService {
       case 'medication':
       case 'goToMedication':
         return VoiceCommand.goToMedication;
-      
+
       case 'weather':
       case 'getweather':
       case 'weathertoday':
         return VoiceCommand.weather;
-      
+
       case 'news':
       case 'latestnews':
       case 'headlines':
@@ -339,6 +340,13 @@ class VoiceAssistantService {
       case 'settings':
       case 'goToSettings':
         return VoiceCommand.goToSettings;
+
+      case 'todaymedications': // 👈 insert from here
+      case 'today_medications':
+      case 'today_meds':
+      case 'mymedications':
+      case 'todaymeds':
+        return VoiceCommand.todayMedications; // 👈 to here
 
       case 'none':
       default:
@@ -454,19 +462,41 @@ class VoiceAssistantService {
       'how is the weather',
       'what is the weather',
     ])) {
-     return VoiceCommand.weather;
+      return VoiceCommand.weather;
     }
 
     if (_containsAny(lower, [
-     'news',
-     'latest news',
-     'headlines',
-     'اخبار',
-     'الأخبار',
-     'خبر',
+      'news',
+      'latest news',
+      'headlines',
+      'اخبار',
+      'الأخبار',
+      'خبر',
     ])) {
-     return VoiceCommand.news;
+      return VoiceCommand.news;
     }
+
+    if (_containsAny(lower, [
+      // 👈 insert from here
+      'today medications',
+      'my medications today',
+      'what medications',
+      'medications today',
+      'my meds today',
+      'what meds',
+      'which medications',
+      'did i take',
+      'have i taken',
+      'medications left',
+      'what do i have today',
+      'ادويتي اليوم',
+      'دوائي اليوم',
+      'ماذا اخذت',
+      'ما اخذت',
+      'الدواء اليوم',
+    ])) {
+      return VoiceCommand.todayMedications;
+    } // 👈 to here
 
     return null;
   }
@@ -753,6 +783,108 @@ class VoiceAssistantService {
         'Sorry, I could not delete the medication because of an error.',
       );
     }
+  }
+
+  Future<void> runTodayMedicationsFlow(String elderlyId) async {
+    final ok = await initialize();
+    if (!ok) return;
+
+    try {
+      final allMeds = await _loadMedications(elderlyId);
+      if (allMeds.isEmpty) {
+        await speak('You have no medications saved yet.');
+        return;
+      }
+
+      final now = DateTime.now();
+      final todayName = _dayName(now.weekday);
+
+      final todayMeds = allMeds.where((m) {
+        if (m.days == null || m.days!.isEmpty) return false;
+        return m.days!.any((d) => d.toLowerCase() == todayName.toLowerCase());
+      }).toList();
+
+      if (todayMeds.isEmpty) {
+        await speak('You have no medications scheduled for today.');
+        return;
+      }
+
+      final todayKey =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      // Fetch the single daily log document
+      final logDoc = await FirebaseFirestore.instance
+          .collection('medication_log')
+          .doc(elderlyId)
+          .collection('daily_log')
+          .doc(todayKey)
+          .get();
+
+      final logData = logDoc.exists ? (logDoc.data() ?? {}) : {};
+
+      final takenParts = <String>[];
+      final remainingParts = <String>[];
+
+      for (final med in todayMeds) {
+        for (int i = 0; i < (med.times ?? []).length; i++) {
+          final t = med.times![i];
+          final logKey = '${med.id}_$i';
+          final label = '${med.name} at ${_formatTime(t)}';
+          final doseLog = logData[logKey] as Map<String, dynamic>?;
+          final status = doseLog?['status'] as String? ?? '';
+          if (status == 'taken_on_time' || status == 'taken_late') {
+            takenParts.add(label);
+          } else {
+            remainingParts.add(label);
+          }
+        }
+      }
+
+      final buffer = StringBuffer();
+      final total = takenParts.length + remainingParts.length;
+
+      if (remainingParts.isEmpty) {
+        buffer.write(
+          'Great job! You have taken all $total of your medications for today.',
+        );
+      } else if (takenParts.isEmpty) {
+        buffer.write(
+          'You have $total medication${total > 1 ? 's' : ''} today, none taken yet. '
+          'You need to take: ${remainingParts.join(', ')}.',
+        );
+      } else {
+        buffer.write(
+          'You have ${remainingParts.length} medication${remainingParts.length > 1 ? 's' : ''} left to take: '
+          '${remainingParts.join(', ')}. '
+          'Already taken: ${takenParts.join(', ')}.',
+        );
+      }
+
+      await speak(buffer.toString());
+    } catch (e) {
+      debugPrint('❌ runTodayMedicationsFlow error: $e');
+      await speak('Sorry, I could not load your medications right now.');
+    }
+  }
+
+  String _dayName(int weekday) {
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return days[weekday - 1];
+  }
+
+  String _formatTime(TimeOfDay t) {
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final minute = t.minute.toString().padLeft(2, '0');
+    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
   }
 
   /// Complete voice-controlled edit flow with multiple field editing

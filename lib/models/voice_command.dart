@@ -9,4 +9,5 @@ enum VoiceCommand {
   goToSettings,
   weather,
   news,
+  todayMedications,
 }

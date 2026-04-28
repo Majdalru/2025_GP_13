@@ -757,6 +757,20 @@ class MedicationCard extends StatelessWidget {
     }
   }
 
+  // ← helper to format start date
+  String _startDateDisplay(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    final start = medication.createdAt.toDate();
+    final now = DateTime.now();
+    final isToday =
+        start.year == now.year &&
+        start.month == now.month &&
+        start.day == now.day;
+    final locale = Localizations.localeOf(context).languageCode;
+    final formatted = DateFormat.yMMMd(locale).format(start);
+    return isToday ? loc.startDateToday(formatted) : formatted;
+  }
+
   String _durationDisplay(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     if (medication.endDate == null) return loc.durOngoingShort;
@@ -855,9 +869,23 @@ class MedicationCard extends StatelessWidget {
                   width: 1,
                 ),
               ),
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  RichText(
+                    text: TextSpan(
+                      style: valueStyle,
+                      children: <TextSpan>[
+                        TextSpan(
+                          text: '${loc.summaryStartDate}: ',
+                          style: labelStyle,
+                        ),
+                        TextSpan(text: _startDateDisplay(context)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   RichText(
                     text: TextSpan(
                       style: valueStyle,

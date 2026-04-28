@@ -12,6 +12,7 @@ class Medication {
   final String? frequency;
   final List<TimeOfDay> times;
   final String? notes;
+  final bool refillReminder; // ← notify caregiver 3 days before end
   final String addedBy;
   final Timestamp createdAt;
   final Timestamp updatedAt;
@@ -26,6 +27,7 @@ class Medication {
     this.frequency,
     required this.times,
     this.notes,
+    this.refillReminder = false,
     required this.addedBy,
     required this.createdAt,
     required this.updatedAt,
@@ -51,6 +53,7 @@ class Medication {
       'frequency': frequency,
       'times': times.map((time) => _formatTimeOfDay(time)).toList(),
       'notes': notes,
+      'refillReminder': refillReminder,
       'addedBy': addedBy,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
@@ -72,6 +75,7 @@ class Medication {
               .toList() ??
           [],
       notes: map['notes'],
+      refillReminder: map['refillReminder'] as bool? ?? false,
       addedBy: map['addedBy'] ?? '',
       createdAt: map['createdAt'] ?? Timestamp.now(),
       updatedAt: map['updatedAt'] ?? Timestamp.now(),

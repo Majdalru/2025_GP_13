@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -104,10 +103,7 @@ class ArabicVoiceAssistantService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'input': {'text': text},
-          'voice': {
-            'languageCode': 'ar-XA',
-            'name': 'ar-XA-Wavenet-D',
-          },
+          'voice': {'languageCode': 'ar-XA', 'name': 'ar-XA-Wavenet-D'},
           'audioConfig': {
             'audioEncoding': 'MP3',
             'speakingRate': 0.85,
@@ -117,7 +113,9 @@ class ArabicVoiceAssistantService {
       );
 
       if (response.statusCode != 200) {
-        debugPrint('❌ Google TTS HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+          '❌ Google TTS HTTP ${response.statusCode}: ${response.body}',
+        );
         return;
       }
 
@@ -274,7 +272,7 @@ class ArabicVoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'The user may speak Arabic or English. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, weather, news, none. '
+                  'goToMedia, goToHome, sos, goToSettings, weather, news, todayMedications, none. '
                   'Respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -288,8 +286,8 @@ class ArabicVoiceAssistantService {
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final content =
-          (decoded['choices'][0]['message']['content'] as String).trim();
+      final content = (decoded['choices'][0]['message']['content'] as String)
+          .trim();
 
       Map<String, dynamic>? jsonIntent;
 
@@ -324,19 +322,17 @@ class ArabicVoiceAssistantService {
       case 'medication':
         return VoiceCommand.goToMedication;
 
-      
       case 'weather':
       case 'getweather':
       case 'weathertoday':
         return VoiceCommand.weather;
-
 
       case 'news':
       case 'latestnews':
       case 'headlines':
       case 'getnews':
       case 'newstoday':
-       return VoiceCommand.news;
+        return VoiceCommand.news;
 
       case 'addmedication':
       case 'add_medication':
@@ -368,6 +364,11 @@ class ArabicVoiceAssistantService {
       case 'gotosettings':
       case 'settings':
         return VoiceCommand.goToSettings;
+
+      case 'todaymedications':
+      case 'today_medications':
+      case 'today_meds':
+        return VoiceCommand.todayMedications;
 
       default:
         return null;
@@ -518,15 +519,32 @@ class ArabicVoiceAssistantService {
       'خبر',
       'وش الاخبار',
       'وش الأخبار',
-     'ايش الاخبار',
-     'ايش الأخبار',
-     'اخبار اليوم',
-     'أخبار اليوم',
-     'news',
-     'latest news',
-     'headlines',
+      'ايش الاخبار',
+      'ايش الأخبار',
+      'اخبار اليوم',
+      'أخبار اليوم',
+      'news',
+      'latest news',
+      'headlines',
     ])) {
-     return VoiceCommand.news;
+      return VoiceCommand.news;
+    }
+
+    if (_containsAny(lower, [
+      'ادويتي اليوم',
+      'دوائي اليوم',
+      'ماذا اخذت',
+      'ما اخذت',
+      'الدواء اليوم',
+      'ايش اخذت اليوم',
+      'وش اخذت اليوم',
+      'الادوية اليوم',
+      'كم دواء باقي',
+      'today medications',
+      'my medications today',
+      'what meds today',
+    ])) {
+      return VoiceCommand.todayMedications;
     }
 
     return null;
@@ -610,9 +628,12 @@ class ArabicVoiceAssistantService {
       return;
     }
 
-    final parsedDays =
-        await _structuredParser.parseDays(daysAnswer ?? '', _openAIApiKey);
-    final days = parsedDays ??
+    final parsedDays = await _structuredParser.parseDays(
+      daysAnswer ?? '',
+      _openAIApiKey,
+    );
+    final days =
+        parsedDays ??
         const [
           'Sunday',
           'Monday',
@@ -709,7 +730,8 @@ class ArabicVoiceAssistantService {
       return;
     }
 
-    final notes = (notesAnswer != null &&
+    final notes =
+        (notesAnswer != null &&
             !_isNo(notesAnswer) &&
             notesAnswer.trim().isNotEmpty)
         ? notesAnswer
@@ -1109,8 +1131,10 @@ class ArabicVoiceAssistantService {
       return null;
     }
 
-    final parsedDays =
-        await _structuredParser.parseDays(daysAnswer, _openAIApiKey);
+    final parsedDays = await _structuredParser.parseDays(
+      daysAnswer,
+      _openAIApiKey,
+    );
     final newDays = parsedDays ?? original.days;
     final daysText = newDays.join('، ');
 
@@ -1155,8 +1179,8 @@ class ArabicVoiceAssistantService {
 
     final newFrequency =
         await _structuredParser.parseFrequency(freqAnswer, _openAIApiKey) ??
-            original.frequency ??
-            'Once a day';
+        original.frequency ??
+        'Once a day';
 
     final confirm = await _askQuestion(
       'هل تريد تغيير عدد المرات إلى $newFrequency؟ قل نعم أو لا.',
@@ -1407,10 +1431,7 @@ class ArabicVoiceAssistantService {
     return null;
   }
 
-  Medication? _bestMedicationFuzzyMatch(
-    String text,
-    List<Medication> meds,
-  ) {
+  Medication? _bestMedicationFuzzyMatch(String text, List<Medication> meds) {
     final cleanedText = _normalizeText(text);
     if (cleanedText.isEmpty || meds.isEmpty) return null;
 
@@ -1572,5 +1593,103 @@ class ArabicVoiceAssistantService {
   Future<void> dispose() async {
     await _player.stop();
     await _player.dispose();
+  }
+
+  Future<void> runTodayMedicationsFlow(String elderlyId) async {
+    final ok = await initialize();
+    if (!ok) return;
+
+    try {
+      final allMeds = await _loadMedications(elderlyId);
+      if (allMeds.isEmpty) {
+        await speak('ما عندك أي أدوية مسجلة.');
+        return;
+      }
+
+      final now = DateTime.now();
+      final todayName = _dayName(now.weekday);
+
+      final todayMeds = allMeds.where((m) {
+        if (m.days == null || m.days!.isEmpty) return false;
+        return m.days!.any((d) => d.toLowerCase() == todayName.toLowerCase());
+      }).toList();
+
+      if (todayMeds.isEmpty) {
+        await speak('ما عندك أدوية مجدولة لليوم.');
+        return;
+      }
+
+      final todayKey =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      final logDoc = await FirebaseFirestore.instance
+          .collection('medication_log')
+          .doc(elderlyId)
+          .collection('daily_log')
+          .doc(todayKey)
+          .get();
+
+      final logData = logDoc.exists ? (logDoc.data() ?? {}) : {};
+
+      final takenParts = <String>[];
+      final remainingParts = <String>[];
+
+      for (final med in todayMeds) {
+        for (int i = 0; i < (med.times ?? []).length; i++) {
+          final t = med.times![i];
+          final logKey = '${med.id}_$i';
+          final label = '${med.name} الساعة ${_formatTimeArabic(t)}';
+          final doseLog = logData[logKey] as Map<String, dynamic>?;
+          final status = doseLog?['status'] as String? ?? '';
+          if (status == 'taken_on_time' || status == 'taken_late') {
+            takenParts.add(label);
+          } else {
+            remainingParts.add(label);
+          }
+        }
+      }
+
+      final buffer = StringBuffer();
+      final total = takenParts.length + remainingParts.length;
+
+      if (remainingParts.isEmpty) {
+        buffer.write('أحسنت! لقد أخذت كل أدويتك لليوم، وعددها $total.');
+      } else if (takenParts.isEmpty) {
+        buffer.write(
+          'عندك $total دواء اليوم، ولم تأخذ أي منها بعد. '
+          'تحتاج تأخذ: ${remainingParts.join('، ')}.',
+        );
+      } else {
+        buffer.write(
+          'باقي عليك ${remainingParts.length} دواء: ${remainingParts.join('، ')}. '
+          'وأخذت بالفعل: ${takenParts.join('، ')}.',
+        );
+      }
+
+      await speak(buffer.toString());
+    } catch (e) {
+      debugPrint('❌ runTodayMedicationsFlow error: $e');
+      await speak('آسف، ما قدرت أحمّل أدويتك الحين.');
+    }
+  }
+
+  String _dayName(int weekday) {
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return days[weekday - 1];
+  }
+
+  String _formatTimeArabic(TimeOfDay t) {
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final minute = t.minute.toString().padLeft(2, '0');
+    final period = t.period == DayPeriod.am ? 'صباحاً' : 'مساءً';
+    return '$hour:$minute $period';
   }
 }

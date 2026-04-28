@@ -1358,6 +1358,18 @@ abstract class AppLocalizations {
   /// **'Every day'**
   String get everyDay;
 
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get selectAll;
+
+  /// No description provided for @summaryStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts on'**
+  String get summaryStartDate;
+
   /// No description provided for @mustBeLoggedInToSave.
   ///
   /// In en, this message translates to:
@@ -1381,6 +1393,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change'**
   String get change;
+
+  /// No description provided for @startDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get startDateLabel;
+
+  /// No description provided for @startDateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today ({date})'**
+  String startDateToday(String date);
+
+  /// No description provided for @startedInPast.
+  ///
+  /// In en, this message translates to:
+  /// **'This medication started in the past. Reminders will begin from today.'**
+  String get startedInPast;
+
+  /// No description provided for @startFuture.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication will start on the selected future date.'**
+  String get startFuture;
 
   /// No description provided for @addAnotherTime.
   ///
@@ -2143,6 +2179,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Any special instructions? (Optional)'**
   String get stepNotesSub;
+
+  /// No description provided for @stepRefillQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Would you like to receive a reminder 3 days before this medication ends?'**
+  String get stepRefillQuestion;
+
+  /// No description provided for @summaryRefillReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Refill Reminder'**
+  String get summaryRefillReminder;
+
+  /// No description provided for @stepRefillYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, remind me'**
+  String get stepRefillYes;
+
+  /// No description provided for @stepRefillNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No thanks'**
+  String get stepRefillNo;
+
+  /// No description provided for @stepRefillOnlyIfDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'This option is only available when a specific end date is set.'**
+  String get stepRefillOnlyIfDuration;
+
+  /// No description provided for @stepRefillNotificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'💊 Medication Ending Soon'**
+  String get stepRefillNotificationTitle;
+
+  /// No description provided for @stepRefillNotificationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{medName} ends in 3 days. Please arrange a refill.'**
+  String stepRefillNotificationBody(String medName);
 
   /// No description provided for @stepSummaryTitle.
   ///
