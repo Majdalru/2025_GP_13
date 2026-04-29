@@ -7,8 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../services/location_service.dart';
-import '../../services/weather_service.dart';
-import '../../services/news_service.dart';
 import 'media_page.dart';
 import 'elderly_med.dart';
 import 'daily_library_page.dart';
@@ -83,82 +81,14 @@ class ElderlyHomePage extends StatefulWidget {
 class _ElderlyHomePageState extends State<ElderlyHomePage> {
   String? fullName;
   // news
-  final newsService = NewsService();
 
-  Future<void> getNews() async {
-    try {
-      final localeProvider = Provider.of<LocaleProvider>(
-        context,
-        listen: false,
-      );
-      final bool isArabic = localeProvider.isArabic;
 
-      final news = await newsService.getTopHeadlines(
-        languageCode: isArabic ? 'ar' : 'en',
-        country: isArabic ? 'sa' : null,
-        maxResults: 3,
-        category: 'health',
-      );
-
-      if (news.isEmpty) {
-        if (isArabic) {
-          await _arabicVoice.speak("عذرًا، لم أجد أخبارًا الآن.");
-        } else {
-          await _voice.speak("Sorry, I could not find any news right now.");
-        }
-        return;
-      }
-
-      if (isArabic) {
-        String speech = "أهم الأخبار اليوم: ";
-        for (int i = 0; i < news.length; i++) {
-          speech += "الخبر ${i + 1}: ${news[i]['title']}. ";
-        }
-        await _arabicVoice.speak(speech);
-      } else {
-        String speech = "Here are today's top news headlines. ";
-        for (int i = 0; i < news.length; i++) {
-          speech += "News ${i + 1}: ${news[i]['title']}. ";
-        }
-        await _voice.speak(speech);
-      }
-    } catch (e) {
-      final localeProvider = Provider.of<LocaleProvider>(
-        context,
-        listen: false,
-      );
-      final bool isArabic = localeProvider.isArabic;
-
-      if (isArabic) {
-        await _arabicVoice.speak("عذرًا، حدثت مشكلة أثناء جلب الأخبار.");
-      } else {
-        await _voice.speak("Sorry, there was a problem fetching the news.");
-      }
-    }
-  }
+ 
 
   // done
   final locationService = LocationService();
-  final weatherService = WeatherService();
-  String getSaudiCity(double lat, double lon, bool isArabic) {
-    // الرياض
-    if (lat >= 24 && lat <= 26 && lon >= 45 && lon <= 47) {
-      return isArabic ? 'الرياض' : 'Riyadh';
-    }
 
-    // مكة
-    if (lat >= 21 && lat <= 22.5 && lon >= 39 && lon <= 40.5) {
-      return isArabic ? 'مكة' : 'Makkah';
-    }
 
-    // المدينة
-    if (lat >= 24 && lat <= 25.5 && lon >= 39 && lon <= 40.5) {
-      return isArabic ? 'المدينة' : 'Madinah';
-    }
-
-    // fallback
-    return isArabic ? 'منطقتك' : 'your location';
-  }
 
   Future<void> saveElderlyLocation() async {
     try {
@@ -276,54 +206,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     }
   }
 
-  Future<void> getWeather() async {
-    try {
-      final position = await locationService.getCurrentLocation();
 
-      final localeProvider = Provider.of<LocaleProvider>(
-        context,
-        listen: false,
-      );
-      final bool isArabic = localeProvider.isArabic;
-      final lang = isArabic ? 'ar' : 'en';
-
-      final weather = await weatherService.getCurrentWeather(
-        lat: position.latitude,
-        lon: position.longitude,
-        lang: lang,
-      );
-
-      final city = getSaudiCity(
-        position.latitude,
-        position.longitude,
-        isArabic,
-      );
-      final temp = weather['current']['temp_c'];
-      final condition = weather['current']['condition']['text'];
-
-      if (isArabic) {
-        await _arabicVoice.speak(
-          "الطقس اليوم في $city، $condition، ودرجة الحرارة $temp درجة مئوية",
-        );
-      } else {
-        await _voice.speak(
-          "Today's weather in $city is $condition with a temperature of $temp degrees Celsius",
-        );
-      }
-    } catch (e) {
-      final localeProvider = Provider.of<LocaleProvider>(
-        context,
-        listen: false,
-      );
-      final bool isArabic = localeProvider.isArabic;
-
-      if (isArabic) {
-        await _arabicVoice.speak("عذرًا، لم أتمكن من جلب الطقس الآن.");
-      } else {
-        await _voice.speak("Sorry, I couldn't get the weather right now.");
-      }
-    }
-  }
 
   String _translateGender(String? g) {
     if (g == null || g.isEmpty) {
@@ -827,12 +710,16 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.weather:
-                                  await getWeather();
-                                  break;
-
                                 case VoiceCommand.news:
-                                  await getNews();
-                                  break;
+                                case VoiceCommand.goToDailyLibrary:
+                                 if (!mounted) return;
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                       builder: (_) => const DailyLibraryPage(),
+                                         ),
+                                   );
+                                 break;
 
                                 case VoiceCommand.sos:
                                   if (!mounted) return;
@@ -890,6 +777,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     uid,
                                   );
                                   break;
+                                 
+                                  
                               }
                             },
                           )
@@ -1007,12 +896,17 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.weather:
-                                  await getWeather();
-                                  break;
-
                                 case VoiceCommand.news:
-                                  await getNews();
-                                  break;
+                                case VoiceCommand.goToDailyLibrary:
+                                   if (!mounted) return;
+                                   Navigator.push(
+                                     context,
+                                     MaterialPageRoute(
+                                       builder: (_) => const DailyLibraryPage(),
+                                     ),
+                                  );
+                                 
+                                 break;
 
                                 case VoiceCommand.sos:
                                   if (!mounted) return;
@@ -1068,6 +962,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   }
                                   await _voice.runTodayMedicationsFlow(uid);
                                   break;
+
+                                  
                               }
                             },
                           ),
@@ -1286,9 +1182,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                         children: [
                           const Icon(Icons.wb_sunny, size: 70, color: kPrimary),
                           const SizedBox(width: 24),
-                          const Expanded(
+                           Expanded(
                             child: Text(
-                              "Daily Library",
+                              isArabic ? "المكتبة اليومية" : "Daily Library",
                               style: TextStyle(
                                 fontSize: 30,
                                 fontWeight: FontWeight.w700,

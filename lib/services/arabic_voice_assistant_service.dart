@@ -17,7 +17,8 @@ import 'whisper_service.dart';
 const String _googleTtsApiKey = '';
 
 /// OpenAI API Key for Whisper + intent classification + structured parsing
-const String _openAIApiKey = '';
+const String _openAIApiKey =
+    '';
 
 class ArabicVoiceAssistantService {
   static final ArabicVoiceAssistantService _instance =
@@ -272,7 +273,7 @@ class ArabicVoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'The user may speak Arabic or English. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, weather, news, todayMedications, none. '
+                  'goToMedia, goToHome, sos, goToSettings, goToDailyLibrary,weather, news, todayMedications, none. '
                   'Respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -369,6 +370,12 @@ class ArabicVoiceAssistantService {
       case 'today_medications':
       case 'today_meds':
         return VoiceCommand.todayMedications;
+
+      case 'gotodailylibrary':
+      case 'daily_library':
+      case 'dailylibrary':
+      case 'daily':
+        return VoiceCommand.goToDailyLibrary;
 
       default:
         return null;
@@ -494,8 +501,9 @@ class ArabicVoiceAssistantService {
       return VoiceCommand.editMedication;
     }
 
+
     if (_containsAny(lower, [
-      'الطقس',
+   'الطقس',
       'جو',
       'الجو',
       'درجه الحراره',
@@ -507,11 +515,6 @@ class ArabicVoiceAssistantService {
       'وش الجو',
       'وش الطقس',
       'ايش الطقس',
-    ])) {
-      return VoiceCommand.weather;
-    }
-
-    if (_containsAny(lower, [
       'اخبار',
       'أخبار',
       'الاخبار',
@@ -523,12 +526,15 @@ class ArabicVoiceAssistantService {
       'ايش الأخبار',
       'اخبار اليوم',
       'أخبار اليوم',
-      'news',
-      'latest news',
-      'headlines',
+      'المكتبه اليوميه',
+      'المكتبة اليومية',
+      'مكتبه يوميه',
+      'مكتبة يومية',
     ])) {
-      return VoiceCommand.news;
+      return VoiceCommand.goToDailyLibrary;
     }
+
+
 
     if (_containsAny(lower, [
       'ادويتي اليوم',

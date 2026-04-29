@@ -10,4 +10,5 @@ enum VoiceCommand {
   weather,
   news,
   todayMedications,
+  goToDailyLibrary,
 }

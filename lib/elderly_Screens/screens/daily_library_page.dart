@@ -90,16 +90,53 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
       return isArabic ? 'الرياض' : 'Riyadh';
     }
 
-    if (lat >= 21 && lat <= 22.5 && lon >= 39 && lon <= 40.5) {
-      return isArabic ? 'مكة' : 'Makkah';
-    }
-
-    if (lat >= 24 && lat <= 25.5 && lon >= 39 && lon <= 40.5) {
-      return isArabic ? 'المدينة' : 'Madinah';
-    }
-
-    return isArabic ? 'منطقتك' : 'your location';
+  // مكة
+  if (lat >= 21 && lat <= 22.5 && lon >= 39 && lon <= 40.5) {
+    return isArabic ? 'مكة' : 'Makkah';
   }
+
+  // المدينة
+  if (lat >= 24 && lat <= 25.5 && lon >= 39 && lon <= 40.5) {
+    return isArabic ? 'المدينة' : 'Madinah';
+  }
+
+  // جدة
+  if (lat >= 21 && lat <= 22 && lon >= 39 && lon <= 40) {
+    return isArabic ? 'جدة' : 'Jeddah';
+  }
+
+  // الدمام
+  if (lat >= 26 && lat <= 27 && lon >= 49 && lon <= 50) {
+    return isArabic ? 'الدمام' : 'Dammam';
+  }
+
+  // الخبر
+  if (lat >= 26 && lat <= 27 && lon >= 49 && lon <= 50.5) {
+    return isArabic ? 'الخبر' : 'Khobar';
+  }
+
+  // أبها
+  if (lat >= 18 && lat <= 19 && lon >= 42 && lon <= 43) {
+    return isArabic ? 'أبها' : 'Abha';
+  }
+
+  // تبوك
+  if (lat >= 28 && lat <= 29 && lon >= 36 && lon <= 37) {
+    return isArabic ? 'تبوك' : 'Tabuk';
+  }
+
+  // حائل
+  if (lat >= 27 && lat <= 28 && lon >= 41 && lon <= 42) {
+    return isArabic ? 'حائل' : 'Hail';
+  }
+
+  // القصيم (بريدة)
+  if (lat >= 26 && lat <= 27 && lon >= 43 && lon <= 44) {
+    return isArabic ? 'القصيم' : 'Qassim';
+  }
+
+  return isArabic ? 'منطقتك' : 'your location';
+}
 
   Future<void> _loadWeather() async {
     try {
@@ -150,7 +187,7 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
       final news = await newsService.getTopHeadlines(
         languageCode: isArabic ? 'ar' : 'en',
         country: isArabic ? 'sa' : null,
-        maxResults: 3,
+        maxResults: 6,
         category: 'health',
       );
 
@@ -176,7 +213,7 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
     );
     final bool isArabic = localeProvider.isArabic;
 
-    // ✅ Important: initialize TTS before speaking
+    // Important: initialize TTS before speaking
     if (isArabic) {
       await _arabicVoice.initialize();
     } else {
@@ -214,7 +251,7 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
     );
     final bool isArabic = localeProvider.isArabic;
 
-    // ✅ Important: initialize TTS before speaking
+    //  Important: initialize TTS before speaking
     if (isArabic) {
       await _arabicVoice.initialize();
     } else {
@@ -231,9 +268,9 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
     }
 
     if (isArabic) {
-      String speech = "أهم الأخبار اليوم: ";
+      String speech = "أهم عَناوِين الأخبار اليوم: ";
       for (int i = 0; i < newsList.length; i++) {
-        speech += "الخبر ${i + 1}: ${newsList[i]['title']}. ";
+        speech += "الخَبَر ${i + 1}: ${newsList[i]['title']}. ";
       }
       await _arabicVoice.speak(speech);
     } else {
@@ -261,7 +298,7 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
 _startAnim();
 HapticFeedback.mediumImpact();
 
-    // ✅ Important: initialize TTS/voice service before speak + listen
+    //  Important: initialize TTS/voice service before speak + listen
     final initialized = isArabic
         ? await _arabicVoice.initialize()
         : await _voice.initialize();
@@ -279,7 +316,7 @@ HapticFeedback.mediumImpact();
     try {
       if (isArabic) {
         await _arabicVoice.speak(
-          "ماذا تريد أن تسمع؟ قل الطقس أو الأخبار.",
+          " تستطيع السؤال عن الطقس أو الأخبار.",
         );
         setState(() {
   _isSpeaking = false;
@@ -289,28 +326,52 @@ HapticFeedback.mediumImpact();
         final answer = await _arabicVoice.listenWhisper(seconds: 5);
         final text = (answer ?? "").toLowerCase();
 
-        if (text.contains("طقس") || text.contains("الطقس")) {
-          setState(() {
-            _isListening = false;
-            _isSpeaking = true;
-          });
-          await _speakWeather();
-        } else if (text.contains("خبر") ||
-            text.contains("أخبار") ||
-            text.contains("اخبار")) {
-          setState(() {
-            _isListening = false;
-            _isSpeaking = true;
-          });
-          await _speakNews();
-        } else {
+if (text.contains("طقس") ||
+    text.contains("الطقس") ||
+    text.contains("جو") ||
+    text.contains("الجو") ||
+    text.contains("كيف الجو") ||
+    text.contains("وش الجو") ||
+    text.contains("درجة الحرارة") ||
+    text.contains("درجه الحراره") ||
+    text.contains("حرارة") ||
+    text.contains("حراره")) {
+  setState(() {
+    _isListening = false;
+    _isSpeaking = true;
+  });
+  await _speakWeather();
+}else if (text.contains("خبر") ||
+    text.contains("أخبار") ||
+    text.contains("اخبار") ||
+    text.contains("الاخبار") ||
+    text.contains("الأخبار") ||
+    text.contains("وش الاخبار") ||
+    text.contains("ايش الاخبار") ||
+    text.contains("كيف الاخبار") ||
+    text.contains("اهم الاخبار") ||
+    text.contains("أهم الأخبار") ||
+    text.contains("عناوين الاخبار") ||
+    text.contains("عناوين الأخبار") ||
+    text.contains("وش فيه اخبار") ||
+    text.contains("فيه اخبار") ||
+    text.contains("اعطني اخبار") ||
+    text.contains("اعطني الاخبار")) {
+
+  setState(() {
+    _isListening = false;
+    _isSpeaking = true;
+  });
+
+  await _speakNews();
+}else {
           await _arabicVoice.speak(
             "لم أفهم طلبك. يمكنك قول الطقس أو الأخبار.",
           );
         }
       } else {
         await _voice.speak(
-          "What would you like to hear? Say weather or news.",
+          "You can ask about weather or news.",
         );
             setState(() {
   _isSpeaking = false;
@@ -319,19 +380,37 @@ HapticFeedback.mediumImpact();
         final answer = await _voice.listenWhisper(seconds: 5);
         final text = (answer ?? "").toLowerCase();
 
-        if (text.contains("weather")) {
-          setState(() {
-            _isListening = false;
-            _isSpeaking = true;
-          });
-          await _speakWeather();
-        } else if (text.contains("news")) {
-          setState(() {
-            _isListening = false;
-            _isSpeaking = true;
-          });
-          await _speakNews();
-        } else {
+if (text.contains("weather") ||
+    text.contains("temperature") ||
+    text.contains("forecast") ||
+    text.contains("how is the weather") ||
+    text.contains("what is the weather")) {
+  setState(() {
+    _isListening = false;
+    _isSpeaking = true;
+  });
+  await _speakWeather();
+} else if (text.contains("news") ||
+    text.contains("latest news") ||
+    text.contains("headlines") ||
+    text.contains("top news") ||
+    text.contains("what's the news") ||
+    text.contains("what is the news") ||
+    text.contains("how is the news") ||
+    text.contains("any news") ||
+    text.contains("tell me news") ||
+    text.contains("give me news") ||
+    text.contains("news today") ||
+    text.contains("today's news") ||
+    text.contains("what's new")) {
+
+  setState(() {
+    _isListening = false;
+    _isSpeaking = true;
+  });
+
+  await _speakNews();
+}else {
           await _voice.speak(
             "I did not understand. You can say weather or news.",
           );
@@ -364,7 +443,7 @@ HapticFeedback.mediumImpact();
       appBar: AppBar(
         toolbarHeight: 110,
         backgroundColor: kPrimary,
-        title: const Text("Daily Library"),
+        title: Text(isArabic ? "المكتبة اليومية" : "Daily Library"),
         titleTextStyle: const TextStyle(
           fontSize: 34,
           color: Colors.white,
@@ -480,82 +559,200 @@ HapticFeedback.mediumImpact();
       ),
     );
   }
+ IconData _getWeatherIcon(String condition) {
+  condition = condition.toLowerCase();
 
-  Widget _buildWeatherCard(bool isArabic) {
-    return Card(
-      color: Colors.white,
-      elevation: 4,
-      shadowColor: kPrimary.withOpacity(0.2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: kPrimary, width: 2),
-      ),
-      child: Container(
-        width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 230),
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _cardHeader(
-              icon: Icons.wb_sunny,
-              title: isArabic ? "الطقس" : "Weather",
-            ),
-            const SizedBox(height: 22),
-            if (isLoadingWeather)
-              const Center(child: CircularProgressIndicator())
-            else if (weatherData == null)
-              Text(
-                isArabic
-                    ? "تعذر تحميل الطقس الآن."
-                    : "Unable to load weather right now.",
-                style: const TextStyle(fontSize: 22, color: Colors.black87),
-              )
-            else
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    "${weatherData!['current']['temp_c']}°",
-                    style: const TextStyle(
-                      fontSize: 58,
-                      fontWeight: FontWeight.bold,
-                      color: kPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          weatherData!['customCityName'].toString(),
-                          style: const TextStyle(
-                            fontSize: 27,
-                            fontWeight: FontWeight.bold,
-                            color: kPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          weatherData!['current']['condition']['text']
-                              .toString(),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            color: Colors.black87,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
+  if (condition.contains('sun') || condition.contains('clear') || condition.contains('مشمس') || condition.contains('صافي')) {
+    return Icons.wb_sunny;
+  } else if (condition.contains('cloud') || condition.contains('غائم') || condition.contains('ملبد')) {
+    return Icons.cloud;
+  } else if (condition.contains('rain') || condition.contains('مطر')) {
+    return Icons.water_drop;
+  } else if (condition.contains('storm') || condition.contains('thunder') || condition.contains('رعد')) {
+    return Icons.flash_on;
+  } else if (condition.contains('mist') || condition.contains('fog') || condition.contains('ضباب')) {
+    return Icons.foggy;
   }
+
+  return Icons.wb_cloudy;
+}
+
+Color _getWeatherIconColor(String condition) {
+  condition = condition.toLowerCase();
+
+  if (condition.contains('sun') || condition.contains('clear') || condition.contains('مشمس') || condition.contains('صافي')) {
+    return Colors.orange;
+  } else if (condition.contains('cloud') || condition.contains('غائم') || condition.contains('ملبد')) {
+    return Colors.blueGrey;
+  } else if (condition.contains('rain') || condition.contains('مطر')) {
+    return Colors.blue;
+  } else if (condition.contains('storm') || condition.contains('thunder') || condition.contains('رعد')) {
+    return Colors.deepPurple;
+  } else if (condition.contains('mist') || condition.contains('fog') || condition.contains('ضباب')) {
+    return Colors.grey;
+  }
+
+  return kPrimary;
+}
+
+String _getWeatherTip(double temp, bool isArabic) {
+  if (temp >= 35) {
+    return isArabic
+        ? "الجو حار اليوم، يُفضل شرب الماء وتجنب الشمس."
+        : "It is hot today. Drink water and avoid direct sunlight.";
+  } else if (temp <= 15) {
+    return isArabic
+        ? "الجو بارد اليوم، يُفضل ارتداء ملابس دافئة."
+        : "It is cold today. Wearing warm clothes is recommended.";
+  }
+
+  return isArabic
+      ? "الجو مناسب اليوم، نتمنى لك يومًا لطيفًا."
+      : "The weather is pleasant today. Have a nice day.";
+}
+Widget _buildWeatherCard(bool isArabic) {
+  final String condition = weatherData == null
+      ? ""
+      : weatherData!['current']['condition']['text'].toString();
+
+  final double temp = weatherData == null
+      ? 0
+      : double.tryParse(weatherData!['current']['temp_c'].toString()) ?? 0;
+
+  return Card(
+    color: Colors.white,
+    elevation: 4,
+    shadowColor: kPrimary.withOpacity(0.2),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+      side: const BorderSide(color: kPrimary, width: 2),
+    ),
+    child: Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 430),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+      ),
+      
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _cardHeader(
+            icon: Icons.cloud_outlined,
+            title: isArabic ? "الطقس" : "Weather",
+          ),
+          const SizedBox(height: 22),
+
+          if (isLoadingWeather)
+            const Center(child: CircularProgressIndicator())
+          else if (weatherData == null)
+            Text(
+              isArabic
+                  ? "تعذر تحميل الطقس الآن."
+                  : "Unable to load weather right now.",
+              style: const TextStyle(fontSize: 22, color: Colors.black87),
+            )
+          else
+            Column(
+              children: [
+                Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+
+    Row(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _getWeatherIconColor(condition).withOpacity(0.12),
+          ),
+          child: Icon(
+            _getWeatherIcon(condition),
+            size: 48,
+            color: _getWeatherIconColor(condition),
+          ),
+        ),
+
+        const SizedBox(width: 16),
+
+        Text(
+          "${weatherData!['current']['temp_c']}°",
+          style: const TextStyle(
+            fontSize: 52,
+            fontWeight: FontWeight.bold,
+            color: kPrimary,
+          ),
+        ),
+      ],
+    ),
+
+    const SizedBox(height: 16),
+
+    Text(
+      weatherData!['customCityName'].toString(),
+      style: const TextStyle(
+        fontSize: 26,
+        fontWeight: FontWeight.bold,
+        color: kPrimary,
+      ),
+    ),
+
+    const SizedBox(height: 6),
+
+    Text(
+      condition,
+      style: const TextStyle(
+        fontSize: 20,
+        color: Colors.black87,
+      ),
+    ),
+  ],
+),     
+
+                const SizedBox(height: 20),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: kPrimary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.tips_and_updates,
+                        color: kPrimary,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _getWeatherTip(temp, isArabic),
+                          style: const TextStyle(
+                            fontSize: 19,
+                            height: 1.35,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildNewsCard(bool isArabic) {
     return Card(
@@ -575,7 +772,7 @@ HapticFeedback.mediumImpact();
           children: [
             _cardHeader(
               icon: Icons.article,
-              title: isArabic ? "الأخبار" : "News",
+              title: isArabic ? "أهم العناوين" : "Top Headlines",
             ),
             const SizedBox(height: 20),
             if (isLoadingNews)
@@ -588,11 +785,17 @@ HapticFeedback.mediumImpact();
                 style: const TextStyle(fontSize: 22, color: Colors.black87),
               )
             else
-              Column(
-                children: newsList.take(3).map((news) {
-                  return _newsLine(news['title']?.toString() ?? "");
-                }).toList(),
-              ),
+Column(
+  children: newsList.take(6).toList().asMap().entries.map((entry) {
+    final index = entry.key + 1;
+    final news = entry.value;
+
+    return _newsTitleLine(
+      index: index,
+      title: news['title']?.toString() ?? "",
+    );
+  }).toList(),
+),
           ],
         ),
       ),
@@ -616,31 +819,50 @@ HapticFeedback.mediumImpact();
     );
   }
 
-  Widget _newsLine(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 10),
-            child: Icon(Icons.circle, size: 10, color: kPrimary),
+Widget _newsTitleLine({
+  required int index,
+  required String title,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: kPrimary,
+            borderRadius: BorderRadius.circular(9),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 21,
-                height: 1.35,
-                color: Colors.black87,
-              ),
+          child: Text(
+            "$index",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 10,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }
 
 class RipplePainter extends CustomPainter {

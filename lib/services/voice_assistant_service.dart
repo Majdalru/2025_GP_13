@@ -14,8 +14,7 @@ import 'medication_scheduler.dart';
 import 'whisper_service.dart';
 
 /// API KEY
-const String _openAIApiKey =
-    ''; // TODO: Add your API Key here safely (e.g. environment variable)
+const String _openAIApiKey =''; // TODO: Add your API Key here safely (e.g. environment variable)
 
 class VoiceAssistantService {
   // ===== Singleton =====
@@ -232,7 +231,7 @@ class VoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'User may speak English or Arabic. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, weather, news, todayMedications, none. '
+                  'goToMedia, goToHome, sos, goToSettings, goToDailyLibrary,weather, news, todayMedications, none. '
                   'You MUST respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -335,18 +334,23 @@ class VoiceAssistantService {
       case 'sos':
       case 'emergency':
         return VoiceCommand.sos;
+      case 'gotodailylibrary':
+      case 'daily_library':
+      case 'dailylibrary':
+      case 'daily':
+       return VoiceCommand.goToDailyLibrary;
 
       case 'gotosettings':
       case 'settings':
       case 'goToSettings':
         return VoiceCommand.goToSettings;
 
-      case 'todaymedications': // 👈 insert from here
+      case 'todaymedications': //  insert from here
       case 'today_medications':
       case 'today_meds':
       case 'mymedications':
       case 'todaymeds':
-        return VoiceCommand.todayMedications; // 👈 to here
+        return VoiceCommand.todayMedications; //  to here
 
       case 'none':
       default:
@@ -377,7 +381,7 @@ class VoiceAssistantService {
     if (_containsAny(lower, [
       'media',
       'media libarary',
-      'libarary',
+      
       'Media',
       'audio',
       'song',
@@ -453,28 +457,35 @@ class VoiceAssistantService {
       return VoiceCommand.editMedication;
     }
 
+
+
+
     if (_containsAny(lower, [
-      'weather',
+  'daily library',
+  'daily',
+        'weather',
       'today weather',
       'forecast',
       'temperature',
       'climate',
       'how is the weather',
       'what is the weather',
-    ])) {
-      return VoiceCommand.weather;
-    }
-
-    if (_containsAny(lower, [
-      'news',
+  'library',
+        'news',
+      'latest news',
+  'المكتبه اليوميه',
+  'المكتبة اليومية',
+  'مكتبه يوميه',
+  'مكتبة يومية',
+        'news',
       'latest news',
       'headlines',
       'اخبار',
       'الأخبار',
       'خبر',
-    ])) {
-      return VoiceCommand.news;
-    }
+])) {
+  return VoiceCommand.goToDailyLibrary;
+}
 
     if (_containsAny(lower, [
       // 👈 insert from here
