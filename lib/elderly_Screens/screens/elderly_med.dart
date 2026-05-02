@@ -27,11 +27,13 @@ class ElderlyMedicationPage extends StatefulWidget {
 
   /// optional initial voice intent coming from home page
   final VoiceCommand? initialCommand;
+  final bool isMedicationsEnabled;
 
   const ElderlyMedicationPage({
     super.key,
     required this.elderlyId,
     this.initialCommand,
+    this.isMedicationsEnabled = true,
   });
 
   @override
@@ -258,7 +260,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
       ),
-      body: Column(
+      body: widget.isMedicationsEnabled ? Column(
         children: [
           CustomSegmentedControl(tabController: _tabController),
           Expanded(
@@ -432,8 +434,17 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
             ),
           ),
         ],
-      ),
-
+      )
+      : Column(
+          children: [
+            Expanded(
+              child: TodaysMedsTab(
+                elderlyId: widget.elderlyId,
+                isCaregiverView: false,
+              ),
+            ),
+          ],
+        ),
       // Voice button in medications page
       floatingActionButton: isArabic
           ? ArabicFloatingVoiceButton(
@@ -444,18 +455,21 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
               onCommand: (command) async {
                 switch (command) {
                   case VoiceCommand.addMedication:
+                    if (!widget.isMedicationsEnabled) { await _arabicVoiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
                     await _arabicVoiceService.runAddMedicationFlow(
                       widget.elderlyId,
                     );
                     break;
 
                   case VoiceCommand.deleteMedication:
+                    if (!widget.isMedicationsEnabled) { await _arabicVoiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
                     await _arabicVoiceService.runDeleteMedicationFlow(
                       widget.elderlyId,
                     );
                     break;
 
                   case VoiceCommand.editMedication:
+                    if (!widget.isMedicationsEnabled) { await _arabicVoiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
                     await _arabicVoiceService.runEditMedicationFlow(
                       widget.elderlyId,
                     );
@@ -496,16 +510,19 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
               onCommand: (command) async {
                 switch (command) {
                   case VoiceCommand.addMedication:
+                    if (!widget.isMedicationsEnabled) { await _voiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
                     await _voiceService.runAddMedicationFlow(widget.elderlyId);
                     break;
 
                   case VoiceCommand.deleteMedication:
+                    if (!widget.isMedicationsEnabled) { await _voiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
                     await _voiceService.runDeleteMedicationFlow(
                       widget.elderlyId,
                     );
                     break;
 
                   case VoiceCommand.editMedication:
+                    if (!widget.isMedicationsEnabled) { await _voiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
                     await _voiceService.runEditMedicationFlow(widget.elderlyId);
                     break;
 

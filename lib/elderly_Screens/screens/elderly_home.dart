@@ -617,14 +617,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                               switch (command) {
                                 case VoiceCommand.goToMedication:
-                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid != null) {
+                                  if (uid != null) {
                                     if (!mounted) return;
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => ElderlyMedicationPage(
                                           elderlyId: uid,
+                                          isMedicationsEnabled: _medicationsEnabled,
                                         ),
                                       ),
                                     );
@@ -652,6 +652,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     MaterialPageRoute(
                                       builder: (_) => ElderlyMedicationPage(
                                         elderlyId: uid,
+                                        isMedicationsEnabled: _medicationsEnabled,
                                         initialCommand:
                                             VoiceCommand.addMedication,
                                       ),
@@ -676,6 +677,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     MaterialPageRoute(
                                       builder: (_) => ElderlyMedicationPage(
                                         elderlyId: uid,
+                                        isMedicationsEnabled: _medicationsEnabled,
                                         initialCommand:
                                             VoiceCommand.editMedication,
                                       ),
@@ -700,6 +702,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     MaterialPageRoute(
                                       builder: (_) => ElderlyMedicationPage(
                                         elderlyId: uid,
+                                        isMedicationsEnabled: _medicationsEnabled,
                                         initialCommand:
                                             VoiceCommand.deleteMedication,
                                       ),
@@ -809,14 +812,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                               switch (command) {
                                 case VoiceCommand.goToMedication:
-                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid != null) {
+                                  if (uid != null) {
                                     if (!mounted) return;
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => ElderlyMedicationPage(
                                           elderlyId: uid,
+                                          isMedicationsEnabled: _medicationsEnabled,
                                         ),
                                       ),
                                     );
@@ -844,6 +847,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     MaterialPageRoute(
                                       builder: (_) => ElderlyMedicationPage(
                                         elderlyId: uid,
+                                        isMedicationsEnabled: _medicationsEnabled,
                                         initialCommand:
                                             VoiceCommand.addMedication,
                                       ),
@@ -868,6 +872,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     MaterialPageRoute(
                                       builder: (_) => ElderlyMedicationPage(
                                         elderlyId: uid,
+                                        isMedicationsEnabled: _medicationsEnabled,
                                         initialCommand:
                                             VoiceCommand.editMedication,
                                       ),
@@ -892,6 +897,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                     MaterialPageRoute(
                                       builder: (_) => ElderlyMedicationPage(
                                         elderlyId: uid,
+                                        isMedicationsEnabled: _medicationsEnabled,
                                         initialCommand:
                                             VoiceCommand.deleteMedication,
                                       ),
@@ -1124,10 +1130,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                 const SizedBox(height: 40),
 
-                if (_mediaEnabled || _medicationsEnabled)
-                  Row(
+                                  Row(
                     children: [
-                      if (_mediaEnabled)
+                      if (_mediaEnabled) ...[
                         Expanded(
                           child: _HomeCard(
                             icon: Icons.video_library,
@@ -1143,41 +1148,41 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                             },
                           ),
                         ),
-                      if (_mediaEnabled && _medicationsEnabled)
                         const SizedBox(width: 20),
-                      if (_medicationsEnabled)
-                        Expanded(
-                          child: _HomeCard(
-                            icon: Icons.medical_services,
-                            title: AppLocalizations.of(context)!.medication,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              final uid = FirebaseAuth.instance.currentUser?.uid;
-                              if (uid != null) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ElderlyMedicationPage(elderlyId: uid),
+                      ],
+                      Expanded(
+                        child: _HomeCard(
+                          icon: Icons.medical_services,
+                          title: AppLocalizations.of(context)!.medication,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+                            if (uid != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ElderlyMedicationPage(
+                                    elderlyId: uid,
+                                    isMedicationsEnabled: _medicationsEnabled,
                                   ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      )!.errorNotLoggedIn2,
-                                    ),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.errorNotLoggedIn2,
                                   ),
-                                );
-                              }
-                            },
-                          ),
+                                ),
+                              );
+                            }
+                          },
                         ),
+                      ),
                     ],
                   ),
-                if (_mediaEnabled || _medicationsEnabled)
                   const SizedBox(height: 20),
 
                 const SizedBox(height: 2),
