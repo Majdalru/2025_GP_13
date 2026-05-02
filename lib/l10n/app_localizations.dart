@@ -2911,6 +2911,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Until {date} ({days} days left)'**
   String cardUntilDate(String date, int days);
+
+  /// No description provided for @accessControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Access Control'**
+  String get accessControl;
+
+  /// No description provided for @accessControlDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable or disable features for this elderly user.'**
+  String get accessControlDesc;
+
+  /// No description provided for @accessMedications.
+  ///
+  /// In en, this message translates to:
+  /// **'Medications'**
+  String get accessMedications;
+
+  /// No description provided for @accessLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Library'**
+  String get accessLibrary;
+
+  /// No description provided for @accessMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Media & Shared Content'**
+  String get accessMedia;
+
+  /// No description provided for @featureDisabledByCaregiver.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature has been disabled by your caregiver.'**
+  String get featureDisabledByCaregiver;
 }
 
 class _AppLocalizationsDelegate

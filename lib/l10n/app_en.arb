@@ -909,5 +909,11 @@
     "date": { "type": "String" },
     "days": { "type": "int" }
   }
-}
+},
+"accessControl": "Access Control",
+"accessControlDesc": "Enable or disable features for this elderly user.",
+"accessMedications": "Medications",
+"accessLibrary": "Daily Library",
+"accessMedia": "Media & Shared Content",
+"featureDisabledByCaregiver": "This feature has been disabled by your caregiver."
 }

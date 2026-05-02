@@ -236,6 +236,11 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   int _prevCaregiverCount = 0;
   bool _initialCaregiverLoaded = false;
   bool _didRunNewsTest = false;
+
+  bool _medicationsEnabled = true;
+  bool _libraryEnabled = true;
+  bool _mediaEnabled = true;
+
   @override
   void initState() {
     super.initState();
@@ -366,6 +371,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               _prevCaregiverCount = newCount;
             }
 
+            final permissions = data['permissions'] as Map<String, dynamic>?;
+
             if (!mounted) return;
 
             setState(() {
@@ -373,6 +380,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               gender = newGender;
               phone = newPhone;
               caregiverNames = names;
+              _medicationsEnabled = permissions?['medications'] ?? true;
+              _libraryEnabled = permissions?['library'] ?? true;
+              _mediaEnabled = permissions?['media'] ?? true;
               loading = false;
             });
           },
@@ -607,7 +617,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                               switch (command) {
                                 case VoiceCommand.goToMedication:
-                                  if (uid != null) {
+                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid != null) {
                                     if (!mounted) return;
                                     Navigator.push(
                                       context,
@@ -625,7 +636,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.addMedication:
-                                  if (uid == null) {
+                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid == null) {
                                     await _arabicVoice.speak(
                                       'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
                                     );
@@ -648,7 +660,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.editMedication:
-                                  if (uid == null) {
+                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid == null) {
                                     await _arabicVoice.speak(
                                       'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
                                     );
@@ -671,7 +684,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.deleteMedication:
-                                  if (uid == null) {
+                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid == null) {
                                     await _arabicVoice.speak(
                                       'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
                                     );
@@ -694,7 +708,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.goToMedia:
-                                  if (!mounted) return;
+                                  if (!_mediaEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (!mounted) return;
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -712,7 +727,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                 case VoiceCommand.weather:
                                 case VoiceCommand.news:
                                 case VoiceCommand.goToDailyLibrary:
-                                 if (!mounted) return;
+                                 if (!_libraryEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                     if (!mounted) return;
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -793,7 +809,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                               switch (command) {
                                 case VoiceCommand.goToMedication:
-                                  if (uid != null) {
+                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid != null) {
                                     if (!mounted) return;
                                     Navigator.push(
                                       context,
@@ -811,7 +828,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.addMedication:
-                                  if (uid == null) {
+                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid == null) {
                                     await _voice.speak(
                                       "I could not find your account. Please log in again.",
                                     );
@@ -834,7 +852,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.editMedication:
-                                  if (uid == null) {
+                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid == null) {
                                     await _voice.speak(
                                       "I could not find your account. Please log in again.",
                                     );
@@ -857,7 +876,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.deleteMedication:
-                                  if (uid == null) {
+                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (uid == null) {
                                     await _voice.speak(
                                       "I could not find your account. Please log in again.",
                                     );
@@ -880,7 +900,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                   break;
 
                                 case VoiceCommand.goToMedia:
-                                  if (!mounted) return;
+                                  if (!_mediaEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                    if (!mounted) return;
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -898,7 +919,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                 case VoiceCommand.weather:
                                 case VoiceCommand.news:
                                 case VoiceCommand.goToDailyLibrary:
-                                   if (!mounted) return;
+                                   if (!_libraryEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
+                                     if (!mounted) return;
                                    Navigator.push(
                                      context,
                                      MaterialPageRoute(
@@ -1102,101 +1124,107 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
                 const SizedBox(height: 40),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: _HomeCard(
-                        icon: Icons.video_library,
-                        title: AppLocalizations.of(context)!.media,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MediaPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: _HomeCard(
-                        icon: Icons.medical_services,
-                        title: AppLocalizations.of(context)!.medication,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          final uid = FirebaseAuth.instance.currentUser?.uid;
-                          if (uid != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ElderlyMedicationPage(elderlyId: uid),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.errorNotLoggedIn2,
+                if (_mediaEnabled || _medicationsEnabled)
+                  Row(
+                    children: [
+                      if (_mediaEnabled)
+                        Expanded(
+                          child: _HomeCard(
+                            icon: Icons.video_library,
+                            title: AppLocalizations.of(context)!.media,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const MediaPage(),
                                 ),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                              );
+                            },
+                          ),
+                        ),
+                      if (_mediaEnabled && _medicationsEnabled)
+                        const SizedBox(width: 20),
+                      if (_medicationsEnabled)
+                        Expanded(
+                          child: _HomeCard(
+                            icon: Icons.medical_services,
+                            title: AppLocalizations.of(context)!.medication,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ElderlyMedicationPage(elderlyId: uid),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.errorNotLoggedIn2,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                if (_mediaEnabled || _medicationsEnabled)
+                  const SizedBox(height: 20),
 
                 const SizedBox(height: 2),
 
-                Card(
-                  color: kSurface,
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                    side: const BorderSide(color: kPrimary, width: 2),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(25),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DailyLibraryPage(),
-                        ),
-                      );
-                    },
-                    splashColor: kPrimary.withOpacity(0.15),
-                    highlightColor: Colors.transparent,
-                    child: Container(
-                      width: double.infinity,
-                      height: 145, //
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.wb_sunny, size: 70, color: kPrimary),
-                          const SizedBox(width: 24),
-                           Expanded(
-                            child: Text(
-                              isArabic ? "المكتبة اليومية" : "Daily Library",
-                              style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w700,
-                                color: kPrimary,
+                if (_libraryEnabled)
+                  Card(
+                    color: kSurface,
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      side: const BorderSide(color: kPrimary, width: 2),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(25),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DailyLibraryPage(),
+                          ),
+                        );
+                      },
+                      splashColor: kPrimary.withOpacity(0.15),
+                      highlightColor: Colors.transparent,
+                      child: Container(
+                        width: double.infinity,
+                        height: 145, //
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.wb_sunny, size: 70, color: kPrimary),
+                            const SizedBox(width: 24),
+                             Expanded(
+                              child: Text(
+                                isArabic ? "المكتبة اليومية" : "Daily Library",
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w700,
+                                  color: kPrimary,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

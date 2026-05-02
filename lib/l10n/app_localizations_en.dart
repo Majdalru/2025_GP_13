@@ -1575,4 +1575,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String cardUntilDate(String date, int days) {
     return 'Until $date ($days days left)';
   }
+
+  @override
+  String get accessControl => 'Access Control';
+
+  @override
+  String get accessControlDesc =>
+      'Enable or disable features for this elderly user.';
+
+  @override
+  String get accessMedications => 'Medications';
+
+  @override
+  String get accessLibrary => 'Daily Library';
+
+  @override
+  String get accessMedia => 'Media & Shared Content';
+
+  @override
+  String get featureDisabledByCaregiver =>
+      'This feature has been disabled by your caregiver.';
 }

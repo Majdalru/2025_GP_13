@@ -912,5 +912,11 @@
     "date": { "type": "String" },
     "days": { "type": "int" }
   }
-}
+},
+"accessControl": "التحكم بالوصول",
+"accessControlDesc": "تفعيل أو تعطيل الميزات لكبير السن.",
+"accessMedications": "الأدوية",
+"accessLibrary": "المكتبة اليومية",
+"accessMedia": "الوسائط والمحتوى المشترك",
+"featureDisabledByCaregiver": "تم تعطيل هذه الميزة من قبل مقدم الرعاية."
 }

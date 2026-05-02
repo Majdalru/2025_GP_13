@@ -5,6 +5,7 @@ import 'meds_summary_page.dart';
 import 'location_page.dart';
 import 'share_content_page.dart';
 import 'home_shell.dart';
+import 'manage_access_page.dart';
 
 class BrowsePage extends StatelessWidget {
   final ElderlyProfile? selectedProfile;
@@ -86,10 +87,21 @@ class BrowsePage extends StatelessWidget {
 
       _BrowseItem(
         title: AppLocalizations.of(context)!.manageAccess,
-        subtitle: '',
+        subtitle: AppLocalizations.of(context)!.accessControlDesc,
         icon: Icons.manage_accounts_rounded,
         color: Colors.indigo,
-        onTap: null,
+        onTap: () {
+          if (selectedProfile != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    ManageAccessPage(elderlyId: selectedProfile!.uid),
+              ),
+            );
+          } else {
+            _showSelectProfileMessage(context);
+          }
+        },
       ),
 
       _BrowseItem(

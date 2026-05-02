@@ -1563,4 +1563,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String cardUntilDate(String date, int days) {
     return 'حتى $date ($days أيام متبقية)';
   }
+
+  @override
+  String get accessControl => 'التحكم بالوصول';
+
+  @override
+  String get accessControlDesc => 'تفعيل أو تعطيل الميزات لكبير السن.';
+
+  @override
+  String get accessMedications => 'الأدوية';
+
+  @override
+  String get accessLibrary => 'المكتبة اليومية';
+
+  @override
+  String get accessMedia => 'الوسائط والمحتوى المشترك';
+
+  @override
+  String get featureDisabledByCaregiver =>
+      'تم تعطيل هذه الميزة من قبل مقدم الرعاية.';
 }
