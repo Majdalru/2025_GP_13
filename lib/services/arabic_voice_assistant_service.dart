@@ -14,11 +14,11 @@ import 'voice_structured_parser_service.dart';
 import 'whisper_service.dart';
 
 /// Google Cloud TTS API Key
-const String _googleTtsApiKey = '';
+const String _googleTtsApiKey = 'AIzaSyBCq3Feac7VVULUhKKgGJlsrXaYCzftJt0';
 
 /// OpenAI API Key for Whisper + intent classification + structured parsing
 const String _openAIApiKey =
-    '';
+    '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';
 
 class ArabicVoiceAssistantService {
   static final ArabicVoiceAssistantService _instance =
@@ -273,7 +273,7 @@ class ArabicVoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'The user may speak Arabic or English. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, goToDailyLibrary,weather, news, todayMedications, none. '
+                  'goToMedia, goToHome, sos, goToSettings, weather, news, todayMedications, none. '
                   'Respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -370,12 +370,6 @@ class ArabicVoiceAssistantService {
       case 'today_medications':
       case 'today_meds':
         return VoiceCommand.todayMedications;
-
-      case 'gotodailylibrary':
-      case 'daily_library':
-      case 'dailylibrary':
-      case 'daily':
-        return VoiceCommand.goToDailyLibrary;
 
       default:
         return null;
@@ -501,9 +495,8 @@ class ArabicVoiceAssistantService {
       return VoiceCommand.editMedication;
     }
 
-
     if (_containsAny(lower, [
-   'الطقس',
+      'الطقس',
       'جو',
       'الجو',
       'درجه الحراره',
@@ -515,6 +508,11 @@ class ArabicVoiceAssistantService {
       'وش الجو',
       'وش الطقس',
       'ايش الطقس',
+    ])) {
+      return VoiceCommand.weather;
+    }
+
+    if (_containsAny(lower, [
       'اخبار',
       'أخبار',
       'الاخبار',
@@ -526,15 +524,12 @@ class ArabicVoiceAssistantService {
       'ايش الأخبار',
       'اخبار اليوم',
       'أخبار اليوم',
-      'المكتبه اليوميه',
-      'المكتبة اليومية',
-      'مكتبه يوميه',
-      'مكتبة يومية',
+      'news',
+      'latest news',
+      'headlines',
     ])) {
-      return VoiceCommand.goToDailyLibrary;
+      return VoiceCommand.news;
     }
-
-
 
     if (_containsAny(lower, [
       'ادويتي اليوم',
