@@ -188,7 +188,7 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
         languageCode: isArabic ? 'ar' : 'en',
         country: isArabic ? 'sa' : null,
         maxResults: 6,
-        category: 'health',
+        category: 'health,science',
       );
 
       if (!mounted) return;
@@ -292,6 +292,7 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
     final bool isArabic = localeProvider.isArabic;
 
  setState(() {
+  
   _isSpeaking = true;  
   _isListening = false;
 });

@@ -18,7 +18,7 @@ const String _googleTtsApiKey = '';
 
 /// OpenAI API Key for Whisper + intent classification + structured parsing
 const String _openAIApiKey =
-    '';
+  '';
 
 class ArabicVoiceAssistantService {
   static final ArabicVoiceAssistantService _instance =
@@ -228,7 +228,7 @@ class ArabicVoiceAssistantService {
       onCommand(command);
     } else {
       await speak(
-        'عذرًا، لم أفهم طلبك. يمكنك السؤال عن الطقس او الأخبار او قول  الأدوية أو الوسائط أو الصفحة الرئيسية أو الطوارئ.',
+        'عذرًا، لم أفهم طلبك. يمكنك السؤال عن المكتبة اليومية او قول  الأدوية أو الوسائط أو الصفحة الرئيسية أو الطوارئ.',
       );
     }
   }
