@@ -17,8 +17,7 @@ import 'whisper_service.dart';
 const String _googleTtsApiKey = 'AIzaSyBCq3Feac7VVULUhKKgGJlsrXaYCzftJt0';
 
 /// OpenAI API Key for Whisper + intent classification + structured parsing
-const String _openAIApiKey =
-    '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';
+const String _openAIApiKey = '';
 
 class ArabicVoiceAssistantService {
   static final ArabicVoiceAssistantService _instance =

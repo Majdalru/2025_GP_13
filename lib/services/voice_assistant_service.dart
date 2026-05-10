@@ -15,7 +15,7 @@ import 'whisper_service.dart';
 
 /// API KEY
 const String _openAIApiKey =
-    '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'; // TODO: Add your API Key here safely (e.g. environment variable)
+    ''; // TODO: Add your API Key here safely (e.g. environment variable)
 
 class VoiceAssistantService {
   // ===== Singleton =====
