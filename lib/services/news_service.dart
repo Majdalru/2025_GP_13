@@ -29,7 +29,7 @@ bool _isSafeNews(Map<String, dynamic> item) {
     'genitals',
     'private area',
     'sensitive area',
-    '?',
+   
 
     // Arabic
     'جنس',
@@ -81,19 +81,23 @@ if (country != null && country.isNotEmpty) {
 
   return articles
     .where((item) => _isSafeNews(item as Map<String, dynamic>))
-    .map((item) {
-      final source = item['source'] as Map<String, dynamic>?;
+.map((item) {
+  final source = item['source'] as Map<String, dynamic>?;
 
-      return {
-        'title': item['title'] ?? '',
-        'description': item['description'] ?? '',
-        'content': item['content'] ?? '',
-        'url': item['url'] ?? '',
-        'image': item['image'] ?? '',
-        'publishedAt': item['publishedAt'] ?? '',
-        'sourceName': source?['name'] ?? '',
-      };
-    }).toList();
+  print('NEWS TITLE: ${item['title']}');
+  print('NEWS SOURCE: ${source?['name'] ?? 'Unknown'}');
+  print('SOURCE URL: ${source?['url'] ?? 'No URL'}');
+
+  return {
+    'title': item['title'] ?? '',
+    'description': item['description'] ?? '',
+    'content': item['content'] ?? '',
+    'url': item['url'] ?? '',
+    'image': item['image'] ?? '',
+    'publishedAt': item['publishedAt'] ?? '',
+    'sourceName': source?['name'] ?? '',
+  };
+}).toList();
     }
 
     if (response.statusCode == 401) {
