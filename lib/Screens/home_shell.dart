@@ -98,7 +98,7 @@ class _HomeShellState extends State<HomeShell> {
   void _listenToEmergencyAlerts() {
     _emergencySub = FirebaseFirestore.instance
         .collection('emergency_alerts')
-        .where('status', isEqualTo: 'active')
+        .where('status', whereIn: ['active', 'seen'])
         .snapshots()
         .listen((snapshot) async {
       final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
@@ -141,6 +141,7 @@ class _HomeShellState extends State<HomeShell> {
       final data = activeDoc.data() as Map<String, dynamic>;
       final elderlyId = data['elderlyId']?.toString() ?? '';
       final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
+      final alertStatus = data['status']?.toString() ?? 'active';
 
       setState(() {
         _activeAlertId = activeDoc!.id;
@@ -148,8 +149,8 @@ class _HomeShellState extends State<HomeShell> {
         _activeAlertElderlyName = elderlyName;
       });
 
-      // Show popup + local notification + emergency sound only once for each new alert.
-      if (!_shownAlertDialogs.contains(activeDoc.id)) {
+      // Show popup + local notification + emergency sound only once for each new active alert.
+      if (alertStatus == 'active' && !_shownAlertDialogs.contains(activeDoc.id)) {
         _shownAlertDialogs.add(activeDoc.id);
 
         await _playEmergencySound();
@@ -209,6 +210,14 @@ class _HomeShellState extends State<HomeShell> {
                 backgroundColor: Colors.red,
               ),
               onPressed: () async {
+                await FirebaseFirestore.instance
+                    .collection('emergency_alerts')
+                    .doc(alertId)
+                    .update({
+                  'status': 'seen',
+                  'seenAt': FieldValue.serverTimestamp(),
+                });
+
                 await _stopEmergencySound();
 
                 if (!context.mounted) return;
@@ -338,6 +347,16 @@ class _HomeShellState extends State<HomeShell> {
                     side: const BorderSide(color: Colors.white),
                   ),
                   onPressed: () async {
+                    if (_activeAlertId != null) {
+                      await FirebaseFirestore.instance
+                          .collection('emergency_alerts')
+                          .doc(_activeAlertId)
+                          .update({
+                        'status': 'seen',
+                        'seenAt': FieldValue.serverTimestamp(),
+                      });
+                    }
+
                     await _stopEmergencySound();
 
                     if (!mounted) return;

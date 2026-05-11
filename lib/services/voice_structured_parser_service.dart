@@ -259,4 +259,93 @@ Approximation rules:
     if (json == null) return null;
     return json;
   }
+
+  Future<bool?> parseEmergencyIntent(String userText, String apiKey) async {
+    final schema = {
+      'type': 'object',
+      'properties': {
+        'isEmergency': {'type': 'boolean'},
+        'confidence': {
+          'type': 'string',
+          'enum': ['low', 'medium', 'high'],
+        },
+        'reason': {'type': 'string'},
+      },
+      'required': ['isEmergency', 'confidence', 'reason'],
+      'additionalProperties': false,
+    };
+
+    final systemPrompt = '''
+You classify whether an elderly user's speech indicates an emergency.
+
+Return isEmergency = true if the user says or implies any urgent safety risk, including:
+- They are in danger or feel unsafe.
+- They need help immediately.
+- They fell down.
+- They cannot move or cannot get up.
+- They need someone to come.
+- They need an ambulance.
+- They are very unwell in a potentially urgent way.
+
+Arabic examples that should be emergency:
+- انا بخطر
+- انا في خطر
+- ساعدوني
+- الحقوني
+- احتاج مساعدة
+- احتاج احد
+- طحت
+- وقعت
+- ما اقدر اتحرك
+- ما اقدر اقوم
+- ابغى اسعاف
+- اتصلوا بالاسعاف
+- تعبانه مرة وما اقدر اتحرك
+- خايفة واحتاج احد
+
+English examples that should be emergency:
+- I am in danger
+- I need help
+- Help me
+- Send help
+- I fell
+- I can't move
+- I cannot get up
+- Call an ambulance
+- I feel unsafe
+- I need someone now
+
+Return isEmergency = false for normal app commands:
+- medication requests
+- weather/news requests
+- media requests
+- home/settings navigation
+- casual phrases without danger or urgent help
+
+Use high confidence only when the phrase clearly indicates emergency.
+Use medium confidence when it likely indicates emergency.
+Use low confidence when unclear.
+''';
+
+    final json = await _postForJson(
+      apiKey: apiKey,
+      systemPrompt: systemPrompt,
+      userText: userText,
+      schema: schema,
+    );
+
+    if (json == null) return null;
+
+    final isEmergency = json['isEmergency'];
+    final confidence = json['confidence']?.toString();
+
+    if (isEmergency is bool) {
+      // Avoid false alarms for unclear phrases.
+      if (confidence == 'low') return false;
+      return isEmergency;
+    }
+
+    return null;
+  }
+
 }

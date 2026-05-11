@@ -115,6 +115,12 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
   Future<void> sendEmergencyAlert() async {
     try {
+      if (_isSendingEmergency) return;
+
+      setState(() {
+        _isSendingEmergency = true;
+      });
+
       final user = FirebaseAuth.instance.currentUser;
 
       if (user == null) {
@@ -145,6 +151,13 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           });
 
       debugPrint("🚨 Emergency alert saved with ID: ${alertRef.id}");
+
+      if (mounted) {
+        setState(() {
+          _latestAlertStatus = 'active';
+        });
+      }
+
 
       if (!mounted) return;
 
@@ -184,6 +197,12 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         },
       );
 
+      if (mounted) {
+        setState(() {
+          _isSendingEmergency = false;
+        });
+      }
+
       debugPrint(
         "Emergency alert sent: ${position.latitude}, ${position.longitude}",
       );
@@ -198,7 +217,116 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           backgroundColor: Colors.red,
         ),
       );
+
+      if (mounted) {
+        setState(() {
+          _isSendingEmergency = false;
+        });
+      }
     }
+  }
+
+  void _listenToMyEmergencyStatus() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _emergencyStatusSub = FirebaseFirestore.instance
+        .collection('emergency_alerts')
+        .where('elderlyId', isEqualTo: user.uid)
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted || snapshot.docs.isEmpty) return;
+
+      final data = snapshot.docs.first.data();
+      final status = data['status']?.toString();
+
+      setState(() {
+        _latestAlertStatus = status;
+      });
+
+      if (status == 'seen') {
+        final localeProvider = Provider.of<LocaleProvider>(
+          context,
+          listen: false,
+        );
+        final isArabic = localeProvider.isArabic;
+
+        _showStatusMessage(
+          title: isArabic ? 'تمت مشاهدة التنبيه' : 'Alert Seen',
+          message: isArabic
+              ? 'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.'
+              : 'Your caregiver has seen your emergency alert.',
+          icon: Icons.visibility_rounded,
+          color: Colors.green.shade700,
+        );
+      }
+    });
+  }
+
+  void _startSosHold(bool isArabic) {
+    if (_isSendingEmergency) return;
+
+    HapticFeedback.heavyImpact();
+
+    setState(() {
+      _isHoldingSos = true;
+      _sosHoldProgress = 0.0;
+    });
+
+    const totalMilliseconds = 2000;
+    const stepMilliseconds = 100;
+    int elapsed = 0;
+
+    _sosHoldTimer?.cancel();
+    _sosHoldTimer = Timer.periodic(
+      const Duration(milliseconds: stepMilliseconds),
+      (timer) async {
+        elapsed += stepMilliseconds;
+
+        if (mounted) {
+          setState(() {
+            _sosHoldProgress = elapsed / totalMilliseconds;
+          });
+        }
+
+        if (elapsed % 400 == 0) {
+          HapticFeedback.selectionClick();
+        }
+
+        if (elapsed >= totalMilliseconds) {
+          timer.cancel();
+
+          if (!mounted) return;
+
+          setState(() {
+            _isHoldingSos = false;
+            _sosHoldProgress = 1.0;
+          });
+
+          HapticFeedback.heavyImpact();
+          await sendEmergencyAlert();
+
+          if (mounted) {
+            setState(() {
+              _sosHoldProgress = 0.0;
+            });
+          }
+        }
+      },
+    );
+  }
+
+  void _cancelSosHold() {
+    _sosHoldTimer?.cancel();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isHoldingSos = false;
+      _sosHoldProgress = 0.0;
+    });
   }
 
   String _translateGender(String? g) {
@@ -238,12 +366,21 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   bool _voiceIsListening = false;
   bool _voiceIsSpeaking = false;
 
+  bool _isSendingEmergency = false;
+  String? _latestAlertStatus;
+  StreamSubscription<QuerySnapshot>? _emergencyStatusSub;
+
+  Timer? _sosHoldTimer;
+  double _sosHoldProgress = 0.0;
+  bool _isHoldingSos = false;
+
   @override
   void initState() {
     super.initState();
     _listenToUserDoc();
     favoritesManager.init();
     saveElderlyLocation();
+    _listenToMyEmergencyStatus();
   }
 
   //here test news
@@ -280,6 +417,86 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       }
     });
   }
+  void _showStatusMessage({
+    required String title,
+    required String message,
+    required IconData icon,
+    required Color color,
+    int seconds = 4,
+  }) {
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger
+      ..hideCurrentMaterialBanner()
+      ..showMaterialBanner(
+        MaterialBanner(
+          elevation: 6,
+          backgroundColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.30),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.20),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 34),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        message,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: const [SizedBox.shrink()],
+        ),
+      );
+
+    Future.delayed(Duration(seconds: seconds), () {
+      if (mounted) {
+        messenger.hideCurrentMaterialBanner();
+      }
+    });
+  }
+
 
   List<List<T>> _chunk<T>(List<T> list, int size) {
     final out = <List<T>>[];
@@ -403,6 +620,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   @override
   void dispose() {
     _userSub?.cancel();
+    _emergencyStatusSub?.cancel();
+    _sosHoldTimer?.cancel();
     super.dispose();
   }
 
@@ -423,6 +642,29 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     const kTealDark = Color(0xFF00897B);
     const kServiceBg = Colors.white;
     const kEmergencyRed = Color(0xFFE53935);
+
+    final bool alertActive = _latestAlertStatus == 'active';
+    final bool alertSeen = _latestAlertStatus == 'seen';
+
+    final Color emergencyButtonColor = alertSeen
+        ? Colors.green
+        : alertActive
+            ? Colors.orange.shade700
+            : kEmergencyRed;
+
+    final Color emergencyButtonBg = alertSeen
+        ? Colors.green.withOpacity(0.10)
+        : alertActive
+            ? Colors.orange.withOpacity(0.12)
+            : _isHoldingSos
+                ? kEmergencyRed.withOpacity(0.18)
+                : kEmergencyRed.withOpacity(0.10);
+
+    final Color emergencyButtonBorder = alertSeen
+        ? Colors.green.withOpacity(0.5)
+        : alertActive
+            ? Colors.orange.withOpacity(0.55)
+            : kEmergencyRed.withOpacity(0.4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -1185,59 +1427,133 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: GestureDetector(
-                onTap: () async {
-                  HapticFeedback.heavyImpact();
-                  await sendEmergencyAlert();
+                onTap: () {
+                  _showStatusMessage(
+                    title: isArabic ? 'تنبيه' : 'Hold Required',
+                    message: isArabic
+                        ? 'اضغطي باستمرار حتى يكتمل الشريط لإرسال تنبيه الطوارئ.'
+                        : 'Press and hold until the progress bar is full to send SOS.',
+                    icon: Icons.touch_app_rounded,
+                    color: Colors.orange.shade700,
+                  );
                 },
-                child: Container(
+                onLongPressStart: (_) => _startSosHold(isArabic),
+                onLongPressEnd: (_) {
+                  if (_sosHoldProgress < 1.0) {
+                    _cancelSosHold();
+                  }
+                },
+                onLongPressCancel: _cancelSosHold,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
-                    color: kEmergencyRed.withOpacity(0.10),
+                    color: emergencyButtonBg,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: kEmergencyRed.withOpacity(0.4),
+                      color: emergencyButtonBorder,
                       width: 1.5,
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: kEmergencyRed,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.warning_amber_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            isArabic ? 'طوارئ' : 'Emergency',
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                              color: kEmergencyRed,
-                            ),
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: 52,
+                                height: 52,
+                                child: CircularProgressIndicator(
+                                  value: _isHoldingSos ? _sosHoldProgress : 0,
+                                  strokeWidth: 4,
+                                  backgroundColor: Colors.white,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    emergencyButtonColor,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: emergencyButtonColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _latestAlertStatus == 'seen'
+                                      ? Icons.check_circle
+                                      : Icons.warning_amber_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            isArabic
-                                ? 'اضغط للمساعدة الفورية'
-                                : 'Tap for immediate help',
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: kEmergencyRed.withOpacity(0.8),
-                            ),
+                          const SizedBox(width: 14),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _isSendingEmergency
+                                    ? (isArabic ? 'جارٍ الإرسال...' : 'Sending...')
+                                    : _isHoldingSos
+                                        ? (isArabic ? 'استمر بالضغط...' : 'Keep holding...')
+                                        : alertSeen
+                                            ? (isArabic
+                                                ? 'تمت مشاهدة التنبيه'
+                                                : 'Alert Seen')
+                                            : alertActive
+                                                ? (isArabic
+                                                    ? 'تم إرسال التنبيه'
+                                                    : 'Alert Sent')
+                                                : (isArabic ? 'طوارئ' : 'Emergency'),
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: emergencyButtonColor,
+                                ),
+                              ),
+                              Text(
+                                alertSeen
+                                    ? (isArabic
+                                        ? 'الكيرقيفر شاهد تنبيه الطوارئ'
+                                        : 'Caregiver has seen your alert')
+                                    : alertActive
+                                        ? (isArabic
+                                            ? 'بانتظار مشاهدة الكيرقيفر للتنبيه'
+                                            : 'Waiting for caregiver to view the alert')
+                                        : _isHoldingSos
+                                            ? (isArabic
+                                                ? 'لا ترفع إصبعك حتى يكتمل المؤشر'
+                                                : 'Do not release until the indicator is full')
+                                            : (isArabic
+                                                ? 'اضغط باستمرار ثانيتين للإرسال'
+                                                : 'Hold 2 seconds to send SOS'),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: emergencyButtonColor.withOpacity(0.8),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                      if (_isHoldingSos) ...[
+                        const SizedBox(height: 14),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: _sosHoldProgress,
+                            minHeight: 8,
+                            backgroundColor: Colors.red.shade100,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(emergencyButtonColor),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
