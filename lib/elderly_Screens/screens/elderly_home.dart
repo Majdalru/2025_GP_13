@@ -82,13 +82,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   String? fullName;
   // news
 
-
- 
-
   // done
   final locationService = LocationService();
-
-
 
   Future<void> saveElderlyLocation() async {
     try {
@@ -206,8 +201,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     }
   }
 
-
-
   String _translateGender(String? g) {
     if (g == null || g.isEmpty) {
       return AppLocalizations.of(context)!.na;
@@ -240,6 +233,10 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   bool _medicationsEnabled = true;
   bool _libraryEnabled = true;
   bool _mediaEnabled = true;
+
+  // Voice card state — updated via onStateChange callbacks from the button widgets
+  bool _voiceIsListening = false;
+  bool _voiceIsSpeaking = false;
 
   @override
   void initState() {
@@ -421,739 +418,686 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final bool isArabic = localeProvider.isArabic;
 
+    // Color palette for new design
+    const kTeal = Color(0xFF4DB6AC);
+    const kTealDark = Color(0xFF00897B);
+    const kServiceBg = Colors.white;
+    const kEmergencyRed = Color(0xFFE53935);
+
     return Scaffold(
-      backgroundColor: kSurface,
-      drawer: Drawer(
-        backgroundColor: kSurface,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-          children: [
-            const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  (fullName?.isNotEmpty ?? false)
-                      ? fullName!
-                      : AppLocalizations.of(context)!.userFallback,
-                  textAlign: TextAlign.left,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: kPrimary,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kCardRadius),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context)!.elderlyInfo,
-                          style: kTitleText,
-                        ),
-                        IconButton(
-                          iconSize: 32,
-                          splashRadius: 28,
-                          icon: const Icon(Icons.settings, color: kPrimary),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (context) => _EditInfoDialog(
-                                initialName: fullName ?? '',
-                                initialGender: gender ?? '',
-                                initialPhone: phone ?? '',
-                                onSave: (newName, newGender, newPhone) async {
-                                  final user =
-                                      FirebaseAuth.instance.currentUser;
-                                  if (user != null) {
-                                    final parts = newName.split(RegExp(r'\s+'));
-                                    final first = parts.isNotEmpty
-                                        ? parts.first
-                                        : '';
-                                    final last = parts.length > 1
-                                        ? parts.sublist(1).join(' ')
-                                        : '';
-
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(user.uid)
-                                        .update({
-                                          'firstName': first,
-                                          'lastName': last,
-                                          'gender': newGender,
-                                          'phone': newPhone,
-                                        });
-
-                                    setState(() {
-                                      fullName = newName;
-                                      gender = newGender;
-                                      phone = newPhone;
-                                    });
-
-                                    if (context.mounted) {
-                                      Navigator.pop(context);
-                                      if (context.mounted) {
-                                        _showTopBanner(
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.informationUpdatedSuccessfully,
-                                          color: Colors.green.shade700,
-                                        );
-                                      }
-                                    }
-                                  }
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    _InfoBox(
-                      label: AppLocalizations.of(context)!.name,
-                      value: (fullName?.isNotEmpty ?? false)
-                          ? fullName!
-                          : AppLocalizations.of(context)!.na,
-                    ),
-                    const SizedBox(height: 14),
-                    _InfoBox(
-                      label: AppLocalizations.of(context)!.gender,
-                      value: _translateGender(gender),
-                    ),
-                    const SizedBox(height: 14),
-                    _InfoBox(
-                      label: AppLocalizations.of(context)!.mobile,
-                      value: phone ?? AppLocalizations.of(context)!.na,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kCardRadius),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: _CaregiversBox(names: caregiverNames),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kCardRadius),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)!.verificationCode,
-                      style: kTitleText,
-                    ),
-                    const SizedBox(height: 12),
-                    const _PairingCodeBox(),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-
+      backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(25),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Builder(
-                      builder: (context) => IconButton(
-                        icon: const Icon(
-                          Icons.menu,
-                          size: 42,
-                          color: Colors.black,
+        child: Column(
+          children: [
+            // ─── Top bar ───────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Greeting
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isArabic ? 'صباح الخير،' : 'Good morning,',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: kTealDark,
+                          fontWeight: FontWeight.w600,
                         ),
-                        splashRadius: 28,
-                        onPressed: () => Scaffold.of(context).openDrawer(),
                       ),
+                      Text(
+                        fullName?.split(' ').first ?? '',
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1A2340),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Settings icon (opens AppDrawer as a page)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.settings_outlined,
+                      size: 34,
+                      color: Color(0xFF1A2340),
                     ),
-
-                    isArabic
-                        ? ArabicFloatingVoiceButton(
-                            onCommand: (command) async {
-                              final uid =
-                                  FirebaseAuth.instance.currentUser?.uid;
-
-                              debugPrint(
-                                '🎯 Arabic voice command received in ElderlyHomePage: $command',
-                              );
-
-                              switch (command) {
-                                case VoiceCommand.goToMedication:
-                                  if (uid != null) {
-                                    if (!mounted) return;
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ElderlyMedicationPage(
-                                          elderlyId: uid,
-                                          isMedicationsEnabled: _medicationsEnabled,
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    await _arabicVoice.speak(
-                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                    );
-                                  }
-                                  break;
-
-                                case VoiceCommand.addMedication:
-                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid == null) {
-                                    await _arabicVoice.speak(
-                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                    );
-                                    return;
-                                  }
-                                  await _arabicVoice.speak(
-                                    'حسنًا، سأساعدك في إضافة دواء جديد.',
-                                  );
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ElderlyMedicationPage(
-                                        elderlyId: uid,
-                                        isMedicationsEnabled: _medicationsEnabled,
-                                        initialCommand:
-                                            VoiceCommand.addMedication,
-                                      ),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.editMedication:
-                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid == null) {
-                                    await _arabicVoice.speak(
-                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                    );
-                                    return;
-                                  }
-                                  await _arabicVoice.speak(
-                                    'حسنًا، لنعدّل أحد أدويتك.',
-                                  );
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ElderlyMedicationPage(
-                                        elderlyId: uid,
-                                        isMedicationsEnabled: _medicationsEnabled,
-                                        initialCommand:
-                                            VoiceCommand.editMedication,
-                                      ),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.deleteMedication:
-                                  if (!_medicationsEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid == null) {
-                                    await _arabicVoice.speak(
-                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                    );
-                                    return;
-                                  }
-                                  await _arabicVoice.speak(
-                                    'حسنًا، لنحدد الدواء الذي تريد حذفه.',
-                                  );
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ElderlyMedicationPage(
-                                        elderlyId: uid,
-                                        isMedicationsEnabled: _medicationsEnabled,
-                                        initialCommand:
-                                            VoiceCommand.deleteMedication,
-                                      ),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.goToMedia:
-                                  if (!_mediaEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const MediaPage(),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.goToHome:
-                                  await _arabicVoice.speak(
-                                    'أنت بالفعل في الصفحة الرئيسية.',
-                                  );
-                                  break;
-
-                                case VoiceCommand.weather:
-                                case VoiceCommand.news:
-                                case VoiceCommand.goToDailyLibrary:
-                                 if (!_libraryEnabled) { await _arabicVoice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                     if (!mounted) return;
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                       builder: (_) => const DailyLibraryPage(),
-                                         ),
-                                   );
-                                 break;
-
-                                case VoiceCommand.sos:
-                                  if (!mounted) return;
-                                  await _arabicVoice.speak(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => _ElderlySettingsPage(
+                            fullName: fullName ?? '',
+                            gender: gender ?? '',
+                            phone: phone ?? '',
+                            caregiverNames: caregiverNames,
+                            onSave: (newName, newGender, newPhone) async {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                final parts = newName.split(RegExp(r'\s+'));
+                                final first = parts.isNotEmpty
+                                    ? parts.first
+                                    : '';
+                                final last = parts.length > 1
+                                    ? parts.sublist(1).join(' ')
+                                    : '';
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.uid)
+                                    .update({
+                                      'firstName': first,
+                                      'lastName': last,
+                                      'gender': newGender,
+                                      'phone': newPhone,
+                                    });
+                                if (mounted) {
+                                  setState(() {
+                                    fullName = newName;
+                                    gender = newGender;
+                                    phone = newPhone;
+                                  });
+                                  _showTopBanner(
                                     AppLocalizations.of(
                                       context,
-                                    )!.voiceSosPreamble,
+                                    )!.informationUpdatedSuccessfully,
+                                    color: Colors.green.shade700,
                                   );
-                                  await sendEmergencyAlert();
-                                  if (!mounted) return;
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      return AlertDialog(
-                                        title: Text(
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.emergencyTitle,
-                                        ),
-                                        content: Text(
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.emergencyFlowDesc,
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context),
-                                            child: Text(
-                                              AppLocalizations.of(context)!.ok,
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                  break;
-
-                                case VoiceCommand.goToSettings:
-                                  await _arabicVoice.speak(
-                                    'صفحة الإعدادات غير جاهزة الآن. لاحقًا سأتمكن من فتحها لك من هنا.',
-                                  );
-                                  break;
-                                case VoiceCommand
-                                    .todayMedications: // 👈 add this
-                                  final uid =
-                                      FirebaseAuth.instance.currentUser?.uid;
-                                  if (uid == null) {
-                                    await _arabicVoice.speak(
-                                      'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
-                                    );
-                                    return;
-                                  }
-                                  await _arabicVoice.runTodayMedicationsFlow(
-                                    uid,
-                                  );
-                                  break;
-                                 
-                                  
-                              }
-                            },
-                          )
-                        : FloatingVoiceButton(
-                            onCommand: (command) async {
-                              final uid =
-                                  FirebaseAuth.instance.currentUser?.uid;
-
-                              debugPrint(
-                                '🎯 Voice command received in ElderlyHomePage: $command',
-                              );
-
-                              switch (command) {
-                                case VoiceCommand.goToMedication:
-                                  if (uid != null) {
-                                    if (!mounted) return;
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ElderlyMedicationPage(
-                                          elderlyId: uid,
-                                          isMedicationsEnabled: _medicationsEnabled,
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    await _voice.speak(
-                                      "I could not find your account. Please log in again.",
-                                    );
-                                  }
-                                  break;
-
-                                case VoiceCommand.addMedication:
-                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid == null) {
-                                    await _voice.speak(
-                                      "I could not find your account. Please log in again.",
-                                    );
-                                    return;
-                                  }
-                                  await _voice.speak(
-                                    "Okay, I will help you add a new medication.",
-                                  );
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ElderlyMedicationPage(
-                                        elderlyId: uid,
-                                        isMedicationsEnabled: _medicationsEnabled,
-                                        initialCommand:
-                                            VoiceCommand.addMedication,
-                                      ),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.editMedication:
-                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid == null) {
-                                    await _voice.speak(
-                                      "I could not find your account. Please log in again.",
-                                    );
-                                    return;
-                                  }
-                                  await _voice.speak(
-                                    "Okay, let us edit one of your medications.",
-                                  );
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ElderlyMedicationPage(
-                                        elderlyId: uid,
-                                        isMedicationsEnabled: _medicationsEnabled,
-                                        initialCommand:
-                                            VoiceCommand.editMedication,
-                                      ),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.deleteMedication:
-                                  if (!_medicationsEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (uid == null) {
-                                    await _voice.speak(
-                                      "I could not find your account. Please log in again.",
-                                    );
-                                    return;
-                                  }
-                                  await _voice.speak(
-                                    "Okay, let us choose which medication to delete.",
-                                  );
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ElderlyMedicationPage(
-                                        elderlyId: uid,
-                                        isMedicationsEnabled: _medicationsEnabled,
-                                        initialCommand:
-                                            VoiceCommand.deleteMedication,
-                                      ),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.goToMedia:
-                                  if (!_mediaEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                    if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const MediaPage(),
-                                    ),
-                                  );
-                                  break;
-
-                                case VoiceCommand.goToHome:
-                                  await _voice.speak(
-                                    "You are already on the home page.",
-                                  );
-                                  break;
-
-                                case VoiceCommand.weather:
-                                case VoiceCommand.news:
-                                case VoiceCommand.goToDailyLibrary:
-                                   if (!_libraryEnabled) { await _voice.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); return; }
-                                     if (!mounted) return;
-                                   Navigator.push(
-                                     context,
-                                     MaterialPageRoute(
-                                       builder: (_) => const DailyLibraryPage(),
-                                     ),
-                                  );
-                                 
-                                 break;
-
-                                case VoiceCommand.sos:
-                                  if (!mounted) return;
-                                  await _voice.speak(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.voiceSosPreamble,
-                                  );
-                                  await sendEmergencyAlert();
-                                  if (!mounted) return;
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      return AlertDialog(
-                                        title: Text(
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.emergencyTitle,
-                                        ),
-                                        content: Text(
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.emergencyFlowDesc,
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context),
-                                            child: Text(
-                                              AppLocalizations.of(context)!.ok,
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                  break;
-
-                                case VoiceCommand.goToSettings:
-                                  await _voice.speak(
-                                    "Settings page is not ready yet. In the future, I will open it for you from here.",
-                                  );
-                                  break;
-                                case VoiceCommand
-                                    .todayMedications: // 👈 add this
-                                  final uid =
-                                      FirebaseAuth.instance.currentUser?.uid;
-                                  if (uid == null) {
-                                    await _voice.speak(
-                                      "I could not find your account. Please log in again.",
-                                    );
-                                    return;
-                                  }
-                                  await _voice.runTodayMedicationsFlow(uid);
-                                  break;
-
-                                  
+                                }
                               }
                             },
                           ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
 
-                    IconButton(
-                      icon: const Icon(
-                        Icons.logout,
-                        color: Colors.black,
-                        size: 36,
+            // ─── Scrollable content ────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // ── Voice Assistant Card ─────────────────────────
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _voiceIsListening
+                              ? [
+                                  const Color(0xFF2E7D32),
+                                  const Color(0xFF66BB6A),
+                                ] // green — listening
+                              : _voiceIsSpeaking
+                              ? [
+                                  const Color(0xFFC62828),
+                                  const Color(0xFFEF5350),
+                                ] // red — speaking
+                              : [
+                                  const Color(0xFF4DB6AC),
+                                  const Color(0xFF00897B),
+                                ], // teal — idle
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                (_voiceIsListening
+                                        ? const Color(0xFF2E7D32)
+                                        : _voiceIsSpeaking
+                                        ? const Color(0xFFC62828)
+                                        : const Color(0xFF4DB6AC))
+                                    .withOpacity(0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                      splashRadius: 28,
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                              side: const BorderSide(color: kPrimary, width: 2),
-                            ),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(context)!.confirmLogout,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w700,
-                                    color: kPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    TextButton(
-                                      style: TextButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        side: const BorderSide(
-                                          color: kPrimary,
-                                          width: 2,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 30,
-                                          vertical: 16,
-                                        ),
-                                      ),
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text(
-                                        AppLocalizations.of(context)!.no,
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          color: kPrimary,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 15),
-                                    ElevatedButton(
-                                      style: kBigButton(
-                                        kAccentRed,
-                                        pad: const EdgeInsets.symmetric(
-                                          horizontal: 36,
-                                          vertical: 18,
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        FirebaseAuth.instance.signOut();
-                                        Navigator.pushAndRemoveUntil(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 18,
+                      ),
+                      child: Row(
+                        children: [
+                          // Voice button widget (keeps all its animation states)
+                          isArabic
+                              ? ArabicFloatingVoiceButton(
+                                  onStateChange: (isListening, isSpeaking) {
+                                    if (mounted) {
+                                      setState(() {
+                                        _voiceIsListening = isListening;
+                                        _voiceIsSpeaking = isSpeaking;
+                                      });
+                                    }
+                                  },
+                                  onCommand: (command) async {
+                                    final uid =
+                                        FirebaseAuth.instance.currentUser?.uid;
+                                    debugPrint(
+                                      '🎯 Arabic voice command received in ElderlyHomePage: $command',
+                                    );
+                                    switch (command) {
+                                      case VoiceCommand.goToMedication:
+                                        if (uid != null) {
+                                          if (!mounted) return;
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  ElderlyMedicationPage(
+                                                    elderlyId: uid,
+                                                    isMedicationsEnabled:
+                                                        _medicationsEnabled,
+                                                  ),
+                                            ),
+                                          );
+                                        } else {
+                                          await _arabicVoice.speak(
+                                            'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                          );
+                                        }
+                                        break;
+                                      case VoiceCommand.addMedication:
+                                        if (!_medicationsEnabled) {
+                                          await _arabicVoice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (uid == null) {
+                                          await _arabicVoice.speak(
+                                            'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                          );
+                                          return;
+                                        }
+                                        await _arabicVoice.speak(
+                                          'حسنًا، سأساعدك في إضافة دواء جديد.',
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => const LoginPage(),
+                                            builder: (_) =>
+                                                ElderlyMedicationPage(
+                                                  elderlyId: uid,
+                                                  isMedicationsEnabled:
+                                                      _medicationsEnabled,
+                                                  initialCommand: VoiceCommand
+                                                      .addMedication,
+                                                ),
                                           ),
-                                          (_) => false,
                                         );
-                                      },
-                                      child: Text(
-                                        AppLocalizations.of(context)!.yes,
-                                        style: kButtonText,
-                                      ),
+                                        break;
+                                      case VoiceCommand.editMedication:
+                                        if (!_medicationsEnabled) {
+                                          await _arabicVoice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (uid == null) {
+                                          await _arabicVoice.speak(
+                                            'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                          );
+                                          return;
+                                        }
+                                        await _arabicVoice.speak(
+                                          'حسنًا، لنعدّل أحد أدويتك.',
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ElderlyMedicationPage(
+                                                  elderlyId: uid,
+                                                  isMedicationsEnabled:
+                                                      _medicationsEnabled,
+                                                  initialCommand: VoiceCommand
+                                                      .editMedication,
+                                                ),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.deleteMedication:
+                                        if (!_medicationsEnabled) {
+                                          await _arabicVoice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (uid == null) {
+                                          await _arabicVoice.speak(
+                                            'لم أتمكن من العثور على حسابك. يرجى تسجيل الدخول مرة أخرى.',
+                                          );
+                                          return;
+                                        }
+                                        await _arabicVoice.speak(
+                                          'حسنًا، لنحذف أحد أدويتك.',
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ElderlyMedicationPage(
+                                                  elderlyId: uid,
+                                                  isMedicationsEnabled:
+                                                      _medicationsEnabled,
+                                                  initialCommand: VoiceCommand
+                                                      .deleteMedication,
+                                                ),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.goToMedia:
+                                        if (!_mediaEnabled) {
+                                          await _arabicVoice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const MediaPage(),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.goToHome:
+                                        await _arabicVoice.speak(
+                                          'أنت بالفعل في الصفحة الرئيسية.',
+                                        );
+                                        break;
+                                      case VoiceCommand.weather:
+                                      case VoiceCommand.news:
+                                      case VoiceCommand.goToDailyLibrary:
+                                        if (!_libraryEnabled) {
+                                          await _arabicVoice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DailyLibraryPage(),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.sos:
+                                        if (!mounted) return;
+                                        await _arabicVoice.speak(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.voiceSosPreamble,
+                                        );
+                                        await sendEmergencyAlert();
+                                        break;
+                                      case VoiceCommand.goToSettings:
+                                        await _arabicVoice.speak(
+                                          'صفحة الإعدادات ليست جاهزة بعد.',
+                                        );
+                                        break;
+                                      case VoiceCommand.todayMedications:
+                                        if (uid == null) {
+                                          await _arabicVoice.speak(
+                                            'لم أتمكن من العثور على حسابك.',
+                                          );
+                                          return;
+                                        }
+                                        await _arabicVoice
+                                            .runTodayMedicationsFlow(uid);
+                                        break;
+                                    }
+                                  },
+                                )
+                              : FloatingVoiceButton(
+                                  onStateChange: (isListening, isSpeaking) {
+                                    if (mounted) {
+                                      setState(() {
+                                        _voiceIsListening = isListening;
+                                        _voiceIsSpeaking = isSpeaking;
+                                      });
+                                    }
+                                  },
+                                  onCommand: (command) async {
+                                    final uid =
+                                        FirebaseAuth.instance.currentUser?.uid;
+                                    switch (command) {
+                                      case VoiceCommand.goToMedication:
+                                        if (uid != null) {
+                                          if (!mounted) return;
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  ElderlyMedicationPage(
+                                                    elderlyId: uid,
+                                                    isMedicationsEnabled:
+                                                        _medicationsEnabled,
+                                                  ),
+                                            ),
+                                          );
+                                        } else {
+                                          await _voice.speak(
+                                            "I could not find your account. Please log in again.",
+                                          );
+                                        }
+                                        break;
+                                      case VoiceCommand.addMedication:
+                                        if (!_medicationsEnabled) {
+                                          await _voice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (uid == null) {
+                                          await _voice.speak(
+                                            "I could not find your account. Please log in again.",
+                                          );
+                                          return;
+                                        }
+                                        await _voice.speak(
+                                          "Okay, let me help you add a new medication.",
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ElderlyMedicationPage(
+                                                  elderlyId: uid,
+                                                  isMedicationsEnabled:
+                                                      _medicationsEnabled,
+                                                  initialCommand: VoiceCommand
+                                                      .addMedication,
+                                                ),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.editMedication:
+                                        if (!_medicationsEnabled) {
+                                          await _voice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (uid == null) {
+                                          await _voice.speak(
+                                            "I could not find your account. Please log in again.",
+                                          );
+                                          return;
+                                        }
+                                        await _voice.speak(
+                                          "Okay, let us edit one of your medications.",
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ElderlyMedicationPage(
+                                                  elderlyId: uid,
+                                                  isMedicationsEnabled:
+                                                      _medicationsEnabled,
+                                                  initialCommand: VoiceCommand
+                                                      .editMedication,
+                                                ),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.deleteMedication:
+                                        if (!_medicationsEnabled) {
+                                          await _voice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (uid == null) {
+                                          await _voice.speak(
+                                            "I could not find your account. Please log in again.",
+                                          );
+                                          return;
+                                        }
+                                        await _voice.speak(
+                                          "Okay, let us choose which medication to delete.",
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ElderlyMedicationPage(
+                                                  elderlyId: uid,
+                                                  isMedicationsEnabled:
+                                                      _medicationsEnabled,
+                                                  initialCommand: VoiceCommand
+                                                      .deleteMedication,
+                                                ),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.goToMedia:
+                                        if (!_mediaEnabled) {
+                                          await _voice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const MediaPage(),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.goToHome:
+                                        await _voice.speak(
+                                          "You are already on the home page.",
+                                        );
+                                        break;
+                                      case VoiceCommand.weather:
+                                      case VoiceCommand.news:
+                                      case VoiceCommand.goToDailyLibrary:
+                                        if (!_libraryEnabled) {
+                                          await _voice.speak(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.featureDisabledByCaregiver,
+                                          );
+                                          return;
+                                        }
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DailyLibraryPage(),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.sos:
+                                        if (!mounted) return;
+                                        await _voice.speak(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.voiceSosPreamble,
+                                        );
+                                        await sendEmergencyAlert();
+                                        if (!mounted) return;
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.emergencyTitle,
+                                            ),
+                                            content: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.emergencyFlowDesc,
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
+                                                child: Text(
+                                                  AppLocalizations.of(
+                                                    context,
+                                                  )!.ok,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.goToSettings:
+                                        await _voice.speak(
+                                          "Settings page is not ready yet. In the future, I will open it for you from here.",
+                                        );
+                                        break;
+                                      case VoiceCommand.todayMedications:
+                                        final uid2 = FirebaseAuth
+                                            .instance
+                                            .currentUser
+                                            ?.uid;
+                                        if (uid2 == null) {
+                                          await _voice.speak(
+                                            "I could not find your account. Please log in again.",
+                                          );
+                                          return;
+                                        }
+                                        await _voice.runTodayMedicationsFlow(
+                                          uid2,
+                                        );
+                                        break;
+                                    }
+                                  },
+                                ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Text(
+                                    _voiceIsListening
+                                        ? (isArabic
+                                              ? 'استمع إليك...'
+                                              : 'Listening...')
+                                        : _voiceIsSpeaking
+                                        ? (isArabic
+                                              ? 'المساعد يتحدث'
+                                              : 'Assistant is talking')
+                                        : (isArabic
+                                              ? 'اضغط للتحدث'
+                                              : 'Tap to speak'),
+                                    key: ValueKey(
+                                      '$_voiceIsListening-$_voiceIsSpeaking',
                                     ),
-                                  ],
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Text(
+                                    _voiceIsListening
+                                        ? (isArabic
+                                              ? 'دورك للكلام 🎤'
+                                              : 'Your turn to speak 🎤')
+                                        : _voiceIsSpeaking
+                                        ? (isArabic
+                                              ? 'انتظر لحظة...'
+                                              : 'Please wait...')
+                                        : (isArabic
+                                              ? 'المساعد الصوتي جاهز'
+                                              : 'Voice assistant ready'),
+                                    key: ValueKey(
+                                      'sub-$_voiceIsListening-$_voiceIsSpeaking',
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white.withOpacity(0.85),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
-                  ],
-                ),
 
-                const SizedBox(height: 65),
-                Text(
-                  AppLocalizations.of(
-                    context,
-                  )!.helloUser(fullName?.split(' ').first ?? ''),
-                  style: const TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    color: Color.fromARGB(255, 6, 10, 65),
-                  ),
-                ),
-                const SizedBox(height: 55),
+                    const SizedBox(height: 24),
 
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kAccentRed,
-                    minimumSize: const Size(double.infinity, 100),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
+                    // ── Section label ────────────────────────────────
+                    Text(
+                      isArabic ? 'الخدمات' : 'Services',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6B7280),
+                      ),
                     ),
-                    elevation: 6,
-                  ),
-                  onPressed: () async {
-                    HapticFeedback.heavyImpact();
-                    await sendEmergencyAlert();
-                  },
-                  child: Text(
-                    AppLocalizations.of(context)!.sos,
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                ),
+                    const SizedBox(height: 14),
 
-                const SizedBox(height: 40),
-
-                                  Row(
-                    children: [
-                      if (_mediaEnabled) ...[
-                        Expanded(
-                          child: _HomeCard(
-                            icon: Icons.video_library,
-                            title: AppLocalizations.of(context)!.media,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const MediaPage(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                      ],
-                      Expanded(
-                        child: _HomeCard(
-                          icon: Icons.medical_services,
-                          title: AppLocalizations.of(context)!.medication,
+                    // ── 2×2 Service Grid ─────────────────────────────
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 14,
+                      childAspectRatio: 1.05,
+                      children: [
+                        // Medications
+                        _GridServiceCard(
+                          icon: Icons.medication_outlined,
+                          iconColor: const Color(0xFF4CAF50),
+                          iconBg: const Color(0xFFE8F5E9),
+                          title: isArabic ? 'أدويتي' : 'Medications',
+                          enabled: _medicationsEnabled,
                           onTap: () {
                             HapticFeedback.selectionClick();
                             final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -1180,56 +1124,465 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                             }
                           },
                         ),
+                        // News & Weather (Daily Library)
+                        _GridServiceCard(
+                          icon: Icons.wb_sunny_outlined,
+                          iconColor: const Color(0xFFFF8F00),
+                          iconBg: const Color(0xFFFFF8E1),
+                          title: isArabic
+                              ? 'الأخبار\nوالطقس'
+                              : 'News &\nWeather',
+                          enabled: _libraryEnabled,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const DailyLibraryPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        // Media Library
+                        _GridServiceCard(
+                          icon: Icons.library_music_outlined,
+                          iconColor: const Color(0xFF7E57C2),
+                          iconBg: const Color(0xFFEDE7F6),
+                          title: isArabic ? 'مكتبة الوسائط' : 'Media Library',
+                          enabled: _mediaEnabled,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const MediaPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        // Family Messages (stub — functions applied later)
+                        _GridServiceCard(
+                          icon: Icons.videocam_outlined,
+                          iconColor: const Color(0xFFE91E8C),
+                          iconBg: const Color(0xFFFCE4EC),
+                          title: isArabic ? 'رسائل العائلة' : 'Family Messages',
+                          enabled: true,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            // TODO: Navigate to family messages page when ready
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 22),
+                  ],
+                ),
+              ),
+            ),
+
+            // ─── Emergency Button (bottom) ──────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: GestureDetector(
+                onTap: () async {
+                  HapticFeedback.heavyImpact();
+                  await sendEmergencyAlert();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    color: kEmergencyRed.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: kEmergencyRed.withOpacity(0.4),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: kEmergencyRed,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isArabic ? 'طوارئ' : 'Emergency',
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: kEmergencyRed,
+                            ),
+                          ),
+                          Text(
+                            isArabic
+                                ? 'اضغط للمساعدة الفورية'
+                                : 'Tap for immediate help',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: kEmergencyRed.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-                const SizedBox(height: 2),
+// ═══════════════════════════════════════════════════════════════════
+// Settings Page (replaces drawer)
+// ═══════════════════════════════════════════════════════════════════
+class _ElderlySettingsPage extends StatelessWidget {
+  final String fullName;
+  final String gender;
+  final String phone;
+  final List<String> caregiverNames;
+  final Function(String name, String gender, String phone) onSave;
 
-                if (_libraryEnabled)
-                  Card(
-                    color: kSurface,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      side: const BorderSide(color: kPrimary, width: 2),
-                    ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(25),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const DailyLibraryPage(),
+  const _ElderlySettingsPage({
+    required this.fullName,
+    required this.gender,
+    required this.phone,
+    required this.caregiverNames,
+    required this.onSave,
+  });
+
+  String _translateGender(BuildContext context, String? g) {
+    if (g == null || g.isEmpty) return AppLocalizations.of(context)!.na;
+    switch (g.toLowerCase()) {
+      case 'male':
+        return AppLocalizations.of(context)!.male;
+      case 'female':
+        return AppLocalizations.of(context)!.female;
+      default:
+        return g;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF7F8FA),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1A2340)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          AppLocalizations.of(context)!.settings,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1A2340),
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // User Info Card
+            _SettingsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.elderlyInfo,
+                        style: kTitleText,
+                      ),
+                      IconButton(
+                        iconSize: 32,
+                        splashRadius: 28,
+                        icon: const Icon(Icons.edit_outlined, color: kPrimary),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => _EditInfoDialog(
+                              initialName: fullName,
+                              initialGender: gender,
+                              initialPhone: phone,
+                              onSave: (newName, newGender, newPhone) async {
+                                onSave(newName, newGender, newPhone);
+                                if (context.mounted) Navigator.pop(context);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _InfoBox(
+                    label: AppLocalizations.of(context)!.name,
+                    value: fullName.isNotEmpty
+                        ? fullName
+                        : AppLocalizations.of(context)!.na,
+                  ),
+                  const SizedBox(height: 14),
+                  _InfoBox(
+                    label: AppLocalizations.of(context)!.gender,
+                    value: _translateGender(context, gender),
+                  ),
+                  const SizedBox(height: 14),
+                  _InfoBox(
+                    label: AppLocalizations.of(context)!.mobile,
+                    value: phone.isNotEmpty
+                        ? phone
+                        : AppLocalizations.of(context)!.na,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Caregivers Card
+            _SettingsCard(child: _CaregiversBox(names: caregiverNames)),
+            const SizedBox(height: 16),
+
+            // Pairing Code Card
+            _SettingsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.verificationCode,
+                    style: kTitleText,
+                  ),
+                  const SizedBox(height: 12),
+                  const _PairingCodeBox(),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Logout
+            SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFEBEE),
+                  foregroundColor: kAccentRed,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  side: BorderSide(color: kAccentRed.withOpacity(0.4)),
+                ),
+                icon: const Icon(Icons.logout, size: 26),
+                label: Text(
+                  AppLocalizations.of(context)!.logOut,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        side: const BorderSide(color: kPrimary, width: 2),
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context)!.confirmLogout,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              color: kPrimary,
+                            ),
                           ),
-                        );
-                      },
-                      splashColor: kPrimary.withOpacity(0.15),
-                      highlightColor: Colors.transparent,
-                      child: Container(
-                        width: double.infinity,
-                        height: 145, //
-                        padding: const EdgeInsets.symmetric(horizontal: 28),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.wb_sunny, size: 70, color: kPrimary),
-                            const SizedBox(width: 24),
-                             Expanded(
-                              child: Text(
-                                isArabic ? "المكتبة اليومية" : "Daily Library",
-                                style: const TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w700,
-                                  color: kPrimary,
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  side: const BorderSide(
+                                    color: kPrimary,
+                                    width: 2,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 30,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                onPressed: () => Navigator.pop(context),
+                                child: Text(
+                                  AppLocalizations.of(context)!.no,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    color: kPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 15),
+                              ElevatedButton(
+                                style: kBigButton(
+                                  kAccentRed,
+                                  pad: const EdgeInsets.symmetric(
+                                    horizontal: 36,
+                                    vertical: 18,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  FirebaseAuth.instance.signOut();
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginPage(),
+                                    ),
+                                    (_) => false,
+                                  );
+                                },
+                                child: Text(
+                                  AppLocalizations.of(context)!.yes,
+                                  style: kButtonText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  final Widget child;
+  const _SettingsCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Grid Service Card (new design)
+// ═══════════════════════════════════════════════════════════════════
+class _GridServiceCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _GridServiceCard({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedOpacity(
+        opacity: enabled ? 1.0 : 0.45,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  child: Icon(icon, color: iconColor, size: 32),
+                ),
+                const Spacer(),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A2340),
+                    height: 1.3,
+                  ),
+                ),
               ],
             ),
           ),

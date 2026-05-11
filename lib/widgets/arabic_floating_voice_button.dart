@@ -17,6 +17,9 @@ class ArabicFloatingVoiceButton extends StatefulWidget {
   final String? customGreeting;
   final String? customErrorResponse;
 
+  /// Called whenever listening/speaking state changes so parent widgets can react.
+  final void Function(bool isListening, bool isSpeaking)? onStateChange;
+
   const ArabicFloatingVoiceButton({
     super.key,
     required this.onCommand,
@@ -24,6 +27,7 @@ class ArabicFloatingVoiceButton extends StatefulWidget {
     this.isAnswerMode = false,
     this.customGreeting,
     this.customErrorResponse,
+    this.onStateChange,
   });
 
   @override
@@ -75,6 +79,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
       _isListening = isListening;
       _isSpeaking = isSpeaking;
     });
+    widget.onStateChange?.call(isListening, isSpeaking);
 
     if (isListening || isSpeaking) {
       _startAnimations();
@@ -217,11 +222,14 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
       _isSpeaking = true;
       _isListening = false;
     });
+    widget.onStateChange?.call(false, true);
+
     await _voiceService.speak(text);
     if (!mounted) return;
     setState(() {
       _isSpeaking = false;
     });
+    widget.onStateChange?.call(false, false);
   }
 
   Future<void> _startListening() async {
@@ -229,6 +237,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
       _isListening = true;
       _isSpeaking = false;
     });
+    widget.onStateChange?.call(true, false);
 
     await _playBeep();
 

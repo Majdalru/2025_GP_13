@@ -17,6 +17,9 @@ class FloatingVoiceButton extends StatefulWidget {
   final String? customGreeting;
   final String? customErrorResponse;
 
+  /// Called whenever listening/speaking state changes so parent widgets can react.
+  final void Function(bool isListening, bool isSpeaking)? onStateChange;
+
   const FloatingVoiceButton({
     super.key,
     required this.onCommand,
@@ -24,6 +27,7 @@ class FloatingVoiceButton extends StatefulWidget {
     this.isAnswerMode = false,
     this.customGreeting,
     this.customErrorResponse,
+    this.onStateChange,
   });
 
   @override
@@ -75,6 +79,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       _isListening = isListening;
       _isSpeaking = isSpeaking;
     });
+
+    widget.onStateChange?.call(isListening, isSpeaking);
 
     if (isListening || isSpeaking) {
       _startAnimations();
@@ -223,10 +229,13 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       _isSpeaking = true;
       _isListening = false;
     });
+    widget.onStateChange?.call(false, true);
+
     await _tts.speak(text);
     setState(() {
       _isSpeaking = false;
     });
+    widget.onStateChange?.call(false, false);
   }
 
   Future<void> _startListening() async {
@@ -234,6 +243,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       _isListening = true;
       _isSpeaking = false;
     });
+    widget.onStateChange?.call(true, false);
 
     await _playBeep();
 
@@ -299,7 +309,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         widget.onCommand(command);
       } else {
         await _speak(
-          "I'm not sure what you mean. Try saying medications, media, daily library, or home.",        );
+          "I'm not sure what you mean. Try saying medications, media, daily library, or home.",
+        );
       }
     } else {
       final String errorMessage =
