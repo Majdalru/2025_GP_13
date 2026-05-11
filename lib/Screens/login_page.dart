@@ -23,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
 
-  UserRole _role = UserRole.caregiver;
+  UserRole _role = UserRole.elderly;
 
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();

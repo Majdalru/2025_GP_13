@@ -78,7 +78,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     );
   }
 
-  // ================= async checks =================
+  // ================= async duplicate checks =================
 
   Future<bool> _emailIsUsed(String email) async {
     try {
@@ -88,6 +88,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
           .where('email', isEqualTo: email)
           .limit(1)
           .get();
+
       return methods.isNotEmpty || snap.docs.isNotEmpty;
     } catch (_) {
       return false;
@@ -101,6 +102,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
           .where('phone', isEqualTo: phone)
           .limit(1)
           .get();
+
       return snap.docs.isNotEmpty;
     } catch (_) {
       return false;
@@ -152,10 +154,11 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     return true;
   }
 
-  // =============== steps navigation () ===============
+  // ================= steps navigation =================
 
   Future<void> _nextStep() async {
     FocusScope.of(context).unfocus();
+
     bool ok = false;
 
     switch (_step) {
@@ -216,10 +219,15 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
 
   void _prevStep() {
     FocusScope.of(context).unfocus();
-    if (_step > 0) setState(() => _step--);
+
+    if (_step > 0) {
+      setState(() => _step--);
+    }
   }
 
   Future<void> _createAccount() async {
+    FocusScope.of(context).unfocus();
+
     final email = _email.text.trim();
     final phone = _phone.text.trim();
 
@@ -227,6 +235,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     _phoneError = null;
 
     if (email.isNotEmpty && await _emailIsUsed(email)) {
+      if (!mounted) return;
       setState(() {
         _emailError = AppLocalizations.of(context)!.emailAlreadyInUse;
         _step = 0;
@@ -238,6 +247,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     }
 
     if (phone.isNotEmpty && await _phoneIsUsed(phone)) {
+      if (!mounted) return;
       setState(() {
         _phoneError = AppLocalizations.of(context)!.phoneAlreadyUsed;
         _step = 2;
@@ -251,6 +261,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
     if (!_validateAllAndJumpToError()) return;
 
     setState(() => _loading = true);
+
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -287,12 +298,17 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
         });
         return;
       }
-      _showInlineTopError(context, _prettyAuthError(e));
+
+      if (mounted) {
+        _showInlineTopError(context, _prettyAuthError(e));
+      }
     } catch (e) {
-      _showInlineTopError(
-        context,
-        AppLocalizations.of(context)!.errorPrefix(e.toString()),
-      );
+      if (mounted) {
+        _showInlineTopError(
+          context,
+          AppLocalizations.of(context)!.errorPrefix(e.toString()),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -371,6 +387,7 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
 
   Widget _header() {
     final stepsText = AppLocalizations.of(context)!.stepXofY(_step + 1, 5);
+
     return Row(
       children: [
         const Icon(Icons.assignment_turned_in_outlined),
@@ -469,237 +486,290 @@ class _ElderlySignUpPageState extends State<ElderlySignUpPage> {
 
   // ====== step 0: Email ======
   Widget _stepEmail(ColorScheme cs) => Form(
-    key: _form0,
-    child: ListView(
-      children: [
-        Text(
-          AppLocalizations.of(context)!.accountEmail,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        key: _form0,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: ListView(
+          children: [
+            Text(
+              AppLocalizations.of(context)!.accountEmail,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              AppLocalizations.of(context)!.email,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(fontSize: 20),
+              onChanged: (_) {
+                if (_emailError != null) {
+                  setState(() => _emailError = null);
+                }
+                _form0.currentState?.validate();
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.email_outlined),
+                errorText: _emailError,
+              ),
+              validator: (v) {
+                final s = (v ?? '').trim();
+
+                if (s.isEmpty) {
+                  return AppLocalizations.of(context)!.requiredField;
+                }
+
+                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
+                  return AppLocalizations.of(context)!.invalidEmailAddress;
+                }
+
+                return _emailError;
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        Text(
-          AppLocalizations.of(context)!.email,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(fontSize: 20),
-          onChanged: (_) {
-            if (_emailError != null) {
-              setState(() => _emailError = null);
-            }
-          },
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.email_outlined),
-            errorText: _emailError,
-          ),
-          validator: (v) {
-            final s = (v ?? '').trim();
-            if (s.isEmpty) return AppLocalizations.of(context)!.requiredField;
-            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
-              return AppLocalizations.of(context)!.invalidEmailAddress;
-            }
-            return _emailError;
-          },
-        ),
-      ],
-    ),
-  );
+      );
 
   // ====== step 1: Name & Gender ======
   Widget _stepNameGender(ColorScheme cs) => Form(
-    key: _form1,
-    child: ListView(
-      children: [
-        Text(
-          AppLocalizations.of(context)!.personalInfo,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          AppLocalizations.of(context)!.firstName,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _first,
-          style: const TextStyle(fontSize: 20),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.person_outline),
-          ),
-          validator: (v) => (v == null || v.trim().isEmpty)
-              ? AppLocalizations.of(context)!.requiredField
-              : null,
-        ),
-        const SizedBox(height: 14),
-        Text(
-          AppLocalizations.of(context)!.lastName,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _last,
-          style: const TextStyle(fontSize: 20),
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.person)),
-          validator: (v) => (v == null || v.trim().isEmpty)
-              ? AppLocalizations.of(context)!.requiredField
-              : null,
-        ),
-        const SizedBox(height: 14),
-        Text(
-          AppLocalizations.of(context)!.gender,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: _gender,
-          items: [
-            DropdownMenuItem(
-              value: 'Male',
-              child: Text(AppLocalizations.of(context)!.male),
+        key: _form1,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: ListView(
+          children: [
+            Text(
+              AppLocalizations.of(context)!.personalInfo,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            DropdownMenuItem(
-              value: 'Female',
-              child: Text(AppLocalizations.of(context)!.female),
+            const SizedBox(height: 12),
+            Text(
+              AppLocalizations.of(context)!.firstName,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _first,
+              style: const TextStyle(fontSize: 20),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              onChanged: (_) {
+                _form1.currentState?.validate();
+              },
+              validator: (v) {
+                final s = (v ?? '').trim();
+
+                if (s.isEmpty) {
+                  return AppLocalizations.of(context)!.requiredField;
+                }
+
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            Text(
+              AppLocalizations.of(context)!.lastName,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _last,
+              style: const TextStyle(fontSize: 20),
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.person)),
+              onChanged: (_) {
+                _form1.currentState?.validate();
+              },
+              validator: (v) {
+                final s = (v ?? '').trim();
+
+                if (s.isEmpty) {
+                  return AppLocalizations.of(context)!.requiredField;
+                }
+
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            Text(
+              AppLocalizations.of(context)!.gender,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              value: _gender,
+              items: [
+                DropdownMenuItem(
+                  value: 'Male',
+                  child: Text(AppLocalizations.of(context)!.male),
+                ),
+                DropdownMenuItem(
+                  value: 'Female',
+                  child: Text(AppLocalizations.of(context)!.female),
+                ),
+              ],
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.wc_outlined),
+              ),
+              onChanged: (v) => setState(() => _gender = v ?? 'Male'),
             ),
           ],
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.wc_outlined),
-          ),
-          onChanged: (v) => setState(() => _gender = v ?? 'Male'),
         ),
-      ],
-    ),
-  );
+      );
 
   // ====== step 2: Phone ======
   Widget _stepPhone(ColorScheme cs) => Form(
-    key: _form2,
-    child: ListView(
-      children: [
-        Text(
-          AppLocalizations.of(context)!.contactInfo,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          AppLocalizations.of(context)!.phoneNumber,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _phone,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 20),
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
+        key: _form2,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: ListView(
+          children: [
+            Text(
+              AppLocalizations.of(context)!.contactInfo,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              AppLocalizations.of(context)!.phoneNumber,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _phone,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(fontSize: 20),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              onChanged: (_) {
+                if (_phoneError != null) {
+                  setState(() => _phoneError = null);
+                }
+                _form2.currentState?.validate();
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.phone_outlined),
+                errorMaxLines: 2,
+                errorText: _phoneError,
+              ),
+              validator: (v) {
+                final s = (v ?? '').trim();
+
+                if (s.isEmpty) {
+                  return AppLocalizations.of(context)!.requiredField;
+                }
+
+                if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
+                  return AppLocalizations.of(context)!.phoneStartWith05;
+                }
+
+                return _phoneError;
+              },
+            ),
           ],
-          onChanged: (_) {
-            if (_phoneError != null) {
-              setState(() => _phoneError = null);
-            }
-          },
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.phone_outlined),
-            errorMaxLines: 2,
-            errorText: _phoneError,
-          ),
-          validator: (v) {
-            final s = (v ?? '').trim();
-            if (s.isEmpty) return AppLocalizations.of(context)!.requiredField;
-            if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
-              return AppLocalizations.of(context)!.phoneStartWith05;
-            }
-            return _phoneError;
-          },
         ),
-      ],
-    ),
-  );
+      );
 
   // ====== step 3: Password ======
   Widget _stepPassword(ColorScheme cs) => Form(
-    key: _form3,
-    child: ListView(
-      children: [
-        Text(
-          AppLocalizations.of(context)!.accountSecurity,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          AppLocalizations.of(context)!.password,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _pass,
-          obscureText: _ob,
-          style: const TextStyle(fontSize: 20),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock_outline),
-            suffixIcon: IconButton(
-              onPressed: () => setState(() => _ob = !_ob),
-              icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
+        key: _form3,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: ListView(
+          children: [
+            Text(
+              AppLocalizations.of(context)!.accountSecurity,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
-          validator: (v) => (v == null || v.length < 6)
-              ? AppLocalizations.of(context)!.min6Chars
-              : null,
-        ),
-        const SizedBox(height: 14),
-        Text(
-          AppLocalizations.of(context)!.confirmPassword,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _passConfirm,
-          obscureText: _obConfirm,
-          style: const TextStyle(fontSize: 20),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock_outline),
-            suffixIcon: IconButton(
-              onPressed: () => setState(() => _obConfirm = !_obConfirm),
-              icon: Icon(_obConfirm ? Icons.visibility_off : Icons.visibility),
+            const SizedBox(height: 12),
+            Text(
+              AppLocalizations.of(context)!.password,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
             ),
-          ),
-          validator: (v) {
-            if (v == null || v.isEmpty)
-              return AppLocalizations.of(context)!.requiredField;
-            if (v != _pass.text)
-              return AppLocalizations.of(context)!.passwordsDoNotMatch;
-            return null;
-          },
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _pass,
+              obscureText: _ob,
+              style: const TextStyle(fontSize: 20),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _ob = !_ob),
+                  icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
+                ),
+              ),
+              onChanged: (_) {
+                setState(() {});
+                _form3.currentState?.validate();
+              },
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return AppLocalizations.of(context)!.requiredField;
+                }
+
+                if (v.length < 6) {
+                  return AppLocalizations.of(context)!.min6Chars;
+                }
+
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            Text(
+              AppLocalizations.of(context)!.confirmPassword,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _passConfirm,
+              obscureText: _obConfirm,
+              style: const TextStyle(fontSize: 20),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obConfirm = !_obConfirm),
+                  icon: Icon(_obConfirm ? Icons.visibility_off : Icons.visibility),
+                ),
+              ),
+              onChanged: (_) {
+                _form3.currentState?.validate();
+              },
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return AppLocalizations.of(context)!.requiredField;
+                }
+
+                if (v != _pass.text) {
+                  return AppLocalizations.of(context)!.passwordsDoNotMatch;
+                }
+
+                return null;
+              },
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   // ====== step 4: Confirm ======
   Widget _stepConfirm(ColorScheme cs) => ListView(
-    children: [
-      Text(
-        AppLocalizations.of(context)!.confirm,
-        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 12),
-      Card(
-        color: cs.surfaceVariant,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            '📧 Email: ${_email.text}\n'
-            '👤 Name: ${_first.text} ${_last.text}\n'
-            '🚻 Gender: $_gender\n'
-            '📞 Phone: ${_phone.text}',
-            style: const TextStyle(fontSize: 18, height: 1.6),
+        children: [
+          Text(
+            AppLocalizations.of(context)!.confirm,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-        ),
-      ),
-    ],
-  );
+          const SizedBox(height: 12),
+          Card(
+            color: cs.surfaceVariant,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '📧 Email: ${_email.text}\n'
+                '👤 Name: ${_first.text} ${_last.text}\n'
+                '🚻 Gender: $_gender\n'
+                '📞 Phone: ${_phone.text}',
+                style: const TextStyle(fontSize: 18, height: 1.6),
+              ),
+            ),
+          ),
+        ],
+      );
 }

@@ -25,7 +25,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _last = TextEditingController();
   final _phone = TextEditingController();
 
-  // مفاتيح لحقل الإيميل وحقل الرقم عشان نعمل validate لهم بس
+  // Field keys to validate email and phone separately.
   final GlobalKey<FormFieldState<String>> _emailFieldKey =
       GlobalKey<FormFieldState<String>>();
   final GlobalKey<FormFieldState<String>> _phoneFieldKey =
@@ -45,9 +45,12 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   void initState() {
     super.initState();
+
     _emailFocusNode = FocusNode();
     _phoneFocusNode = FocusNode();
 
+    // Duplicate checks are done when the user leaves the field.
+    // This avoids calling Firebase/Firestore after every typed letter.
     _emailFocusNode.addListener(() {
       if (!_emailFocusNode.hasFocus) {
         _runEmailDuplicateCheck();
@@ -82,6 +85,7 @@ class _SignUpPageState extends State<SignUpPage> {
           .where('email', isEqualTo: email)
           .limit(1)
           .get();
+
       return methods.isNotEmpty || snap.docs.isNotEmpty;
     } catch (_) {
       return false;
@@ -95,31 +99,34 @@ class _SignUpPageState extends State<SignUpPage> {
           .where('phone', isEqualTo: phone)
           .limit(1)
           .get();
+
       return snap.docs.isNotEmpty;
     } catch (_) {
       return false;
     }
   }
 
-  // ====== checks للإيميل والرقم (تستخدم مع الفوكس ومع Sign up) ======
-
   Future<bool> _runEmailDuplicateCheck() async {
     final email = _email.text.trim();
     final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
 
-    // لو فاضي أو صيغة غلط، نخلي validator العادي يطلع الخطأ
+    // If empty or invalid, leave the normal validator to show the error.
     if (email.isEmpty || !regex.hasMatch(email)) {
+      if (!mounted) return false;
       setState(() => _emailError = null);
-      _emailFieldKey.currentState?.validate(); // بس حقل الإيميل
+      _emailFieldKey.currentState?.validate();
       return false;
     }
 
     final used = await _emailIsUsed(email);
+
+    if (!mounted) return false;
     setState(() {
       _emailError = used
           ? AppLocalizations.of(context)!.emailAlreadyInUse
           : null;
     });
+
     _emailFieldKey.currentState?.validate();
     return !used;
   }
@@ -129,17 +136,21 @@ class _SignUpPageState extends State<SignUpPage> {
     final regex = RegExp(r'^05\d{8}$');
 
     if (phone.isEmpty || !regex.hasMatch(phone)) {
+      if (!mounted) return false;
       setState(() => _phoneError = null);
-      _phoneFieldKey.currentState?.validate(); // بس حقل الرقم
+      _phoneFieldKey.currentState?.validate();
       return false;
     }
 
     final used = await _phoneIsUsed(phone);
+
+    if (!mounted) return false;
     setState(() {
       _phoneError = used
           ? AppLocalizations.of(context)!.phoneAlreadyUsed
           : null;
     });
+
     _phoneFieldKey.currentState?.validate();
     return !used;
   }
@@ -147,15 +158,14 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _createAccount() async {
     FocusScope.of(context).unfocus();
 
-    // أولاً: فاليديشن عادي لكل الحقول (صيغة، فراغ، الخ)
+    // First: validate all fields locally.
     if (!_formKey.currentState!.validate()) return;
 
-    // ثانياً: فحص تكرار الإيميل والرقم
+    // Second: check duplicate email and phone.
     final okEmail = await _runEmailDuplicateCheck();
     final okPhone = await _runPhoneDuplicateCheck();
 
     if (!okEmail || !okPhone) {
-      // لو واحد منهم مكرر ما نكمل
       return;
     }
 
@@ -163,6 +173,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final phone = _phone.text.trim();
 
     setState(() => _loading = true);
+
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -235,7 +246,11 @@ class _SignUpPageState extends State<SignUpPage> {
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          // لاحظي: ما فيه autovalidateMode هنا
+
+          // This is the main UX improvement:
+          // errors appear while the user is interacting with the form.
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+
           child: ListView(
             children: [
               // ===== Email =====
@@ -256,16 +271,20 @@ class _SignUpPageState extends State<SignUpPage> {
                 onChanged: (_) {
                   if (_emailError != null) {
                     setState(() => _emailError = null);
-                    _emailFieldKey.currentState?.validate();
                   }
+                  _emailFieldKey.currentState?.validate();
                 },
                 validator: (v) {
                   final s = (v ?? '').trim();
-                  if (s.isEmpty)
+
+                  if (s.isEmpty) {
                     return AppLocalizations.of(context)!.requiredField;
+                  }
+
                   if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s)) {
                     return AppLocalizations.of(context)!.enterValidEmail;
                   }
+
                   return _emailError;
                 },
               ),
@@ -282,8 +301,18 @@ class _SignUpPageState extends State<SignUpPage> {
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.person_outline),
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+                onChanged: (_) {
+                  _formKey.currentState?.validate();
+                },
+                validator: (v) {
+                  final s = (v ?? '').trim();
+
+                  if (s.isEmpty) {
+                    return AppLocalizations.of(context)!.requiredField;
+                  }
+
+                  return null;
+                },
               ),
 
               // ===== Last name =====
@@ -298,8 +327,18 @@ class _SignUpPageState extends State<SignUpPage> {
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.person),
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+                onChanged: (_) {
+                  _formKey.currentState?.validate();
+                },
+                validator: (v) {
+                  final s = (v ?? '').trim();
+
+                  if (s.isEmpty) {
+                    return AppLocalizations.of(context)!.requiredField;
+                  }
+
+                  return null;
+                },
               ),
 
               // ===== Gender =====
@@ -350,16 +389,20 @@ class _SignUpPageState extends State<SignUpPage> {
                 onChanged: (_) {
                   if (_phoneError != null) {
                     setState(() => _phoneError = null);
-                    _phoneFieldKey.currentState?.validate();
                   }
+                  _phoneFieldKey.currentState?.validate();
                 },
                 validator: (v) {
                   final s = (v ?? '').trim();
-                  if (s.isEmpty)
+
+                  if (s.isEmpty) {
                     return AppLocalizations.of(context)!.requiredField;
+                  }
+
                   if (!RegExp(r'^05\d{8}$').hasMatch(s)) {
                     return AppLocalizations.of(context)!.enterValidSaudiNumber;
                   }
+
                   return _phoneError;
                 },
               ),
@@ -381,9 +424,21 @@ class _SignUpPageState extends State<SignUpPage> {
                     icon: Icon(_ob ? Icons.visibility_off : Icons.visibility),
                   ),
                 ),
-                validator: (v) => (v == null || v.length < 6)
-                    ? AppLocalizations.of(context)!.min6Chars
-                    : null,
+                onChanged: (_) {
+                  setState(() {});
+                  _formKey.currentState?.validate();
+                },
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return AppLocalizations.of(context)!.requiredField;
+                  }
+
+                  if (v.length < 6) {
+                    return AppLocalizations.of(context)!.min6Chars;
+                  }
+
+                  return null;
+                },
               ),
 
               // ===== Confirm Password =====
@@ -405,11 +460,18 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                 ),
+                onChanged: (_) {
+                  _formKey.currentState?.validate();
+                },
                 validator: (v) {
-                  if (v == null || v.isEmpty)
+                  if (v == null || v.isEmpty) {
                     return AppLocalizations.of(context)!.requiredField;
-                  if (v != _pass.text)
+                  }
+
+                  if (v != _pass.text) {
                     return AppLocalizations.of(context)!.passwordsDoNotMatch;
+                  }
+
                   return null;
                 },
               ),
