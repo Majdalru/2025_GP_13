@@ -64,27 +64,48 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
     ];
 
     return SizedBox(
-      height: 46,
+      height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: options.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final opt = options[index];
           final isSelected = _selectedFilter == opt;
-
-          return ChoiceChip(
-            label: Text(opt),
-            selected: isSelected,
-            selectedColor: kPrimary,
-            backgroundColor: Colors.grey.shade200,
-            labelStyle: TextStyle(
-              color: isSelected ? Colors.white : Colors.black87,
+          return GestureDetector(
+            onTap: () => setState(() => _selectedFilter = opt),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF1A2340) : Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFF1A2340)
+                      : const Color(0xFFE5E7EB),
+                  width: 1.5,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF1A2340).withOpacity(0.2),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Text(
+                opt,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                ),
+              ),
             ),
-            onSelected: (_) {
-              setState(() => _selectedFilter = opt);
-            },
           );
         },
       ),
@@ -95,7 +116,6 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(AppLocalizations.of(context)!.familyMedia)),
         body: Center(
           child: Text(AppLocalizations.of(context)!.pleaseLogInFirst),
         ),
@@ -103,33 +123,52 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        toolbarHeight: 110,
-        backgroundColor: kPrimary,
-        title: Text(AppLocalizations.of(context)!.familyMedia),
-        titleTextStyle: const TextStyle(
-          fontSize: 34,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
-          onPressed: () => Navigator.pop(context),
-        ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-        ),
-      ),
+      backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 12),
-            _buildTypeFilterChips(),
-            const SizedBox(height: 8),
+            // ── Top bar ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 20, 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 24,
+                      color: Color(0xFF1A2340),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.familyMedia,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1A2340),
+                        ),
+                      ),
+                      Text(
+                        AppLocalizations.of(context)!.familyMedia,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
+            // ── Filter chips ─────────────────────────────────────
+            _buildTypeFilterChips(),
+            const SizedBox(height: 6),
+
+            // ── List ─────────────────────────────────────────────
             Expanded(
               child: StreamBuilder<List<SharedItem>>(
                 stream: _sharingService.getSharedItems(user.uid),
@@ -137,33 +176,40 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   }
 
                   final items = snapshot.data ?? [];
-
                   if (items.isEmpty) {
                     return Center(
-                      child: Text(
-                        AppLocalizations.of(context)!.noMediaSharedYet,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          color: Colors.grey,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.videocam_off_outlined,
+                            size: 64,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            AppLocalizations.of(context)!.noMediaSharedYet,
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }
 
                   final filteredItems = items.where((it) {
                     if (_selectedFilter == 'All') return true;
-                    if (_selectedFilter == 'Audio') {
+                    if (_selectedFilter == 'Audio')
                       return it.type == SharedItemType.audio;
-                    }
-                    if (_selectedFilter == 'Video') {
+                    if (_selectedFilter == 'Video')
                       return it.type == SharedItemType.video;
-                    }
                     return true;
                   }).toList();
 
@@ -171,21 +217,22 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                     return Center(
                       child: Text(
                         AppLocalizations.of(context)!.noMediaInThisFilter,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          color: Colors.grey,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey.shade500,
                         ),
                       ),
                     );
                   }
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(20),
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                     itemCount: filteredItems.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
-                      final item = filteredItems[index];
-                      return _buildSharedItemCard(context, item);
+                      return _buildSharedItemCard(
+                        context,
+                        filteredItems[index],
+                      );
                     },
                   );
                 },
@@ -198,49 +245,55 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
   }
 
   Widget _buildSharedItemCard(BuildContext context, SharedItem item) {
-    IconData icon;
-    Color color;
-    String typeLabel;
+    final isVideo = item.type == SharedItemType.video;
+    const kPink = Color(0xFFE91E8C);
+    const kPinkBg = Color(0xFFFCE4EC);
+    const kAudioColor = Color(0xFF0077B6);
+    const kAudioBg = Color(0xFFE3F2FD);
 
-    switch (item.type) {
-      case SharedItemType.video:
-        icon = Icons.videocam;
-        color = Colors.orange;
-        typeLabel = AppLocalizations.of(context)!.video;
-        break;
-      case SharedItemType.audio:
-        icon = Icons.audiotrack;
-        color = Colors.blue;
-        typeLabel = AppLocalizations.of(context)!.audio;
-        break;
-
-      default:
-        icon = Icons.perm_media;
-        color = Colors.grey;
-        typeLabel = AppLocalizations.of(context)!.media;
-    }
-
+    final iconColor = isVideo ? kPink : kAudioColor;
+    final iconBg = isVideo ? kPinkBg : kAudioBg;
+    final icon = isVideo
+        ? Icons.play_circle_outline_rounded
+        : Icons.audiotrack_outlined;
+    final typeLabel = isVideo
+        ? AppLocalizations.of(context)!.video
+        : AppLocalizations.of(context)!.audio;
     final formattedDate = DateFormat('MMM d, h:mm a').format(item.timestamp);
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: () => _handleItemTap(context, item),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
           child: Row(
             children: [
+              // Icon badge
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: color, size: 32),
+                child: Icon(icon, color: iconColor, size: 26),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
+              // Title + meta
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,28 +301,55 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                     Text(
                       item.title.isNotEmpty ? item.title : typeLabel,
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: kPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A2340),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      formattedDate,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: iconBg,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            typeLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: iconColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
+              // Favorite button
               IconButton(
                 icon: Icon(
                   favoritesManager.isFavorite(item.id)
-                      ? Icons.favorite
-                      : Icons.favorite_border,
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
                   color: favoritesManager.isFavorite(item.id)
                       ? Colors.red
-                      : Colors.grey,
-                  size: 30,
+                      : const Color(0xFF9CA3AF),
+                  size: 26,
                 ),
                 onPressed: () async {
                   await favoritesManager.toggleFavorite({
@@ -278,17 +358,11 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                     "title": item.title,
                     "category": "Caregiver",
                     "fileName": item.fileName,
-                    "image": item.type == SharedItemType.video
-                        ? "assets/video.jpg"
-                        : "assets/audio.jpg",
-                    "type": item.type == SharedItemType.video
-                        ? "shared_video"
-                        : "shared_audio",
+                    "image": isVideo ? "assets/video.jpg" : "assets/audio.jpg",
+                    "type": isVideo ? "shared_video" : "shared_audio",
                     "url": item.url,
                   });
-
                   final nowFav = favoritesManager.isFavorite(item.id);
-
                   _showTopBanner(
                     nowFav
                         ? AppLocalizations.of(context)!.addedToFavorites
@@ -296,23 +370,18 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                     color: nowFav ? Colors.green.shade700 : Colors.red.shade700,
                     seconds: 1,
                   );
-
                   if (mounted) setState(() {});
                 },
               ),
-
-              // 🗑 زر الحذف
+              // Delete button
               IconButton(
                 icon: const Icon(
                   Icons.delete_outline,
-                  color: Colors.red,
-                  size: 30,
+                  color: Color(0xFFE53935),
+                  size: 24,
                 ),
                 onPressed: () => _confirmDelete(context, item),
               ),
-
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 30),
             ],
           ),
         ),

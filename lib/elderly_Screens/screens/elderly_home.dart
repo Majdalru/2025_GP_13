@@ -9,7 +9,9 @@ import 'package:provider/provider.dart';
 import '../../services/location_service.dart';
 import 'media_page.dart';
 import 'elderly_med.dart';
+//import 'family_messages_page.dart';
 import 'daily_library_page.dart';
+import 'shared_media_list_page.dart';
 
 import 'favorites_manager.dart';
 import '../../Screens/login_page.dart';
@@ -158,7 +160,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         });
       }
 
-
       if (!mounted) return;
 
       showDialog(
@@ -237,32 +238,32 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         .limit(1)
         .snapshots()
         .listen((snapshot) {
-      if (!mounted || snapshot.docs.isEmpty) return;
+          if (!mounted || snapshot.docs.isEmpty) return;
 
-      final data = snapshot.docs.first.data();
-      final status = data['status']?.toString();
+          final data = snapshot.docs.first.data();
+          final status = data['status']?.toString();
 
-      setState(() {
-        _latestAlertStatus = status;
-      });
+          setState(() {
+            _latestAlertStatus = status;
+          });
 
-      if (status == 'seen') {
-        final localeProvider = Provider.of<LocaleProvider>(
-          context,
-          listen: false,
-        );
-        final isArabic = localeProvider.isArabic;
+          if (status == 'seen') {
+            final localeProvider = Provider.of<LocaleProvider>(
+              context,
+              listen: false,
+            );
+            final isArabic = localeProvider.isArabic;
 
-        _showStatusMessage(
-          title: isArabic ? 'تمت مشاهدة التنبيه' : 'Alert Seen',
-          message: isArabic
-              ? 'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.'
-              : 'Your caregiver has seen your emergency alert.',
-          icon: Icons.visibility_rounded,
-          color: Colors.green.shade700,
-        );
-      }
-    });
+            _showStatusMessage(
+              title: isArabic ? 'تمت مشاهدة التنبيه' : 'Alert Seen',
+              message: isArabic
+                  ? 'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.'
+                  : 'Your caregiver has seen your emergency alert.',
+              icon: Icons.visibility_rounded,
+              color: Colors.green.shade700,
+            );
+          }
+        });
   }
 
   void _startSosHold(bool isArabic) {
@@ -417,6 +418,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       }
     });
   }
+
   void _showStatusMessage({
     required String title,
     required String message,
@@ -496,7 +498,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       }
     });
   }
-
 
   List<List<T>> _chunk<T>(List<T> list, int size) {
     final out = <List<T>>[];
@@ -649,22 +650,22 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     final Color emergencyButtonColor = alertSeen
         ? Colors.green
         : alertActive
-            ? Colors.orange.shade700
-            : kEmergencyRed;
+        ? Colors.orange.shade700
+        : kEmergencyRed;
 
     final Color emergencyButtonBg = alertSeen
         ? Colors.green.withOpacity(0.10)
         : alertActive
-            ? Colors.orange.withOpacity(0.12)
-            : _isHoldingSos
-                ? kEmergencyRed.withOpacity(0.18)
-                : kEmergencyRed.withOpacity(0.10);
+        ? Colors.orange.withOpacity(0.12)
+        : _isHoldingSos
+        ? kEmergencyRed.withOpacity(0.18)
+        : kEmergencyRed.withOpacity(0.10);
 
     final Color emergencyButtonBorder = alertSeen
         ? Colors.green.withOpacity(0.5)
         : alertActive
-            ? Colors.orange.withOpacity(0.55)
-            : kEmergencyRed.withOpacity(0.4);
+        ? Colors.orange.withOpacity(0.55)
+        : kEmergencyRed.withOpacity(0.4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -1411,7 +1412,12 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                           enabled: true,
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            // TODO: Navigate to family messages page when ready
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SharedMediaListPage(),
+                              ),
+                            );
                           },
                         ),
                       ],
@@ -1498,18 +1504,22 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                             children: [
                               Text(
                                 _isSendingEmergency
-                                    ? (isArabic ? 'جارٍ الإرسال...' : 'Sending...')
+                                    ? (isArabic
+                                          ? 'جارٍ الإرسال...'
+                                          : 'Sending...')
                                     : _isHoldingSos
-                                        ? (isArabic ? 'استمر بالضغط...' : 'Keep holding...')
-                                        : alertSeen
-                                            ? (isArabic
-                                                ? 'تمت مشاهدة التنبيه'
-                                                : 'Alert Seen')
-                                            : alertActive
-                                                ? (isArabic
-                                                    ? 'تم إرسال التنبيه'
-                                                    : 'Alert Sent')
-                                                : (isArabic ? 'طوارئ' : 'Emergency'),
+                                    ? (isArabic
+                                          ? 'استمر بالضغط...'
+                                          : 'Keep holding...')
+                                    : alertSeen
+                                    ? (isArabic
+                                          ? 'تمت مشاهدة التنبيه'
+                                          : 'Alert Seen')
+                                    : alertActive
+                                    ? (isArabic
+                                          ? 'تم إرسال التنبيه'
+                                          : 'Alert Sent')
+                                    : (isArabic ? 'طوارئ' : 'Emergency'),
                                 style: TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w900,
@@ -1519,19 +1529,19 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                               Text(
                                 alertSeen
                                     ? (isArabic
-                                        ? 'الكيرقيفر شاهد تنبيه الطوارئ'
-                                        : 'Caregiver has seen your alert')
+                                          ? 'الكيرقيفر شاهد تنبيه الطوارئ'
+                                          : 'Caregiver has seen your alert')
                                     : alertActive
-                                        ? (isArabic
-                                            ? 'بانتظار مشاهدة الكيرقيفر للتنبيه'
-                                            : 'Waiting for caregiver to view the alert')
-                                        : _isHoldingSos
-                                            ? (isArabic
-                                                ? 'لا ترفع إصبعك حتى يكتمل المؤشر'
-                                                : 'Do not release until the indicator is full')
-                                            : (isArabic
-                                                ? 'اضغط باستمرار ثانيتين للإرسال'
-                                                : 'Hold 2 seconds to send SOS'),
+                                    ? (isArabic
+                                          ? 'بانتظار مشاهدة الكيرقيفر للتنبيه'
+                                          : 'Waiting for caregiver to view the alert')
+                                    : _isHoldingSos
+                                    ? (isArabic
+                                          ? 'لا ترفع إصبعك حتى يكتمل المؤشر'
+                                          : 'Do not release until the indicator is full')
+                                    : (isArabic
+                                          ? 'اضغط باستمرار ثانيتين للإرسال'
+                                          : 'Hold 2 seconds to send SOS'),
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: emergencyButtonColor.withOpacity(0.8),
@@ -1549,8 +1559,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                             value: _sosHoldProgress,
                             minHeight: 8,
                             backgroundColor: Colors.red.shade100,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(emergencyButtonColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              emergencyButtonColor,
+                            ),
                           ),
                         ),
                       ],
@@ -1598,216 +1609,651 @@ class _ElderlySettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const kTeal = Color(0xFF4DB6AC);
+    const kTealDark = Color(0xFF00897B);
+    final isArabic = Provider.of<LocaleProvider>(context).isArabic;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F8FA),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1A2340)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          AppLocalizations.of(context)!.settings,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1A2340),
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User Info Card
-            _SettingsCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            // ── Top bar — matches home page style ─────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 26,
+                      color: Color(0xFF1A2340),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 4),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizations.of(context)!.elderlyInfo,
-                        style: kTitleText,
-                      ),
-                      IconButton(
-                        iconSize: 32,
-                        splashRadius: 28,
-                        icon: const Icon(Icons.edit_outlined, color: kPrimary),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (context) => _EditInfoDialog(
-                              initialName: fullName,
-                              initialGender: gender,
-                              initialPhone: phone,
-                              onSave: (newName, newGender, newPhone) async {
-                                onSave(newName, newGender, newPhone);
-                                if (context.mounted) Navigator.pop(context);
-                              },
-                            ),
-                          );
-                        },
+                        AppLocalizations.of(context)!.settings,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1A2340),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  _InfoBox(
-                    label: AppLocalizations.of(context)!.name,
-                    value: fullName.isNotEmpty
-                        ? fullName
-                        : AppLocalizations.of(context)!.na,
-                  ),
-                  const SizedBox(height: 14),
-                  _InfoBox(
-                    label: AppLocalizations.of(context)!.gender,
-                    value: _translateGender(context, gender),
-                  ),
-                  const SizedBox(height: 14),
-                  _InfoBox(
-                    label: AppLocalizations.of(context)!.mobile,
-                    value: phone.isNotEmpty
-                        ? phone
-                        : AppLocalizations.of(context)!.na,
-                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
 
-            // Caregivers Card
-            _SettingsCard(child: _CaregiversBox(names: caregiverNames)),
-            const SizedBox(height: 16),
-
-            // Pairing Code Card
-            _SettingsCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.verificationCode,
-                    style: kTitleText,
-                  ),
-                  const SizedBox(height: 12),
-                  const _PairingCodeBox(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Logout
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFEBEE),
-                  foregroundColor: kAccentRed,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  side: BorderSide(color: kAccentRed.withOpacity(0.4)),
-                ),
-                icon: const Icon(Icons.logout, size: 26),
-                label: Text(
-                  AppLocalizations.of(context)!.logOut,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        side: const BorderSide(color: kPrimary, width: 2),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Profile header card — navy ──────────────────
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4DB6AC), Color(0xFF00897B)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF4DB6AC).withOpacity(0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
+                      child: Row(
                         children: [
-                          Text(
-                            AppLocalizations.of(context)!.confirmLogout,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w700,
-                              color: kPrimary,
+                          // Avatar circle
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.25),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 36,
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(
-                                    color: kPrimary,
-                                    width: 2,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 30,
-                                    vertical: 16,
-                                  ),
-                                ),
-                                onPressed: () => Navigator.pop(context),
-                                child: Text(
-                                  AppLocalizations.of(context)!.no,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  fullName.isNotEmpty
+                                      ? fullName
+                                      : AppLocalizations.of(context)!.na,
                                   style: const TextStyle(
                                     fontSize: 22,
-                                    color: kPrimary,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 15),
-                              ElevatedButton(
-                                style: kBigButton(
-                                  kAccentRed,
-                                  pad: const EdgeInsets.symmetric(
-                                    horizontal: 36,
-                                    vertical: 18,
-                                  ),
-                                ),
-                                onPressed: () {
-                                  FirebaseAuth.instance.signOut();
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const LoginPage(),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.phone_outlined,
+                                      color: Colors.white70,
+                                      size: 16,
                                     ),
-                                    (_) => false,
-                                  );
-                                },
-                                child: Text(
-                                  AppLocalizations.of(context)!.yes,
-                                  style: kButtonText,
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      phone.isNotEmpty
+                                          ? phone
+                                          : AppLocalizations.of(context)!.na,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Edit button
+                          Material(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => _EditInfoDialog(
+                                      initialName: fullName,
+                                      initialGender: gender,
+                                      initialPhone: phone,
+                                      onSave: (n, g, p) async {
+                                        onSave(n, g, p);
+                                        if (context.mounted)
+                                          Navigator.pop(context);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.white,
+                                  size: 26,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
+
+                    const SizedBox(height: 24),
+
+                    // ── Personal Info section ──────────────────────
+                    _SectionLabel(AppLocalizations.of(context)!.elderlyInfo),
+                    const SizedBox(height: 10),
+                    _SettingsCard(
+                      child: Column(
+                        children: [
+                          _InfoRow(
+                            icon: Icons.badge_outlined,
+                            iconColor: const Color(0xFF00897B),
+                            iconBg: const Color(0xFFE0F2F1),
+                            label: AppLocalizations.of(context)!.name,
+                            value: fullName.isNotEmpty
+                                ? fullName
+                                : AppLocalizations.of(context)!.na,
+                          ),
+                          const _RowDivider(),
+                          _InfoRow(
+                            icon: Icons.wc_outlined,
+                            iconColor: const Color(0xFF7E57C2),
+                            iconBg: const Color(0xFFEDE7F6),
+                            label: AppLocalizations.of(context)!.gender,
+                            value: _translateGender(context, gender),
+                          ),
+                          const _RowDivider(),
+                          _InfoRow(
+                            icon: Icons.phone_outlined,
+                            iconColor: const Color(0xFFFF8F00),
+                            iconBg: const Color(0xFFFFF8E1),
+                            label: AppLocalizations.of(context)!.mobile,
+                            value: phone.isNotEmpty
+                                ? phone
+                                : AppLocalizations.of(context)!.na,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // ── Caregivers section ─────────────────────────
+                    _SectionLabel(AppLocalizations.of(context)!.caregivers),
+                    const SizedBox(height: 10),
+                    _SettingsCard(child: _CaregiversBox(names: caregiverNames)),
+
+                    const SizedBox(height: 22),
+
+                    // ── Pairing code section ───────────────────────
+                    _SectionLabel(
+                      AppLocalizations.of(context)!.verificationCode,
+                    ),
+                    const SizedBox(height: 10),
+                    _SettingsCard(child: const _PairingCodeBox()),
+
+                    const SizedBox(height: 22),
+
+                    // ── Language section ───────────────────────────
+                    _SectionLabel(isArabic ? 'اللغة' : 'Language'),
+                    const SizedBox(height: 10),
+                    _SettingsCard(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0F2F1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.language_outlined,
+                                color: Color(0xFF00897B),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isArabic ? 'لغة التطبيق' : 'App Language',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isArabic ? 'العربية' : 'English',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1A2340),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Toggle pill
+                            GestureDetector(
+                              onTap: () {
+                                final provider = Provider.of<LocaleProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                provider.toggleLanguage();
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                width: 72,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4DB6AC),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: const [
+                                        Text(
+                                          'EN',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        Text(
+                                          'ع',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    AnimatedAlign(
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      curve: Curves.easeInOut,
+                                      alignment: isArabic
+                                          ? Alignment.centerRight
+                                          : Alignment.centerLeft,
+                                      child: Container(
+                                        margin: const EdgeInsets.all(3),
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.15,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            isArabic ? 'ع' : 'EN',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF1A2340),
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // ── Logout button ──────────────────────────────
+                    SizedBox(
+                      width: double.infinity,
+                      height: 62,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFEBEE),
+                          foregroundColor: kAccentRed,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            side: BorderSide(
+                              color: kAccentRed.withOpacity(0.35),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        icon: const Icon(Icons.logout_rounded, size: 26),
+                        label: Text(
+                          AppLocalizations.of(context)!.logOut,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => _LogoutConfirmPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Logout Confirmation Page
+// ═══════════════════════════════════════════════════════════════════
+class _LogoutConfirmPage extends StatelessWidget {
+  const _LogoutConfirmPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 26,
+                      color: Color(0xFF1A2340),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content — centered vertically
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Red icon badge
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: kAccentRed.withOpacity(0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.logout_rounded,
+                        color: kAccentRed,
+                        size: 52,
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    Text(
+                      AppLocalizations.of(context)!.confirmLogout,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1A2340),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Text(
+                      AppLocalizations.of(context)!.doYouReallyWantToLogOut,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        color: Color(0xFF6B7280),
+                        height: 1.5,
+                      ),
+                    ),
+
+                    const SizedBox(height: 52),
+
+                    // Stay button (navy outlined)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 62,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Color(0xFF1A2340),
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          AppLocalizations.of(context)!.no,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            color: Color(0xFF1A2340),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Logout button (red filled)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 62,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kAccentRed,
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        icon: const Icon(Icons.logout_rounded, size: 26),
+                        label: Text(
+                          AppLocalizations.of(context)!.logOut,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.heavyImpact();
+                          FirebaseAuth.instance.signOut();
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginPage(),
+                            ),
+                            (_) => false,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Section label helper ──────────────────────────────────────────
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF6B7280),
+      ),
+    );
+  }
+}
+
+// ── Single info row inside a card ─────────────────────────────────
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String label;
+  final String value;
+
+  const _InfoRow({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A2340),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Thin divider between info rows ───────────────────────────────
+class _RowDivider extends StatelessWidget {
+  const _RowDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: const Color(0xFFF7F8FA),
+      indent: 50,
     );
   }
 }
@@ -1820,14 +2266,14 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -1950,64 +2396,97 @@ class _CaregiversBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(AppLocalizations.of(context)!.caregivers, style: kTitleText),
-        const SizedBox(height: 8),
-        if (names.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: kSurface,
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: kPrimary.withOpacity(0.5), width: 1.5),
+    if (names.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0F2F1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.people_outline,
+                color: Color(0xFF00897B),
+                size: 24,
+              ),
             ),
-            child: Text(
+            const SizedBox(width: 14),
+            Text(
               AppLocalizations.of(context)!.noCaregiversLinked,
-              style: const TextStyle(fontSize: 18, color: Colors.black54),
+              style: const TextStyle(fontSize: 18, color: Color(0xFF9CA3AF)),
             ),
-          )
-        else
-          Column(
-            children: names.map((name) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: kSurface,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: kPrimary.withOpacity(0.5),
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.person,
-                      color: Color.fromARGB(255, 27, 108, 113),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: names.asMap().entries.map((entry) {
+        final name = entry.value;
+        final isLast = entry.key == names.length - 1;
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2F1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.black87,
-                        ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: Color(0xFF00897B),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A2340),
                       ),
                     ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-      ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2F1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Caregiver',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF1A2340),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!isLast)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: const Color(0xFFF7F8FA),
+                indent: 50,
+              ),
+          ],
+        );
+      }).toList(),
     );
   }
 }
@@ -2166,70 +2645,6 @@ class _PairingCodeBoxState extends State<_PairingCodeBox> {
   }
 }
 
-class _HomeCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  const _HomeCard({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final scale = (width / 200).clamp(0.8, 1.0);
-        final iconSize = 79 * scale;
-        final fontSize = 27 * scale;
-        final vPadding = 50 * scale;
-
-        return Card(
-          color: kSurface,
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-            side: const BorderSide(color: kPrimary, width: 2),
-          ),
-          shadowColor: Colors.grey.withOpacity(0.1),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(25),
-            onTap: onTap,
-            splashColor: kPrimary.withOpacity(0.15),
-            highlightColor: Colors.transparent,
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: vPadding),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: iconSize, color: kPrimary),
-                  const SizedBox(height: 8),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w600,
-                        color: kPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _EditInfoDialog extends StatefulWidget {
   final String initialName;
   final String initialGender;
@@ -2252,8 +2667,12 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
   late final TextEditingController _phoneController;
   late String _selectedGender;
   final _formKey = GlobalKey<FormState>();
-
   String? _phoneUsedError;
+  bool _isSaving = false;
+
+  // Navy palette — replaces teal for better elderly contrast
+  static const kNavy = Color(0xFF1A2340);
+  static const kNavyLight = Color(0xFFEEF0F5);
 
   @override
   void initState() {
@@ -2279,9 +2698,7 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
           .where('phone', isEqualTo: phone)
           .limit(1)
           .get();
-
       if (snap.docs.isEmpty) return true;
-
       final currentUid = FirebaseAuth.instance.currentUser?.uid;
       return snap.docs.first.id == currentUid;
     } catch (e) {
@@ -2290,199 +2707,399 @@ class _EditInfoDialogState extends State<_EditInfoDialog> {
     }
   }
 
+  InputDecoration _fieldDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(
+        fontSize: 18,
+        color: Color(0xFF6B7280),
+        fontWeight: FontWeight.w600,
+      ),
+      prefixIcon: Container(
+        margin: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: kNavyLight,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: kNavy, size: 22),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: kNavy.withOpacity(0.15), width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: kNavy, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: kAccentRed, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: kAccentRed, width: 2),
+      ),
+      errorStyle: const TextStyle(fontSize: 16),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFFF9FAFB),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: BorderSide(color: kPrimary.withOpacity(0.3), width: 2),
-      ),
-      title: Text(
-        AppLocalizations.of(context)!.editInformation,
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: kPrimary,
-        ),
-        textAlign: TextAlign.center,
-      ),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.95,
-          maxHeight: MediaQuery.of(context).size.height * 0.80,
-        ),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  textCapitalization: TextCapitalization.words,
-                  style: kBodyText,
-                  decoration: kInput(
-                    AppLocalizations.of(context)!.name,
-                  ).copyWith(errorStyle: const TextStyle(fontSize: 18)),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? AppLocalizations.of(context)!.nameIsRequired
-                      : null,
-                ),
-                const SizedBox(height: 18),
+    final isArabic = Provider.of<LocaleProvider>(
+      context,
+      listen: false,
+    ).isArabic;
 
-                DropdownButtonFormField<String>(
-                  value: _selectedGender,
-                  decoration: kInput(AppLocalizations.of(context)!.gender)
-                      .copyWith(
-                        filled: true,
-                        fillColor: Colors.white,
-                        errorStyle: const TextStyle(fontSize: 18),
-                      ),
-                  dropdownColor: Colors.white,
-                  style: kBodyText,
-                  items: [
-                    DropdownMenuItem(
-                      value: "male",
-                      child: Text(
-                        AppLocalizations.of(context)!.male,
-                        style: kBodyText,
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: "female",
-                      child: Text(
-                        AppLocalizations.of(context)!.female,
-                        style: kBodyText,
-                      ),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedGender = val ?? 'male';
-                    });
-                  },
-                  validator: (v) => v == null || v.isEmpty
-                      ? AppLocalizations.of(context)!.selectGender
-                      : null,
-                ),
-                const SizedBox(height: 18),
-
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  style: kBodyText,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                  decoration: kInput(
-                    AppLocalizations.of(context)!.mobileFormatHint,
-                  ).copyWith(errorStyle: const TextStyle(fontSize: 18)),
-                  validator: (v) {
-                    final txt = (v ?? "").trim();
-                    if (txt.isEmpty) {
-                      return AppLocalizations.of(context)!.requiredField;
-                    }
-                    if (!txt.startsWith('05')) {
-                      return AppLocalizations.of(context)!.startWith05;
-                    }
-                    if (txt.length != 10) {
-                      return AppLocalizations.of(context)!.enter10Digits;
-                    }
-                    if (_phoneUsedError != null) {
-                      return _phoneUsedError;
-                    }
-                    return null;
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      actionsAlignment: MainAxisAlignment.spaceEvenly,
-      actions: [
-        Row(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
+      body: SafeArea(
+        child: Column(
           children: [
-            Expanded(
-              child: SizedBox(
-                height: 56,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    side: const BorderSide(color: kPrimary, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+            // ── Top bar ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 26,
+                      color: kNavy,
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 0,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    AppLocalizations.of(context)!.editInformation,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: kNavy,
                     ),
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    AppLocalizations.of(context)!.cancel,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      color: kPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                ],
+              ),
+            ),
+
+            // ── Form ─────────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name field
+                      _FieldLabel(isArabic ? 'الاسم الكامل' : 'Full Name'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          color: kNavy,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: _fieldDecoration(
+                          AppLocalizations.of(context)!.name,
+                          Icons.badge_outlined,
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? AppLocalizations.of(context)!.nameIsRequired
+                            : null,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Gender field
+                      _FieldLabel(isArabic ? 'الجنس' : 'Gender'),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: kNavy.withOpacity(0.15),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            // Male option
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => _selectedGender = 'male'),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  margin: const EdgeInsets.all(5),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _selectedGender == 'male'
+                                        ? kNavy
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.male,
+                                        color: _selectedGender == 'male'
+                                            ? Colors.white
+                                            : const Color(0xFF9CA3AF),
+                                        size: 26,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        AppLocalizations.of(context)!.male,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: _selectedGender == 'male'
+                                              ? Colors.white
+                                              : const Color(0xFF9CA3AF),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Female option
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => _selectedGender = 'female'),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  margin: const EdgeInsets.all(5),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _selectedGender == 'female'
+                                        ? kNavy
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.female,
+                                        color: _selectedGender == 'female'
+                                            ? Colors.white
+                                            : const Color(0xFF9CA3AF),
+                                        size: 26,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        AppLocalizations.of(context)!.female,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: _selectedGender == 'female'
+                                              ? Colors.white
+                                              : const Color(0xFF9CA3AF),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Phone field
+                      _FieldLabel(isArabic ? 'رقم الجوال' : 'Mobile Number'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          color: kNavy,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                        decoration: _fieldDecoration(
+                          AppLocalizations.of(context)!.mobileFormatHint,
+                          Icons.phone_outlined,
+                        ),
+                        validator: (v) {
+                          final txt = (v ?? '').trim();
+                          if (txt.isEmpty) {
+                            return AppLocalizations.of(context)!.requiredField;
+                          }
+                          if (!txt.startsWith('05')) {
+                            return AppLocalizations.of(context)!.startWith05;
+                          }
+                          if (txt.length != 10) {
+                            return AppLocalizations.of(context)!.enter10Digits;
+                          }
+                          if (_phoneUsedError != null) {
+                            return _phoneUsedError;
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
 
-            Expanded(
-              child: SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  style: kBigButton(
-                    kPrimary,
-                    pad: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 0,
-                    ),
-                  ).copyWith(elevation: const WidgetStatePropertyAll(2)),
-                  onPressed: () async {
-                    setState(() => _phoneUsedError = null);
-
-                    if (!_formKey.currentState!.validate()) return;
-
-                    final phone = _phoneController.text.trim();
-
-                    final available = await _isPhoneAvailable(phone);
-                    if (!available) {
-                      if (!mounted) return;
-                      setState(() {
-                        _phoneUsedError = AppLocalizations.of(
-                          context,
-                        )!.mobileAlreadyUsed;
-                      });
-                      _formKey.currentState!.validate();
-                      return;
-                    }
-
-                    widget.onSave(
-                      _nameController.text.trim(),
-                      _selectedGender,
-                      phone,
-                    );
-                  },
-                  child: Text(
-                    AppLocalizations.of(context)!.save,
-                    style: kButtonText,
+            // ── Pinned bottom buttons ─────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F8FA),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, -4),
                   ),
-                ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Cancel
+                  Expanded(
+                    child: SizedBox(
+                      height: 60,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: kNavy.withOpacity(0.4),
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          AppLocalizations.of(context)!.cancel,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            color: kNavy,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  // Save
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 60,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kNavy,
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: _isSaving
+                            ? null
+                            : () async {
+                                setState(() => _phoneUsedError = null);
+                                if (!_formKey.currentState!.validate()) return;
+
+                                setState(() => _isSaving = true);
+
+                                final phone = _phoneController.text.trim();
+                                final available = await _isPhoneAvailable(
+                                  phone,
+                                );
+
+                                if (!mounted) return;
+
+                                if (!available) {
+                                  setState(() {
+                                    _phoneUsedError = AppLocalizations.of(
+                                      context,
+                                    )!.mobileAlreadyUsed;
+                                    _isSaving = false;
+                                  });
+                                  _formKey.currentState!.validate();
+                                  return;
+                                }
+
+                                widget.onSave(
+                                  _nameController.text.trim(),
+                                  _selectedGender,
+                                  phone,
+                                );
+
+                                setState(() => _isSaving = false);
+                              },
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                AppLocalizations.of(context)!.save,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ],
+      ),
+    );
+  }
+}
+
+// ── Field label helper ────────────────────────────────────────────
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF1A2340),
+      ),
     );
   }
 }

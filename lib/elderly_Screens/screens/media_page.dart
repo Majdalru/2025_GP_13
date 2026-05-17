@@ -16,7 +16,7 @@ import '../../providers/locale_provider.dart';
 import 'package:flutter_application_1/models/voice_command.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 import 'youtube_player_page.dart';
-import 'shared_media_list_page.dart';
+//import 'shared_media_list_page.dart';
 
 class MediaPage extends StatefulWidget {
   const MediaPage({super.key});
@@ -38,8 +38,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
         return loc.quran;
       case 'Health':
         return loc.health;
-      case 'Caregiver':
-        return loc.caregiver;
+      // case 'Caregiver':
+      //   return loc.caregiver;
       case 'Favorites':
         return loc.favorites;
       default:
@@ -172,118 +172,162 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final isArabic = localeProvider.isArabic;
+    const kTeal = Color(0xFF4DB6AC);
+    const kBg = Color(0xFFF7F8FA);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-
-      appBar: AppBar(
-        toolbarHeight: 110,
-        backgroundColor: const Color(0xFF1B3A52),
-        title: Text(AppLocalizations.of(context)!.media),
-        titleTextStyle: const TextStyle(
-          fontSize: 34,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-        ),
-      ),
-
+      backgroundColor: kBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 20,
-                mainAxisSpacing: 25,
-                childAspectRatio: MediaQuery.of(context).size.width < 380
-                    ? 0.68
-                    : 0.8,
+        child: Column(
+          children: [
+            // ── Top bar ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 20, 4),
+              child: Row(
                 children: [
-                  _buildMediaCard(
-                    context,
-                    Icons.library_music,
-                    'Story',
-                    AppLocalizations.of(context)!.story,
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 26,
+                      color: Color(0xFF1A2340),
+                    ),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  _buildMediaCard(
-                    context,
-                    Icons.menu_book,
-                    'Quran',
-                    AppLocalizations.of(context)!.quran,
-                  ),
-                  _buildMediaCard(
-                    context,
-                    Icons.upload_file,
-                    'Caregiver',
-                    AppLocalizations.of(context)!.caregiver,
-                  ),
-                  _buildMediaCard(
-                    context,
-                    Icons.favorite,
-                    'Health',
-                    AppLocalizations.of(context)!.health,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.media,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1A2340),
+                        ),
+                      ),
+                      Text(
+                        isArabic
+                            ? 'القرآن والقصص والصحة'
+                            : 'Quran, Stories & Health',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+            ),
 
-              const SizedBox(height: 40),
+            // ── Content ──────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Section label
+                    _sectionLabel(isArabic ? 'الأقسام' : 'Categories'),
+                    const SizedBox(height: 10),
 
-              SizedBox(
-                width: double.infinity,
-                height: 90,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const FavoritesPage()),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.favorite,
-                    size: 45,
-                    color: Colors.white,
-                  ),
-                  label: Text(
-                    AppLocalizations.of(context)!.favorites,
-                    style: TextStyle(
-                      fontFamily: isArabic ? 'NotoSansArabic' : null,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    // 2-column grid: Story + Quran top row, Health alone or centered
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: 1.05,
+                      children: [
+                        _buildMediaCard(
+                          context,
+                          Icons.auto_stories_outlined,
+                          'Story',
+                          AppLocalizations.of(context)!.story,
+                          const Color(0xFF7E57C2),
+                          const Color(0xFFEDE7F6),
+                        ),
+                        _buildMediaCard(
+                          context,
+                          Icons.menu_book_outlined,
+                          'Quran',
+                          AppLocalizations.of(context)!.quran,
+                          const Color(0xFF00897B),
+                          const Color(0xFFE0F2F1),
+                        ),
+                        _buildMediaCard(
+                          context,
+                          Icons.favorite_border_outlined,
+                          'Health',
+                          AppLocalizations.of(context)!.health,
+                          const Color(0xFFE53935),
+                          const Color(0xFFFFEBEE),
+                        ),
+                        // Favorites tile
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FavoritesPage(),
+                            ),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 20,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF8E1),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Icon(
+                                      Icons.star_outline_rounded,
+                                      color: Color(0xFFFF8F00),
+                                      size: 32,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    AppLocalizations.of(context)!.favorites,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1A2340),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: MediaPage.kPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    elevation: 4,
-                  ),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 120),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
 
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      // ── Voice FAB ───────────────────────────────────────────
       floatingActionButton: GestureDetector(
         onTap: _startVoiceConversation,
         child: SizedBox(
@@ -296,20 +340,15 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 AnimatedBuilder(
                   animation: _rippleController,
                   builder: (context, child) {
-                    final rippleColor = _isListeningState
-                        ? Colors.green
-                        : Colors.red;
-
                     return CustomPaint(
                       size: const Size(100, 100),
                       painter: RipplePainter(
                         animation: _rippleController.value,
-                        color: rippleColor,
+                        color: _isListeningState ? Colors.green : Colors.red,
                       ),
                     );
                   },
                 ),
-
               AnimatedBuilder(
                 animation: Listenable.merge([
                   _pulseController,
@@ -319,16 +358,14 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   final scale = (_isListeningState || _isSpeakingState)
                       ? 1.0 + (_pulseController.value * 0.15)
                       : 1.0;
-
                   Color buttonColor;
                   if (_isListeningState) {
                     buttonColor = Colors.green;
                   } else if (_isSpeakingState) {
                     buttonColor = Colors.red;
                   } else {
-                    buttonColor = const Color(0xFF1B3A52);
+                    buttonColor = kTeal;
                   }
-
                   return Transform.scale(
                     scale: scale,
                     child: Transform.rotate(
@@ -340,35 +377,44 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                         height: 80,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [buttonColor, buttonColor.withOpacity(0.8)],
-                          ),
+                          color: buttonColor,
                           boxShadow: [
                             BoxShadow(
-                              color: buttonColor.withOpacity(0.5),
+                              color: buttonColor.withOpacity(0.4),
                               blurRadius: 20,
-                              spreadRadius: 5,
+                              spreadRadius: 4,
                             ),
                           ],
+                        ),
+                        child: Icon(
+                          _isListeningState
+                              ? Icons.mic
+                              : _isSpeakingState
+                              ? Icons.volume_up
+                              : Icons.mic_none,
+                          color: Colors.white,
+                          size: 38,
                         ),
                       ),
                     ),
                   );
                 },
               ),
-
-              Icon(
-                _isListeningState
-                    ? Icons.mic
-                    : _isSpeakingState
-                    ? Icons.volume_up
-                    : Icons.mic_none,
-                color: Colors.white,
-                size: 40,
-              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF9CA3AF),
+        letterSpacing: 0.8,
       ),
     );
   }
@@ -378,47 +424,47 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     IconData icon,
     String categoryKey,
     String title,
+    Color iconColor,
+    Color iconBg,
   ) {
-    return Card(
-      color: Colors.white,
-      elevation: 4,
-      shadowColor: MediaPage.kPrimary.withOpacity(0.2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: MediaPage.kPrimary.withOpacity(0.9), width: 2),
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => AudioListPage(category: categoryKey)),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        splashColor: MediaPage.kPrimary.withOpacity(0.15),
-        onTap: () {
-          if (categoryKey == "Caregiver") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SharedMediaListPage()),
-            );
-          } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AudioListPage(category: categoryKey),
-              ),
-            );
-          }
-        },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 80, color: MediaPage.kPrimary),
-              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: iconColor, size: 32),
+              ),
+              const Spacer(),
               Text(
                 title,
-                style: TextStyle(
-                  fontFamily: _isArabic ? 'NotoSansArabic' : null,
-                  fontSize: 26,
+                style: const TextStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: MediaPage.kPrimary,
+                  color: Color(0xFF1A2340),
+                  height: 1.3,
                 ),
               ),
             ],
@@ -828,22 +874,22 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       return "Health";
     }
 
-    if (_containsAnyNormalized(norm, [
-      'care',
-      'family',
-      'gift',
-      'caregiver',
-      'مقدم رعايه',
-      'مقدم الرعاية',
-      'ممرض',
-      'ممرضه',
-      'ممرضة',
-      'ابنتي',
-      'ابني',
-      'بنتي',
-    ])) {
-      return "Caregiver";
-    }
+    // if (_containsAnyNormalized(norm, [
+    //   'care',
+    //   'family',
+    //   'gift',
+    //   'caregiver',
+    //   'مقدم رعايه',
+    //   'مقدم الرعاية',
+    //   'ممرض',
+    //   'ممرضه',
+    //   'ممرضة',
+    //   'ابنتي',
+    //   'ابني',
+    //   'بنتي',
+    // ])) {
+    //   return "Caregiver";
+    // }
 
     if (_containsAnyNormalized(norm, [
       'favorite',

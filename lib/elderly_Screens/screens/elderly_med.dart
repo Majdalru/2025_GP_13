@@ -236,215 +236,157 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final isArabic = localeProvider.isArabic;
+    final loc = AppLocalizations.of(context)!;
+
+    // color palette matching home
+    const kTeal = Color(0xFF4DB6AC);
+    const kBg = Color(0xFFF7F8FA);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        toolbarHeight: 110,
-        backgroundColor: const Color(0xFF1B3A52),
-        title: Text(AppLocalizations.of(context)!.medications),
-        titleTextStyle: const TextStyle(
-          fontSize: 34,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-        ),
-      ),
-      body: widget.isMedicationsEnabled ? Column(
-        children: [
-          CustomSegmentedControl(tabController: _tabController),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Tab 1: Today's meds
-                TodaysMedsTab(
-                  elderlyId: widget.elderlyId,
-                  isCaregiverView: false,
-                ),
-
-                // Tab 2: Full list
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 5, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _navigateAndAddMedication(context),
-                        icon: const Icon(Icons.add, size: 32),
-                        label: Text(
-                          AppLocalizations.of(context)!.addNewMedication,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: const Color(0xFF5FA5A0),
-                          textStyle: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                          minimumSize: const Size.fromHeight(70),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 6,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)!.medications,
-                            style: const TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1B3A52),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => MedicationHistoryPage(
-                                  elderlyId: widget.elderlyId,
-                                  isElderlyView: true,
-                                ),
-                              ),
-                            ),
-                            icon: const Icon(Icons.history, size: 26),
-                            label: Text(
-                              AppLocalizations.of(context)!.medicationHistory,
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF5FA5A0),
-                              side: const BorderSide(
-                                color: Color(0xFF5FA5A0),
-                                width: 2,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Expanded(
-                        child:
-                            StreamBuilder<
-                              DocumentSnapshot<Map<String, dynamic>>
-                            >(
-                              stream: FirebaseFirestore.instance
-                                  .collection('medications')
-                                  .doc(widget.elderlyId)
-                                  .snapshots(),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  _currentMeds = [];
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
-                                  );
-                                }
-                                if (!snapshot.hasData ||
-                                    !snapshot.data!.exists) {
-                                  _currentMeds = [];
-                                  return Center(
-                                    child: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      )!.noMedicationsFound,
-                                      style: const TextStyle(fontSize: 18),
-                                    ),
-                                  );
-                                }
-                                if (snapshot.hasError) {
-                                  _currentMeds = [];
-                                  return Center(
-                                    child: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      )!.errorLoadingMedications,
-                                    ),
-                                  );
-                                }
-
-                                final data = snapshot.data!.data();
-                                final medsList =
-                                    (data?['medsList'] as List?)
-                                        ?.map(
-                                          (medMap) => Medication.fromMap(
-                                            medMap as Map<String, dynamic>,
-                                          ),
-                                        )
-                                        .toList() ??
-                                    [];
-
-                                _currentMeds = medsList;
-
-                                if (medsList.isEmpty) {
-                                  return Center(
-                                    child: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      )!.noMedicationsFound,
-                                      style: const TextStyle(fontSize: 18),
-                                    ),
-                                  );
-                                }
-
-                                return ListView.builder(
-                                  itemCount: medsList.length,
-                                  itemBuilder: (context, index) {
-                                    final medication = medsList[index];
-                                    return MedicationCard(
-                                      medication: medication,
-                                      onEdit: () => _navigateAndEditMedication(
-                                        medication,
-                                      ),
-                                      onDelete: () =>
-                                          _deleteMedication(medication),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      )
-      : Column(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Column(
           children: [
-            Expanded(
-              child: TodaysMedsTab(
-                elderlyId: widget.elderlyId,
-                isCaregiverView: false,
+            // ── Top bar ───────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 20, 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 26,
+                      color: kTeal,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          loc.medications,
+                          style: const TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            color: kTeal,
+                          ),
+                        ),
+                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                          stream: FirebaseFirestore.instance
+                              .collection('medications')
+                              .doc(widget.elderlyId)
+                              .snapshots(),
+                          builder: (context, snap) {
+                            final count = snap.hasData && snap.data!.exists
+                                ? ((snap.data!.data()?['medsList'] as List?)
+                                          ?.length ??
+                                      0)
+                                : 0;
+                            return Text(
+                              isArabic
+                                  ? '$count ${loc.medications} · نشط'
+                                  : '$count active ${loc.medications}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            ),
+
+            // ── Tab content ───────────────────────────────────────
+            Expanded(
+              child: widget.isMedicationsEnabled
+                  ? TabBarView(
+                      controller: _tabController,
+                      children: [
+                        // Tab 0: Today's meds
+                        TodaysMedsTab(
+                          elderlyId: widget.elderlyId,
+                          isCaregiverView: false,
+                        ),
+                        // Tab 1: All medications
+                        _AllMedsTab(
+                          elderlyId: widget.elderlyId,
+                          onEdit: _navigateAndEditMedication,
+                          onDelete: _deleteMedication,
+                          onAddMed: () => _navigateAndAddMedication(context),
+                          onHistory: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MedicationHistoryPage(
+                                elderlyId: widget.elderlyId,
+                                isElderlyView: true,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : TodaysMedsTab(
+                      elderlyId: widget.elderlyId,
+                      isCaregiverView: false,
+                    ),
             ),
           ],
         ),
+      ),
+
+      // ── Bottom navigation (Today / All) ───────────────────────
+      bottomNavigationBar: widget.isMedicationsEnabled
+          ? AnimatedBuilder(
+              animation: _tabController,
+              builder: (context, _) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          _NavItem(
+                            icon: Icons.today_outlined,
+                            activeIcon: Icons.today,
+                            label: loc.todaysMeds,
+                            selected: _tabController.index == 0,
+                            onTap: () => _tabController.animateTo(0),
+                          ),
+                          _NavItem(
+                            icon: Icons.medication_outlined,
+                            activeIcon: Icons.medication,
+                            label: loc.medications,
+                            selected: _tabController.index == 1,
+                            onTap: () => _tabController.animateTo(1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            )
+          : null,
+
       // Voice button in medications page
       floatingActionButton: isArabic
           ? ArabicFloatingVoiceButton(
@@ -455,21 +397,42 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
               onCommand: (command) async {
                 switch (command) {
                   case VoiceCommand.addMedication:
-                    if (!widget.isMedicationsEnabled) { await _arabicVoiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
+                    if (!widget.isMedicationsEnabled) {
+                      await _arabicVoiceService.speak(
+                        AppLocalizations.of(
+                          context,
+                        )!.featureDisabledByCaregiver,
+                      );
+                      break;
+                    }
                     await _arabicVoiceService.runAddMedicationFlow(
                       widget.elderlyId,
                     );
                     break;
 
                   case VoiceCommand.deleteMedication:
-                    if (!widget.isMedicationsEnabled) { await _arabicVoiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
+                    if (!widget.isMedicationsEnabled) {
+                      await _arabicVoiceService.speak(
+                        AppLocalizations.of(
+                          context,
+                        )!.featureDisabledByCaregiver,
+                      );
+                      break;
+                    }
                     await _arabicVoiceService.runDeleteMedicationFlow(
                       widget.elderlyId,
                     );
                     break;
 
                   case VoiceCommand.editMedication:
-                    if (!widget.isMedicationsEnabled) { await _arabicVoiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
+                    if (!widget.isMedicationsEnabled) {
+                      await _arabicVoiceService.speak(
+                        AppLocalizations.of(
+                          context,
+                        )!.featureDisabledByCaregiver,
+                      );
+                      break;
+                    }
                     await _arabicVoiceService.runEditMedicationFlow(
                       widget.elderlyId,
                     );
@@ -510,19 +473,40 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
               onCommand: (command) async {
                 switch (command) {
                   case VoiceCommand.addMedication:
-                    if (!widget.isMedicationsEnabled) { await _voiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
+                    if (!widget.isMedicationsEnabled) {
+                      await _voiceService.speak(
+                        AppLocalizations.of(
+                          context,
+                        )!.featureDisabledByCaregiver,
+                      );
+                      break;
+                    }
                     await _voiceService.runAddMedicationFlow(widget.elderlyId);
                     break;
 
                   case VoiceCommand.deleteMedication:
-                    if (!widget.isMedicationsEnabled) { await _voiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
+                    if (!widget.isMedicationsEnabled) {
+                      await _voiceService.speak(
+                        AppLocalizations.of(
+                          context,
+                        )!.featureDisabledByCaregiver,
+                      );
+                      break;
+                    }
                     await _voiceService.runDeleteMedicationFlow(
                       widget.elderlyId,
                     );
                     break;
 
                   case VoiceCommand.editMedication:
-                    if (!widget.isMedicationsEnabled) { await _voiceService.speak(AppLocalizations.of(context)!.featureDisabledByCaregiver); break; }
+                    if (!widget.isMedicationsEnabled) {
+                      await _voiceService.speak(
+                        AppLocalizations.of(
+                          context,
+                        )!.featureDisabledByCaregiver,
+                      );
+                      break;
+                    }
                     await _voiceService.runEditMedicationFlow(widget.elderlyId);
                     break;
 
@@ -553,96 +537,59 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
             ),
     );
   }
-}
+} // ══════════════════════════════════════════════════════════════
 
-// --- CUSTOM TAB BAR WIDGET ---
-class CustomSegmentedControl extends StatefulWidget {
-  final TabController tabController;
-  const CustomSegmentedControl({super.key, required this.tabController});
+// Bottom nav item
+// ══════════════════════════════════════════════════════════════
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
-  @override
-  State<CustomSegmentedControl> createState() => _CustomSegmentedControlState();
-}
-
-class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
-  late int _selectedIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIndex = widget.tabController.index;
-    widget.tabController.addListener(_handleTabSelection);
-  }
-
-  @override
-  void dispose() {
-    widget.tabController.removeListener(_handleTabSelection);
-    super.dispose();
-  }
-
-  void _handleTabSelection() {
-    setState(() {
-      _selectedIndex = widget.tabController.index;
-    });
-  }
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _buildTab(0, AppLocalizations.of(context)!.todaysMeds),
-          _buildTab(1, AppLocalizations.of(context)!.medications),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTab(int index, String text) {
-    final bool isSelected = _selectedIndex == index;
+    const kTeal = Color(0xFF4DB6AC);
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          widget.tabController.animateTo(index);
-        },
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF5FA5A0) : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF5FA5A0).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : [],
+            color: selected ? kTeal.withOpacity(0.08) : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
           ),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF616161),
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-              letterSpacing: 0.5,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                selected ? activeIcon : icon,
+                size: 28,
+                color: selected ? kTeal : const Color(0xFF9CA3AF),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? kTeal : const Color(0xFF9CA3AF),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),
@@ -650,7 +597,246 @@ class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
   }
 }
 
-// --- MEDICATION CARD WIDGET ---
+// ══════════════════════════════════════════════════════════════
+// All Medications Tab — with filter chips
+// ══════════════════════════════════════════════════════════════
+class _AllMedsTab extends StatefulWidget {
+  final String elderlyId;
+  final void Function(Medication) onEdit;
+  final void Function(Medication) onDelete;
+  final VoidCallback onHistory;
+  final VoidCallback onAddMed;
+
+  const _AllMedsTab({
+    required this.elderlyId,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onHistory,
+    required this.onAddMed,
+  });
+
+  @override
+  State<_AllMedsTab> createState() => _AllMedsTabState();
+}
+
+class _AllMedsTabState extends State<_AllMedsTab> {
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    const kTeal = Color(0xFF4DB6AC);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Add medication button ──────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: SizedBox(
+            width: double.infinity,
+            height: 62,
+            child: ElevatedButton.icon(
+              onPressed: widget.onAddMed,
+              icon: const Icon(Icons.add_circle_outline, size: 28),
+              label: Text(
+                loc.addNewMedication,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kTeal,
+                foregroundColor: Colors.white,
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // ── History link ───────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: widget.onHistory,
+              icon: const Icon(Icons.history_rounded, size: 24),
+              label: Text(loc.medicationHistory),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0D2D5D),
+                side: const BorderSide(color: Color(0xFF0D2D5D), width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // ── Medications list ───────────────────────────────────
+        Expanded(
+          child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('medications')
+                .doc(widget.elderlyId)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return Center(
+                  child: Text(
+                    loc.noMedicationsFound,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                );
+              }
+              final data = snapshot.data!.data();
+              final allMeds =
+                  (data?['medsList'] as List?)
+                      ?.map(
+                        (m) => Medication.fromMap(m as Map<String, dynamic>),
+                      )
+                      .toList() ??
+                  [];
+
+              //final filtered = _applyFilter(allMeds);
+
+              if (allMeds.isEmpty) {
+                return Center(
+                  child: Text(
+                    loc.noMedicationsFound,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                itemCount: allMeds.length,
+                itemBuilder: (context, index) {
+                  final med = allMeds[index];
+                  return MedicationCard(
+                    medication: med,
+                    onEdit: () => widget.onEdit(med),
+                    onDelete: () => widget.onDelete(med),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// // --- CUSTOM TAB BAR WIDGET ---
+// class CustomSegmentedControl extends StatefulWidget {
+//   final TabController tabController;
+//   const CustomSegmentedControl({super.key, required this.tabController});
+
+//   @override
+//   State<CustomSegmentedControl> createState() => _CustomSegmentedControlState();
+// }
+
+// class _CustomSegmentedControlState extends State<CustomSegmentedControl> {
+//   late int _selectedIndex;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _selectedIndex = widget.tabController.index;
+//     widget.tabController.addListener(_handleTabSelection);
+//   }
+
+//   @override
+//   void dispose() {
+//     widget.tabController.removeListener(_handleTabSelection);
+//     super.dispose();
+//   }
+
+//   void _handleTabSelection() {
+//     setState(() {
+//       _selectedIndex = widget.tabController.index;
+//     });
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       margin: const EdgeInsets.all(24),
+//       padding: const EdgeInsets.all(6),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(20),
+//         boxShadow: [
+//           BoxShadow(
+//             color: Colors.black.withOpacity(0.15),
+//             blurRadius: 10,
+//             offset: const Offset(0, 3),
+//           ),
+//         ],
+//       ),
+//       child: Row(
+//         children: [
+//           _buildTab(0, AppLocalizations.of(context)!.todaysMeds),
+//           _buildTab(1, AppLocalizations.of(context)!.medications),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildTab(int index, String text) {
+//     final bool isSelected = _selectedIndex == index;
+//     return Expanded(
+//       child: GestureDetector(
+//         onTap: () {
+//           widget.tabController.animateTo(index);
+//         },
+//         child: AnimatedContainer(
+//           duration: const Duration(milliseconds: 300),
+//           padding: const EdgeInsets.symmetric(vertical: 20),
+//           decoration: BoxDecoration(
+//             color: isSelected ? const Color(0xFF5FA5A0) : Colors.transparent,
+//             borderRadius: BorderRadius.circular(18),
+//             boxShadow: isSelected
+//                 ? [
+//                     BoxShadow(
+//                       color: const Color(0xFF5FA5A0).withOpacity(0.3),
+//                       blurRadius: 8,
+//                       offset: const Offset(0, 3),
+//                     ),
+//                   ]
+//                 : [],
+//           ),
+//           child: Text(
+//             text,
+//             textAlign: TextAlign.center,
+//             style: TextStyle(
+//               color: isSelected ? Colors.white : const Color(0xFF616161),
+//               fontWeight: FontWeight.bold,
+//               fontSize: 22,
+//               letterSpacing: 0.5,
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+// ══════════════════════════════════════════════════════════════
+// Medication Card — redesigned to match screenshot aesthetic
+// ══════════════════════════════════════════════════════════════
 class MedicationCard extends StatelessWidget {
   final Medication medication;
   final VoidCallback onEdit;
@@ -663,55 +849,66 @@ class MedicationCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Future<void> _showDeleteConfirmation(BuildContext context) async {
+  Future<void> _showDeleteConfirmation(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     return showDialog<void>(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            loc.confirmDeletion,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            AppLocalizations.of(
-              context,
-            )!.confirmRemoveFromHistory(medication.name),
-            style: const TextStyle(fontSize: 20),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                loc.cancel,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          loc.confirmDeletion,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          loc.confirmRemoveFromHistory(medication.name),
+          style: const TextStyle(fontSize: 18),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              loc.cancel,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            TextButton(
-              child: Text(
-                loc.delete,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD62828),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                onDelete();
-              },
             ),
-          ],
-        );
-      },
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              onDelete();
+            },
+            child: Text(
+              loc.delete,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  // pick a color per medication index based on name hash
+  Color _iconColor() {
+    final colors = [
+      const Color(0xFF4CAF50),
+      const Color(0xFFFF8F00),
+      const Color(0xFF7E57C2),
+      const Color(0xFF1565C0),
+      const Color(0xFFE91E8C),
+    ];
+    return colors[medication.name.hashCode.abs() % colors.length];
+  }
+
+  Color _iconBg() => _iconColor().withOpacity(0.12);
 
   String _translateFreq(String? freq, AppLocalizations loc) {
     switch (freq) {
@@ -774,9 +971,27 @@ class MedicationCard extends StatelessWidget {
     }
   }
 
-  // ← helper to format start date
-  String _startDateDisplay(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    const kTeal = Color(0xFF4DB6AC);
+    const kNavy = Color(0xFF0D2D5D);
+    // Label: teal bold; Value: near-black for max readability
+    const kLabel = TextStyle(
+      fontSize: 19,
+      fontWeight: FontWeight.w800,
+      color: kTeal,
+    );
+    const kValue = TextStyle(
+      fontSize: 19,
+      color: Color(0xFF1A1A1A),
+      height: 1.5,
+    );
+
+    final timeString = medication.times
+        .map((t) => t.format(context))
+        .join('  ·  ');
+
     final start = medication.createdAt.toDate();
     final now = DateTime.now();
     final isToday =
@@ -784,257 +999,250 @@ class MedicationCard extends StatelessWidget {
         start.month == now.month &&
         start.day == now.day;
     final locale = Localizations.localeOf(context).languageCode;
-    final formatted = DateFormat.yMMMd(locale).format(start);
-    return isToday ? loc.startDateToday(formatted) : formatted;
-  }
+    final startFormatted = DateFormat.yMMMd(locale).format(start);
+    final startDisplay = isToday
+        ? loc.startDateToday(startFormatted)
+        : startFormatted;
 
-  String _durationDisplay(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
-    if (medication.endDate == null) return loc.durOngoingShort;
-    final endDt = medication.endDate!.toDate();
-    final now = DateTime.now();
-    final daysLeft = endDt.difference(now).inDays;
-    final formattedDate = DateFormat('MMM d, yyyy').format(endDt);
-    if (daysLeft < 0) return loc.cardExpired(formattedDate);
-    if (daysLeft == 0) return loc.cardEndsToday;
-    if (daysLeft == 1) return loc.cardEndsTomorrow;
-    return loc.cardUntilDate(formattedDate, daysLeft);
-  }
+    String durationDisplay;
+    if (medication.endDate == null) {
+      durationDisplay = loc.durOngoingShort;
+    } else {
+      final endDt = medication.endDate!.toDate();
+      final daysLeft = endDt.difference(now).inDays;
+      final formatted = DateFormat('MMM d, yyyy').format(endDt);
+      if (daysLeft < 0)
+        durationDisplay = loc.cardExpired(formatted);
+      else if (daysLeft == 0)
+        durationDisplay = loc.cardEndsToday;
+      else if (daysLeft == 1)
+        durationDisplay = loc.cardEndsTomorrow;
+      else
+        durationDisplay = loc.cardUntilDate(formatted, daysLeft);
+    }
+    final durationExpiringSoon =
+        medication.endDate != null &&
+        medication.endDate!.toDate().difference(now).inDays <= 2;
 
-  String _doseDisplay(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
-    final parts = <String>[];
+    final doseParts = <String>[];
     if (medication.doseForm != null)
-      parts.add(_translateForm(medication.doseForm, loc));
+      doseParts.add(_translateForm(medication.doseForm, loc));
     if (medication.doseStrength != null && medication.doseStrength!.isNotEmpty)
-      parts.add(medication.doseStrength!);
-    return parts.isEmpty ? loc.summaryNotSpecified : parts.join(' — ');
-  }
+      doseParts.add(medication.doseStrength!);
+    final doseDisplay = doseParts.isEmpty
+        ? loc.summaryNotSpecified
+        : doseParts.join(' — ');
 
-  @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
-    final timeString = medication.times
-        .map((t) => t.format(context))
-        .join(', ');
     final translatedDays = medication.days
         .map((d) => _translateDay(d, loc))
         .join(', ');
-    final labelStyle = DefaultTextStyle.of(context).style.copyWith(
-      fontSize: 22,
-      fontWeight: FontWeight.bold,
-      color: const Color(0xFF1B3A52),
-      letterSpacing: 0.3,
-    );
-    final valueStyle = DefaultTextStyle.of(
-      context,
-    ).style.copyWith(fontSize: 22, color: const Color(0xFF212121), height: 1.4);
 
-    return Card(
-      elevation: 6,
-      margin: const EdgeInsets.only(bottom: 24),
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: const Color(0xFF5FA5A0).withOpacity(0.2),
-          width: 2,
-        ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: kTeal.withOpacity(0.45), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Top: icon + name ────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1B3A52).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(15),
+                    color: _iconBg(),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(
-                    Icons.medication,
-                    color: Color(0xFF1B3A52),
-                    size: 40,
+                  child: Icon(
+                    Icons.medication_rounded,
+                    color: _iconColor(),
+                    size: 34,
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    medication.name,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1B3A52),
-                      letterSpacing: 0.3,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      medication.name,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1A1A1A),
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                  color: const Color(0xFF5FA5A0).withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
+          ),
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: valueStyle,
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: '${loc.summaryStartDate}: ',
-                          style: labelStyle,
-                        ),
-                        TextSpan(text: _startDateDisplay(context)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  RichText(
-                    text: TextSpan(
-                      style: valueStyle,
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: '${loc.summaryDuration}: ',
-                          style: labelStyle,
-                        ),
-                        TextSpan(
-                          text: _durationDisplay(context),
-                          style: valueStyle.copyWith(
-                            color:
-                                medication.endDate != null &&
-                                    medication.endDate!
-                                            .toDate()
-                                            .difference(DateTime.now())
-                                            .inDays <=
-                                        2
-                                ? Colors.orange.shade800
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  RichText(
-                    text: TextSpan(
-                      style: valueStyle,
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: '${loc.summaryDose}: ',
-                          style: labelStyle,
-                        ),
-                        TextSpan(text: _doseDisplay(context)),
-                      ],
-                    ),
-                  ),
-                  RichText(
-                    text: TextSpan(
-                      style: valueStyle,
-                      children: <TextSpan>[
-                        TextSpan(text: '${loc.frequency}: ', style: labelStyle),
-                        TextSpan(
-                          text: _translateFreq(medication.frequency, loc),
-                        ),
-                      ],
-                    ),
-                  ),
-                  RichText(
-                    text: TextSpan(
-                      style: valueStyle,
-                      children: <TextSpan>[
-                        TextSpan(text: '${loc.days}: ', style: labelStyle),
-                        TextSpan(text: translatedDays),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  RichText(
-                    text: TextSpan(
-                      style: valueStyle,
-                      children: <TextSpan>[
-                        TextSpan(text: '${loc.times}: ', style: labelStyle),
-                        TextSpan(text: timeString),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  if (medication.notes != null && medication.notes!.isNotEmpty)
-                    RichText(
-                      text: TextSpan(
-                        style: valueStyle,
-                        children: <TextSpan>[
-                          TextSpan(text: '${loc.notes}: ', style: labelStyle),
-                          TextSpan(text: medication.notes!),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: kTeal.withOpacity(0.2),
             ),
-            const SizedBox(height: 20),
-            Row(
+          ),
+          const SizedBox(height: 14),
+
+          // ── Info block ──────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: onEdit,
-                    icon: const Icon(Icons.edit, size: 28),
-                    label: Text(loc.edit),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: const Color(0xFF5FA5A0),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      textStyle: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                RichText(
+                  text: TextSpan(
+                    style: kValue,
+                    children: [
+                      TextSpan(
+                        text: '${loc.summaryStartDate}: ',
+                        style: kLabel,
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 4,
-                    ),
+                      TextSpan(text: startDisplay),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showDeleteConfirmation(context),
-                    icon: const Icon(Icons.delete, size: 28),
-                    label: Text(loc.delete),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: const Color(0xFFC62828),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      textStyle: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                const SizedBox(height: 10),
+                RichText(
+                  text: TextSpan(
+                    style: kValue,
+                    children: [
+                      TextSpan(text: '${loc.summaryDuration}: ', style: kLabel),
+                      TextSpan(
+                        text: durationDisplay,
+                        style: kValue.copyWith(
+                          color: durationExpiringSoon
+                              ? Colors.orange.shade800
+                              : const Color(0xFF1A1A1A),
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 4,
-                    ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 10),
+                RichText(
+                  text: TextSpan(
+                    style: kValue,
+                    children: [
+                      TextSpan(text: '${loc.summaryDose}: ', style: kLabel),
+                      TextSpan(text: doseDisplay),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                RichText(
+                  text: TextSpan(
+                    style: kValue,
+                    children: [
+                      TextSpan(text: '${loc.frequency}: ', style: kLabel),
+                      TextSpan(text: _translateFreq(medication.frequency, loc)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                RichText(
+                  text: TextSpan(
+                    style: kValue,
+                    children: [
+                      TextSpan(text: '${loc.days}: ', style: kLabel),
+                      TextSpan(text: translatedDays),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                RichText(
+                  text: TextSpan(
+                    style: kValue,
+                    children: [
+                      TextSpan(text: '${loc.times}: ', style: kLabel),
+                      TextSpan(text: timeString),
+                    ],
+                  ),
+                ),
+                if (medication.notes != null &&
+                    medication.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  RichText(
+                    text: TextSpan(
+                      style: kValue,
+                      children: [
+                        TextSpan(text: '${loc.notes}: ', style: kLabel),
+                        TextSpan(text: medication.notes!),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
-          ],
-        ),
+          ),
+
+          const SizedBox(height: 16),
+          Divider(height: 1, thickness: 1, color: kTeal.withOpacity(0.2)),
+
+          // ── Rectangular buttons at bottom ───────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 22),
+                  label: Text(loc.edit),
+                  style: TextButton.styleFrom(
+                    foregroundColor: kNavy,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Container(width: 1, height: 52, color: kTeal.withOpacity(0.2)),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => _showDeleteConfirmation(context),
+                  icon: const Icon(Icons.delete_outline, size: 22),
+                  label: Text(loc.delete),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFD62828),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        bottomRight: Radius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

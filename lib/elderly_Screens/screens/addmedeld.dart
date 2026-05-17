@@ -1499,204 +1499,216 @@ class _AddMedScreenState extends State<AddMedScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        toolbarHeight: 110,
-        title: Text(
-          _isEditing
-              ? AppLocalizations.of(context)!.editMedication
-              : AppLocalizations.of(context)!.addNewMedication,
-        ),
-        titleTextStyle: const TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          letterSpacing: 0.5,
-        ),
-        backgroundColor: const Color(0xFF1B3A52),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 42),
-          onPressed: _goToPreviousPage,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              AppLocalizations.of(context)!.cancel,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+      backgroundColor: const Color(0xFFF7F8FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Top bar ───────────────────────────────────────────
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(4, 10, 16, 10),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 24,
+                      color: Color(0xFF0D2D5D),
+                    ),
+                    onPressed: _goToPreviousPage,
+                  ),
+                  Expanded(
+                    child: Text(
+                      _isEditing
+                          ? AppLocalizations.of(context)!.editMedication
+                          : AppLocalizations.of(context)!.addNewMedication,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0D2D5D),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      AppLocalizations.of(context)!.cancel,
+                      style: const TextStyle(
+                        color: Color(0xFFD62828),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-        ),
-      ),
-      body: Column(
-        children: [
-          _Stepper(currentIndex: _currentPageIndex, stepCount: 8),
-          if (!_isEditing && _currentPageIndex == 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isScanning ? null : _scanFromCamera,
-                  icon: _isScanning
-                      ? const SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3,
+            // ── Stepper + scan + page content ─────────────────────
+            Expanded(
+              child: Column(
+                children: [
+                  _Stepper(currentIndex: _currentPageIndex, stepCount: 8),
+                  if (!_isEditing && _currentPageIndex == 0)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isScanning ? null : _scanFromCamera,
+                          icon: _isScanning
+                              ? const SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : const Icon(Icons.camera_alt, size: 30),
+                          label: Text(
+                            _isScanning
+                                ? AppLocalizations.of(context)!.scanning
+                                : AppLocalizations.of(
+                                    context,
+                                  )!.scanPrescription,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        )
-                      : const Icon(Icons.camera_alt, size: 30),
-                  label: Text(
-                    _isScanning
-                        ? AppLocalizations.of(context)!.scanning
-                        : AppLocalizations.of(context)!.scanPrescription,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D2D5D),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 4,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (!_isEditing && _currentPageIndex == 0)
+                    const SizedBox(height: 8),
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      onPageChanged: (index) {
+                        setState(() => _currentPageIndex = index);
+                      },
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _Step1MedName(
+                          initialValue: _medicationName,
+                          buttonStyle: tealButtonStyle,
+                          onNext: (name) {
+                            setState(() => _medicationName = name);
+                            _goToNextPage();
+                          },
+                        ),
+                        _Step2Duration(
+                          medicationName: _medicationName,
+                          initialDurationDays: _durationDays,
+                          initialCustomEndDate: _customEndDate,
+                          buttonStyle: tealButtonStyle,
+                          onNext: (days, customDate) {
+                            setState(() {
+                              _durationDays = days;
+                              _customEndDate = customDate;
+                            });
+                            _goToNextPage();
+                          },
+                        ),
+                        _Step3SelectDays(
+                          key: ValueKey(
+                            "days_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}",
+                          ),
+                          medicationName: _medicationName,
+                          durationDays: _durationDays,
+                          customEndDate: _customEndDate,
+                          initialDays: _selectedDays,
+                          buttonStyle: tealButtonStyle,
+                          onNext: (days) {
+                            setState(() => _selectedDays = days);
+                            _goToNextPage();
+                          },
+                        ),
+                        _Step4HowManyTimesPerDay(
+                          medicationName: _medicationName,
+                          initialFrequency: _frequency,
+                          buttonStyle: tealButtonStyle,
+                          onNext: (freq) {
+                            if (_frequency != freq) {
+                              _initializeTimesForFrequency(freq);
+                            }
+                            setState(() => _frequency = freq);
+                            _goToNextPage();
+                          },
+                        ),
+                        _Step5SetTimes(
+                          medicationName: _medicationName,
+                          frequency: _frequency,
+                          selectedTimes: _selectedTimes,
+                          buttonStyle: tealButtonStyle,
+                          onTimeChanged: _updateTimes,
+                          onClearTimes: _clearAllTimes,
+                          onAddTime: _frequency == "Custom"
+                              ? _addCustomTimeField
+                              : null,
+                          onRemoveTime: _frequency == "Custom"
+                              ? _removeCustomTimeField
+                              : null,
+                          onNext: _goToNextPage,
+                        ),
+                        _Step2Dose(
+                          medicationName: _medicationName,
+                          initialForm: _doseForm,
+                          initialStrength: _doseStrength,
+                          buttonStyle: tealButtonStyle,
+                          onNext: (form, strength) {
+                            setState(() {
+                              _doseForm = form;
+                              _doseStrength = strength;
+                            });
+                            _goToNextPage();
+                          },
+                        ),
+                        _Step6AddNotes(
+                          medicationName: _medicationName,
+                          initialNotes: _notes,
+                          buttonStyle: tealButtonStyle,
+                          onNext: (notes) {
+                            setState(() => _notes = notes);
+                            _goToNextPage();
+                          },
+                        ),
+                        _Step8Summary(
+                          key: ValueKey(
+                            "summary_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}",
+                          ),
+                          medicationName: _medicationName,
+                          doseForm: _doseForm,
+                          doseStrength: _doseStrength,
+                          durationDays: _durationDays,
+                          customEndDate: _customEndDate,
+                          selectedDays: _selectedDays,
+                          frequency: _frequency,
+                          selectedTimes: _selectedTimes
+                              .whereType<TimeOfDay>()
+                              .toList(),
+                          notes: _notes,
+                          isEditing: _isEditing,
+                          buttonStyle: tealButtonStyle,
+                          onSave: _saveMedication,
+                        ),
+                      ],
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1B3A52),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 4,
-                  ),
-                ),
+                ],
               ),
             ),
-          if (!_isEditing && _currentPageIndex == 0) const SizedBox(height: 8),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPageIndex = index;
-                });
-              },
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _Step1MedName(
-                  initialValue: _medicationName,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (name) {
-                    setState(() => _medicationName = name);
-                    _goToNextPage();
-                  },
-                ),
-                _Step2Duration(
-                  medicationName: _medicationName,
-                  initialDurationDays: _durationDays,
-                  initialCustomEndDate: _customEndDate,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (days, customDate) {
-                    setState(() {
-                      _durationDays = days;
-                      _customEndDate = customDate;
-                    });
-                    _goToNextPage();
-                  },
-                ),
-                _Step3SelectDays(
-                  key: ValueKey(
-                    'days_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
-                  ),
-                  medicationName: _medicationName,
-                  durationDays: _durationDays,
-                  customEndDate: _customEndDate,
-                  initialDays: _selectedDays,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (days) {
-                    setState(() => _selectedDays = days);
-                    _goToNextPage();
-                  },
-                ),
-
-                //
-                _Step4HowManyTimesPerDay(
-                  medicationName: _medicationName,
-                  initialFrequency: _frequency,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (freq) {
-                    if (_frequency != freq) {
-                      _initializeTimesForFrequency(freq);
-                    }
-                    setState(() => _frequency = freq);
-                    _goToNextPage();
-                  },
-                ),
-                _Step5SetTimes(
-                  medicationName: _medicationName,
-                  frequency: _frequency,
-                  selectedTimes: _selectedTimes,
-                  buttonStyle: tealButtonStyle,
-                  onTimeChanged: _updateTimes,
-                  onClearTimes: _clearAllTimes,
-                  onAddTime: _frequency == 'Custom'
-                      ? _addCustomTimeField
-                      : null,
-                  onRemoveTime: _frequency == 'Custom'
-                      ? _removeCustomTimeField
-                      : null,
-                  onNext: () {
-                    _goToNextPage();
-                  },
-                ),
-                _Step2Dose(
-                  medicationName: _medicationName,
-                  initialForm: _doseForm,
-                  initialStrength: _doseStrength,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (form, strength) {
-                    setState(() {
-                      _doseForm = form;
-                      _doseStrength = strength;
-                    });
-                    _goToNextPage();
-                  },
-                ),
-
-                _Step6AddNotes(
-                  medicationName: _medicationName,
-                  initialNotes: _notes,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (notes) {
-                    setState(() => _notes = notes);
-                    _goToNextPage();
-                  },
-                ),
-                _Step8Summary(
-                  key: ValueKey(
-                    'summary_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
-                  ),
-                  medicationName: _medicationName,
-                  doseForm: _doseForm,
-                  doseStrength: _doseStrength,
-                  durationDays: _durationDays,
-                  customEndDate: _customEndDate,
-                  selectedDays: _selectedDays,
-                  frequency: _frequency,
-                  selectedTimes: _selectedTimes.whereType<TimeOfDay>().toList(),
-                  notes: _notes,
-                  isEditing: _isEditing,
-                  buttonStyle: tealButtonStyle,
-                  onSave: _saveMedication,
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1710,23 +1722,40 @@ class _Stepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 24.0),
-      child: Row(
-        children: List.generate(stepCount, (index) {
-          return Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4.0),
-              height: 10.0,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: index <= currentIndex
-                    ? const Color(0xFF5FA5A0)
-                    : Colors.grey.shade300,
-              ),
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: List.generate(stepCount, (index) {
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 3.0),
+                  height: 5.0,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: index <= currentIndex
+                        ? const Color(0xFF5FA5A0)
+                        : Colors.grey.shade200,
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Step ${currentIndex + 1} of $stepCount',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: currentIndex == stepCount - 1
+                  ? const Color(0xFF5FA5A0)
+                  : Colors.grey.shade500,
             ),
-          );
-        }),
+          ),
+        ],
       ),
     );
   }
@@ -1751,15 +1780,34 @@ class _StepHeader extends StatelessWidget {
         if (medicationName != null && medicationName!.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
-            child: Text(
-              medicationName!,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1B3A52),
-                letterSpacing: 0.3,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF5FA5A0).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(20),
               ),
-              overflow: TextOverflow.ellipsis,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.medication_outlined,
+                    size: 16,
+                    color: Color(0xFF3D8A85),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      medicationName!,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF3D8A85),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         Text(
@@ -1767,14 +1815,18 @@ class _StepHeader extends StatelessWidget {
           style: const TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF212121),
+            color: Color(0xFF0D2D5D),
             letterSpacing: 0.3,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           subtitle,
-          style: const TextStyle(fontSize: 20, color: Colors.grey, height: 1.3),
+          style: const TextStyle(
+            fontSize: 20,
+            color: Color(0xFF4B5563),
+            height: 1.3,
+          ),
         ),
         const SizedBox(height: 28),
       ],
@@ -2002,7 +2054,7 @@ class _Step2DoseState extends State<_Step2Dose> {
                     icon,
                     size: 22,
                     color: isSelected
-                        ? const Color(0xFF1B3A52)
+                        ? const Color(0xFF0D2D5D)
                         : Colors.grey.shade600,
                   ),
                   label: Text(
@@ -3321,31 +3373,37 @@ class _SummaryTile extends StatelessWidget {
   const _SummaryTile({required this.title, required this.value});
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF5FA5A0),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0D2D5D),
+                  height: 1.3,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF212121),
-              height: 1.3,
-            ),
-          ),
-        ],
-      ),
+        ),
+        Divider(height: 1, thickness: 1, color: Colors.grey.shade100),
+      ],
     );
   }
 }

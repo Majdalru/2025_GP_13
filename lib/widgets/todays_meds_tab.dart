@@ -57,6 +57,9 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
   final MedicationScheduler _scheduler = MedicationScheduler();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // 0=All 1=Upcoming 2=Taken 3=Missed
+  int _filter = 0;
+
   // --- ADD THIS BLOCK START ---
   String _elderlyName = 'The elderly';
 
@@ -572,263 +575,336 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
             return aCompareTime.compareTo(bCompareTime); // CORRECTED
           });
         // --- End of Logic Block ---
-
-        // --- Build UI with Containers ---
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            if (missed.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(5),
+            // ── Filter chips ──────────────────────────────────────
+            _buildFilterChips(context, missed),
+
+            const SizedBox(height: 16),
+
+            // ── Missed warning banner (always shown if any) ───────
+            if (missed.isNotEmpty && _filter != 2) // hide when "Taken" selected
+              _buildMissedBanner(context, missed),
+
+            // ── Content based on filter ───────────────────────────
+            if (_filter == 0) ...[
+              // ALL — show upcoming, taken, missed in order
+              if (nextUpDoses.isNotEmpty ||
+                  pastDueUpcoming.isNotEmpty ||
+                  laterTodayDoses.isNotEmpty)
+                _buildSectionLabel(
+                  context,
+                  AppLocalizations.of(context)!.upcoming,
+                  Icons.notifications_active_outlined,
+                  const Color(0xFF4DB6AC),
+                ),
+              ...nextUpDoses.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: true,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () => _markAsTaken(dose),
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              ...pastDueUpcoming.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: true,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () => _markAsTaken(dose),
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              ...laterTodayDoses.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: false,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () => _markAsTaken(dose),
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              if (allTaken.isNotEmpty) ...[
+                _buildSectionLabel(
+                  context,
+                  AppLocalizations.of(context)!.taken,
+                  Icons.check_circle_outline,
+                  Colors.green.shade700,
+                ),
+                ...allTaken.map(
+                  (dose) => _TodayMedicationCard(
+                    dose: dose,
+                    isHighlighted: false,
+                    isCaregiverView: widget.isCaregiverView,
+                    onTakenPressed: () {},
+                    onUndoPressed: () => _undoTaken(dose),
+                  ),
+                ),
+              ],
+              if (missed.isNotEmpty) ...[
+                _buildSectionLabel(
+                  context,
+                  AppLocalizations.of(context)!.missedTitle,
+                  Icons.cancel_outlined,
+                  Colors.red.shade700,
+                ),
+                ...missed.map(
+                  (dose) => _TodayMedicationCard(
+                    dose: dose,
+                    isHighlighted: false,
+                    isCaregiverView: widget.isCaregiverView,
+                    onTakenPressed: () => _markAsTaken(dose),
+                    onUndoPressed: () => _undoTaken(dose),
+                  ),
+                ),
+              ],
+              if (nextUpDoses.isEmpty &&
+                  pastDueUpcoming.isEmpty &&
+                  laterTodayDoses.isEmpty &&
+                  allTaken.isEmpty &&
+                  missed.isEmpty)
+                _buildEmptyPlaceholder(),
+            ] else if (_filter == 1) ...[
+              // UPCOMING
+              ...nextUpDoses.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: true,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () => _markAsTaken(dose),
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              ...pastDueUpcoming.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: true,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () => _markAsTaken(dose),
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              ...laterTodayDoses.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: false,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () => _markAsTaken(dose),
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              if (nextUpDoses.isEmpty &&
+                  pastDueUpcoming.isEmpty &&
+                  laterTodayDoses.isEmpty)
+                _buildEmptyPlaceholder(),
+            ] else if (_filter == 2) ...[
+              // TAKEN
+              ...allTaken.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: false,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () {},
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              if (allTaken.isEmpty) _buildEmptyPlaceholder(),
+            ] else ...[
+              // MISSED
+              ...missed.map(
+                (dose) => _TodayMedicationCard(
+                  dose: dose,
+                  isHighlighted: false,
+                  isCaregiverView: widget.isCaregiverView,
+                  onTakenPressed: () => _markAsTaken(dose),
+                  onUndoPressed: () => _undoTaken(dose),
+                ),
+              ),
+              if (missed.isEmpty) _buildEmptyPlaceholder(),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterChips(BuildContext context, List<MedicationDose> missed) {
+    final loc = AppLocalizations.of(context)!;
+    const kTeal = Color(0xFF4DB6AC);
+    final labels = [loc.all, loc.upcoming, loc.taken, loc.missedTitle];
+    final colors = [kTeal, kTeal, Colors.green.shade700, Colors.red.shade700];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(labels.length, (i) {
+          final selected = _filter == i;
+          final color = colors[i];
+          final hasBadge = i == 3 && missed.isNotEmpty;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _filter = i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 11,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.red.shade700, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.shade100.withOpacity(0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: selected ? color : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: selected ? color : const Color(0xFFE5E7EB),
+                    width: 1.5,
+                  ),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: color.withOpacity(0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [],
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.red.shade800,
-                      size: 36,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)!.reminder,
-                            style: TextStyle(
-                              color: Colors.red.shade900,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            // Dynamic message based on view type
-                            widget.isCaregiverView
-                                ? AppLocalizations.of(
-                                    context,
-                                  )!.elderlyMissedDoses(
-                                    _elderlyName,
-                                    missed.length,
-                                  )
-                                : AppLocalizations.of(
-                                    context,
-                                  )!.youMissedDoses(missed.length),
-                            style: TextStyle(
-                              color: Colors.red.shade800,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      labels[i],
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF6B7280),
                       ),
                     ),
+                    if (hasBadge) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected ? Colors.white : Colors.red.shade700,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${missed.length}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: selected
+                                ? Colors.red.shade700
+                                : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            // --- Container 1: Upcoming (Next Up, Past Due, Later Today) ---
-            _buildStatusContainer(
-              title: AppLocalizations.of(context)!.upcoming,
-              icon: Icons.notifications_active, // Or choose a better icon
-              color: Colors.blue.shade700,
-
-              children: [
-                // Next Up (Show header only if items exist)
-                if (nextUpDoses.isNotEmpty) ...[
-                  _buildSectionHeader(
-                    AppLocalizations.of(context)!.nextUp,
-                    Icons.notification_important,
-                    Colors.blue.shade700,
-                    showHeader: false,
-                  ), // Header already shown by container
-                  ...nextUpDoses.map(
-                    (dose) => _TodayMedicationCard(
-                      dose: dose,
-                      isHighlighted: true,
-                      isCaregiverView: widget.isCaregiverView,
-                      onTakenPressed: () => _markAsTaken(dose),
-                      onUndoPressed: () => _undoTaken(dose),
-                    ),
-                  ),
-                  const SizedBox(height: 10), // Spacing between sub-sections
-                ],
-                // Past Due (Show header only if items exist)
-                if (pastDueUpcoming.isNotEmpty) ...[
-                  _buildSectionHeader(
-                    AppLocalizations.of(context)!.pastDue,
-                    Icons.hourglass_bottom,
-                    Colors.orange.shade700,
-                    showHeader: false,
-                  ),
-                  ...pastDueUpcoming.map(
-                    (dose) => _TodayMedicationCard(
-                      dose: dose,
-                      isHighlighted: true, // Also highlight past due
-                      isCaregiverView: widget.isCaregiverView,
-                      onTakenPressed: () => _markAsTaken(dose),
-                      onUndoPressed: () => _undoTaken(dose),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                // Later Today (Show header only if items exist)
-                if (laterTodayDoses.isNotEmpty) ...[
-                  _buildSectionHeader(
-                    AppLocalizations.of(context)!.laterToday,
-                    Icons.update,
-                    Colors.grey.shade600,
-                    showHeader: false,
-                  ),
-                  ...laterTodayDoses.map(
-                    (dose) => _TodayMedicationCard(
-                      dose: dose,
-                      isHighlighted: false,
-                      isCaregiverView: widget.isCaregiverView,
-                      onTakenPressed: () => _markAsTaken(dose),
-                      onUndoPressed: () => _undoTaken(dose),
-                    ),
-                  ),
-                ],
-                // Placeholder if all sub-sections are empty
-                if (nextUpDoses.isEmpty &&
-                    pastDueUpcoming.isEmpty &&
-                    laterTodayDoses.isEmpty)
-                  _buildEmptyPlaceholder(),
-              ],
             ),
-            const SizedBox(height: 20),
-
-            // --- Container 2: Taken (On Time + Late) ---
-            _buildStatusContainer(
-              title: AppLocalizations.of(context)!.taken,
-              icon: Icons.check_circle,
-              color: Colors.green.shade700,
-              children: [
-                if (allTaken.isNotEmpty)
-                  ...allTaken.map(
-                    (dose) => _TodayMedicationCard(
-                      dose: dose,
-                      isHighlighted: false,
-                      isCaregiverView: widget.isCaregiverView,
-                      onTakenPressed: () {}, // Already taken
-                      onUndoPressed: () => _undoTaken(dose),
-                    ),
-                  )
-                else
-                  _buildEmptyPlaceholder(),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // --- Container 3: Missed ---
-            _buildStatusContainer(
-              title: AppLocalizations.of(context)!.missedTitle,
-              icon: Icons.cancel,
-              color: Colors.red.shade700,
-              children: [
-                if (missed.isNotEmpty)
-                  ...missed.map(
-                    (dose) => _TodayMedicationCard(
-                      dose: dose,
-                      isHighlighted: false,
-                      isCaregiverView: widget.isCaregiverView,
-                      onTakenPressed: () =>
-                          _markAsTaken(dose), // Allow taking missed
-                      onUndoPressed: () => _undoTaken(dose),
-                    ),
-                  )
-                else
-                  _buildEmptyPlaceholder(),
-              ],
-            ),
-          ],
-        ); // End return ListView
-      }, // End builder
-    ); // End StreamBuilder
-  } // End build method
-
-  // Helper to build the main containers for each status group
-  Widget _buildStatusContainer({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required List<Widget> children,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05), // Light background for container
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: color.withOpacity(0.3)),
+          );
+        }),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildSectionLabel(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 8, 0, 10),
+      child: Row(
         children: [
-          // Main Header for the container
-          Padding(
-            padding: const EdgeInsets.only(
-              bottom: 8.0,
-            ), // Adjust padding as needed
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: color,
             ),
           ),
-          const Divider(), // Optional separator
-          // Content (med cards or placeholder)
-          ...children,
         ],
       ),
     );
   }
 
-  // Placeholder widget for empty sections within containers
   Widget _buildEmptyPlaceholder() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
+      padding: const EdgeInsets.symmetric(vertical: 32),
       child: Center(
         child: Text(
-          AppLocalizations.of(context)!.noMedicationsInCategory,
-          style: const TextStyle(fontSize: 16, color: Colors.grey),
+          AppLocalizations.of(context)!.noMedicationsFound,
+          style: const TextStyle(fontSize: 18, color: Colors.grey),
         ),
       ),
     );
   }
 
-  // Adjusted Section Header (can optionally hide it if used inside a container)
+  Widget _buildMissedBanner(BuildContext context, List<MedicationDose> missed) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.red.shade300, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.red.shade800,
+            size: 32,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.isCaregiverView
+                  ? AppLocalizations.of(
+                      context,
+                    )!.elderlyMissedDoses(_elderlyName, missed.length)
+                  : AppLocalizations.of(context)!.youMissedDoses(missed.length),
+              style: TextStyle(
+                color: Colors.red.shade800,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(
     String title,
     IconData icon,
     Color color, {
     bool showHeader = true,
   }) {
-    if (!showHeader)
-      return const SizedBox.shrink(); // Return empty if header is handled by container
-
+    if (!showHeader) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0, top: 8.0),
+      padding: const EdgeInsets.only(bottom: 12, top: 8),
       child: Row(
         children: [
           Icon(icon, color: color, size: 20),
@@ -847,11 +923,13 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
   }
 } // End _TodaysMedsTabState
 
-// --- _TodayMedicationCard Widget ---
+// ══════════════════════════════════════════════════════════════
+// _TodayMedicationCard — redesigned, clear for elderly
+// ══════════════════════════════════════════════════════════════
 class _TodayMedicationCard extends StatelessWidget {
   final MedicationDose dose;
   final bool isHighlighted;
-  final bool isCaregiverView; // Use this flag for conditional styling
+  final bool isCaregiverView;
   final VoidCallback onTakenPressed;
   final VoidCallback onUndoPressed;
 
@@ -869,49 +947,14 @@ class _TodayMedicationCard extends StatelessWidget {
     final med = dose.medication;
     final time = dose.scheduledTime;
     final takenTime = dose.takenAt;
-    DateTime now = DateTime.now();
+    final now = DateTime.now();
+    final loc = AppLocalizations.of(context)!;
+    const kBlue = Color(0xFF102E50);
 
-    // --- Define Styles Based on View ---
-    final double timeFontSize = isCaregiverView ? 20.0 : 24.0;
-    final double statusFontSize = isCaregiverView ? 14.0 : 16.0;
-    final double takenAtFontSize = isCaregiverView ? 13.0 : 15.0;
-    final double medNameFontSize = isCaregiverView ? 18.0 : 22.0;
-    final double frequencyFontSize = isCaregiverView ? 14.0 : 16.0;
-    final double notesFontSize = isCaregiverView ? 14.0 : 16.0;
-    final double buttonFontSize = isCaregiverView ? 16.0 : 20.0;
-    final double buttonIconSize = isCaregiverView ? 22.0 : 28.0;
-    final double headerIconSize = isCaregiverView ? 28.0 : 32.0;
-    final double notesIconSize = isCaregiverView ? 18.0 : 20.0;
-    final double undoIconSize = isCaregiverView ? 18.0 : 20.0;
-    final double cardBorderRadius = isCaregiverView ? 16.0 : 20.0;
-    final double cardPadding = isCaregiverView ? 16.0 : 20.0;
-    final double cardMarginBottom = isCaregiverView ? 12.0 : 16.0;
-    final double headerIconPadding = isCaregiverView ? 10.0 : 12.0;
-    final double headerIconRadius = isCaregiverView ? 12.0 : 14.0;
-    final double buttonVPadding = isCaregiverView ? 14.0 : 18.0;
-    final double undoVPadding = isCaregiverView ? 12.0 : 16.0;
-    final double buttonRadius = isCaregiverView ? 12.0 : 14.0;
-
-    // --- Determine Styling Based on Status (Common Logic) ---
-    Color baseBorderColor = Colors.grey.shade300;
-    Color statusBackgroundColor = Colors.white; // Default background
-    Color headerColor = const Color(0xFF1B3A52);
-    IconData headerIcon = Icons.access_time;
-    String statusText = '';
-    Color statusColor = Colors.grey;
-    double defaultBorderWidth = isCaregiverView ? 0.0 : 2.0;
-    double highlightedBorderWidth = isCaregiverView ? 0.0 : 3.0;
-
-    bool canMarkAsTaken =
-        !isCaregiverView &&
-        (status == DoseStatus.missed ||
-            (status == DoseStatus.upcoming &&
-                !dose.scheduledDateTime.isAfter(DateTime.now())));
-
-    bool showTakenButton = canMarkAsTaken;
-    bool showUndoButton =
-        !isCaregiverView &&
-        (status == DoseStatus.takenOnTime || status == DoseStatus.takenLate);
+    final double nameFontSize = isCaregiverView ? 18.0 : 22.0;
+    final double subFontSize = isCaregiverView ? 15.0 : 17.0;
+    final double buttonFontSize = isCaregiverView ? 17.0 : 20.0;
+    final double buttonVPad = isCaregiverView ? 13.0 : 17.0;
 
     bool isStrictlyPastDue =
         status == DoseStatus.upcoming &&
@@ -926,232 +969,262 @@ class _TodayMedicationCard extends StatelessWidget {
         dose.scheduledDateTime.isAfter(now) &&
         !isHighlighted;
 
-    // Determine status-specific colors and icons (used for elderly bg and both views' icons/text)
+    bool canMarkAsTaken =
+        !isCaregiverView &&
+        (status == DoseStatus.missed ||
+            (status == DoseStatus.upcoming &&
+                !dose.scheduledDateTime.isAfter(now)));
+    bool showTakenButton = canMarkAsTaken;
+    bool showUndoButton =
+        !isCaregiverView &&
+        (status == DoseStatus.takenOnTime || status == DoseStatus.takenLate);
+
+    // Status colours
+    Color statusPillBg;
+    Color statusPillText = Colors.white;
+    Color cardBorder;
+    Color cardBg;
+    Color iconColor;
+    Color iconBg;
+    String statusLabel;
+    Color buttonColor;
+
     switch (status) {
       case DoseStatus.takenOnTime:
-        baseBorderColor = Colors.green;
-        statusBackgroundColor = const Color.fromARGB(
-          255,
-          247,
-          250,
-          246,
-        ); // Light green
-        headerColor = Colors.green.shade700;
-        headerIcon = Icons.check_circle;
-        statusText = AppLocalizations.of(context)!.takenOnTime;
-        statusColor = Colors.green;
+        statusPillBg = Colors.green.shade600;
+        cardBorder = Colors.green.shade300;
+        cardBg = Colors.green.shade50;
+        iconColor = Colors.green.shade700;
+        iconBg = Colors.green.shade100;
+        statusLabel = loc.takenOnTime;
+        buttonColor = Colors.green.shade600;
         break;
       case DoseStatus.takenLate:
-        baseBorderColor = Colors.orange;
-        statusBackgroundColor = const Color.fromARGB(
-          255,
-          253,
-          248,
-          241,
-        ); // Light orange
-        headerColor = Colors.orange.shade800;
-        headerIcon = Icons.check_circle;
-        statusText = AppLocalizations.of(context)!.takenLate;
-        statusColor = Colors.orange.shade800;
+        statusPillBg = Colors.orange.shade700;
+        cardBorder = Colors.orange.shade300;
+        cardBg = Colors.orange.shade50;
+        iconColor = Colors.orange.shade700;
+        iconBg = Colors.orange.shade100;
+        statusLabel = loc.takenLate;
+        buttonColor = Colors.orange.shade700;
         break;
       case DoseStatus.missed:
-        baseBorderColor = Colors.red;
-        statusBackgroundColor = const Color.fromARGB(
-          255,
-          248,
-          245,
-          245,
-        ); // Light red
-        headerColor = Colors.red.shade700;
-        headerIcon = Icons.cancel;
-        statusText = AppLocalizations.of(context)!.missed;
-        statusColor = Colors.red.shade700;
+        statusPillBg = Colors.red.shade600;
+        cardBorder = Colors.red.shade300;
+        cardBg = Colors.red.shade50;
+        iconColor = Colors.red.shade700;
+        iconBg = Colors.red.shade100;
+        statusLabel = loc.missed;
+        buttonColor = Colors.red.shade600;
         break;
       case DoseStatus.upcoming:
         if (isStrictlyPastDue) {
-          baseBorderColor = Colors.orange;
-          statusBackgroundColor = const Color.fromARGB(
-            255,
-            253,
-            253,
-            253,
-          ); // Light orange
-          headerColor = Colors.orange.shade700;
-          headerIcon = Icons.hourglass_bottom;
-          statusText = AppLocalizations.of(context)!.pastDue;
-          statusColor = Colors.orange.shade700;
+          statusPillBg = Colors.orange.shade700;
+          cardBorder = Colors.orange.shade300;
+          cardBg = Colors.orange.shade50;
+          iconColor = Colors.orange.shade700;
+          iconBg = Colors.orange.shade100;
+          statusLabel = loc.pastDue;
+          buttonColor = Colors.orange.shade700;
         } else if (shouldHighlight) {
-          baseBorderColor = Colors.blue;
-          statusBackgroundColor = const Color.fromARGB(
-            255,
-            235,
-            241,
-            245,
-          ); // Light blue
-          headerColor = Colors.blue.shade700;
-          headerIcon = Icons.notification_important;
-          statusText = dose.scheduledDateTime.isAfter(now)
-              ? AppLocalizations.of(context)!.nextUp
-              : AppLocalizations.of(context)!.dueNow;
-          statusColor = Colors.blue.shade700;
+          statusPillBg = const Color(0xFF1565C0);
+          cardBorder = const Color(0xFF90CAF9);
+          cardBg = const Color(0xFFE3F2FD);
+          iconColor = const Color(0xFF1565C0);
+          iconBg = const Color(0xFFBBDEFB);
+          statusLabel = dose.scheduledDateTime.isAfter(now)
+              ? loc.nextUp
+              : loc.dueNow;
+          buttonColor = const Color(0xFF1565C0);
         } else {
-          headerIcon = Icons.update;
-          statusText = AppLocalizations.of(context)!.upcoming;
-          statusColor = Colors.grey.shade600;
-          baseBorderColor = Colors.grey.shade300;
-          statusBackgroundColor = Colors.grey.shade100; // Dimmed background
+          statusPillBg = Colors.grey.shade500;
+          cardBorder = Colors.grey.shade300;
+          cardBg = Colors.grey.shade50;
+          iconColor = Colors.grey.shade600;
+          iconBg = Colors.grey.shade200;
+          statusLabel = loc.upcoming;
+          buttonColor = Colors.grey.shade600;
         }
         break;
     }
 
-    // --- Final Background Color Logic ---
-    // If it's caregiver view, always use white.
-    // Otherwise, use the status-determined color (or dimmed grey).
-    final Color finalBackgroundColor = isCaregiverView
-        ? Colors.white
-        : (isDimmed ? Colors.grey.shade100 : statusBackgroundColor);
-
-    final Color finalBorderColor = isDimmed
-        ? Colors.grey.shade300
-        : baseBorderColor;
-    final double finalBorderWidth = (shouldHighlight || isStrictlyPastDue)
-        ? highlightedBorderWidth
-        : defaultBorderWidth;
-
-    // --- Return Card Structure ---
-    return Card(
-      elevation: (shouldHighlight || isStrictlyPastDue)
-          ? (isCaregiverView ? 2 : 6)
-          : (isCaregiverView ? 1 : 2),
-      margin: EdgeInsets.only(bottom: cardMarginBottom),
-      color: finalBackgroundColor, // Use the final calculated background color
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(cardBorderRadius),
-        side: isCaregiverView
-            ? BorderSide.none
-            : BorderSide(color: finalBorderColor, width: finalBorderWidth),
+    return Container(
+      margin: EdgeInsets.only(bottom: isCaregiverView ? 10 : 14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cardBorder, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDimmed ? 0.03 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(cardPadding),
+        padding: EdgeInsets.all(isCaregiverView ? 14 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header (rest of the code remains the same)
+            // ── Header: icon + name + status pill ──────────────
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: EdgeInsets.all(headerIconPadding),
+                  padding: EdgeInsets.all(isCaregiverView ? 10 : 13),
                   decoration: BoxDecoration(
-                    color: headerColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(headerIconRadius),
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    headerIcon,
-                    color: headerColor,
-                    size: headerIconSize,
+                    Icons.medication_outlined,
+                    color: iconColor,
+                    size: isCaregiverView ? 26 : 32,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        time.format(context),
+                        med.name,
                         style: TextStyle(
-                          fontSize: timeFontSize,
-                          fontWeight: FontWeight.bold,
-                          color: headerColor,
+                          fontSize: nameFontSize,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1A2340),
                         ),
                       ),
-                      if (statusText.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2.0),
-                          child: Text(
-                            statusText,
-                            style: TextStyle(
-                              fontSize: statusFontSize,
-                              color: statusColor,
-                              fontWeight: FontWeight.w600,
-                            ),
+                      if (med.doseForm != null ||
+                          (med.doseStrength != null &&
+                              med.doseStrength!.isNotEmpty)) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          [
+                            if (med.doseForm != null) med.doseForm!,
+                            if (med.doseStrength != null &&
+                                med.doseStrength!.isNotEmpty)
+                              med.doseStrength!,
+                          ].join(' · '),
+                          style: TextStyle(
+                            fontSize: subFontSize - 1,
+                            color: const Color(0xFF6B7280),
                           ),
                         ),
-                      if (takenTime != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2.0),
-                          child: Text(
-                            '${AppLocalizations.of(context)!.at} ${DateFormat('h:mm a').format(takenTime.toDate())}',
-                            style: TextStyle(
-                              fontSize: takenAtFontSize,
-                              color: statusColor.withOpacity(0.8),
-                            ),
-                          ),
-                        ),
+                      ],
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusPillBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: statusPillText,
+                    ),
                   ),
                 ),
               ],
             ),
+
+            const SizedBox(height: 14),
+            Divider(height: 1, thickness: 1, color: const Color(0xFFF0F1F3)),
             const SizedBox(height: 12),
 
-            // Medication Name
-            Text(
-              med.name,
-              style: TextStyle(
-                fontSize: medNameFontSize,
-                fontWeight: FontWeight.bold,
-                color: status == DoseStatus.missed
-                    ? const Color.fromARGB(255, 0, 0, 0)
-                    : const Color.fromARGB(255, 0, 0, 0),
-                decoration: TextDecoration.none,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Frequency
-            if (med.frequency != null)
-              Text(
-                '${AppLocalizations.of(context)!.frequency}: ${med.frequency}',
-                style: TextStyle(
-                  fontSize: frequencyFontSize,
-                  color: const Color.fromARGB(255, 41, 40, 40),
-                ),
-              ),
-
-            // Notes
-            if (med.notes != null && med.notes!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  '${AppLocalizations.of(context)!.notes}: ${med.notes}',
-                  style: TextStyle(
-                    fontSize: notesFontSize,
-                    color: const Color.fromARGB(
-                      255,
-                      41,
-                      40,
-                      40,
-                    ), // Same dark grey as Frequency
+            // ── Time chip ────────────────────────────────────────
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: cardBorder, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time_outlined,
+                        size: 17,
+                        color: iconColor,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        time.format(context),
+                        style: TextStyle(
+                          fontSize: subFontSize,
+                          fontWeight: FontWeight.w700,
+                          color: iconColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                if (takenTime != null) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    '${loc.at} ${DateFormat('h:mm a').format(takenTime.toDate())}',
+                    style: TextStyle(
+                      fontSize: subFontSize - 2,
+                      color: iconColor.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ],
+            ),
 
-            // Action Buttons (Only shown for Elderly View)
+            // ── Frequency ────────────────────────────────────────
+            if (med.frequency != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${loc.frequency}: ${med.frequency}',
+                style: TextStyle(
+                  fontSize: subFontSize - 1,
+                  color: const Color(0xFF6B7280),
+                ),
+              ),
+            ],
+
+            // ── Notes ────────────────────────────────────────────
+            if (med.notes != null && med.notes!.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(
+                '${loc.notes}: ${med.notes}',
+                style: TextStyle(
+                  fontSize: subFontSize - 1,
+                  color: const Color(0xFF6B7280),
+                ),
+              ),
+            ],
+
+            // ── Action buttons ───────────────────────────────────
             if (!isCaregiverView) ...[
-              const SizedBox(height: 16),
-              if (showTakenButton)
+              if (showTakenButton) ...[
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: canMarkAsTaken ? onTakenPressed : null,
-                    icon: Icon(
-                      Icons.check_circle_outline,
-                      size: buttonIconSize,
-                    ),
+                    icon: const Icon(Icons.check_circle_outline, size: 26),
                     label: Text(
                       isStrictlyPastDue || status == DoseStatus.missed
-                          ? AppLocalizations.of(context)!.markAsTakenLate
-                          : AppLocalizations.of(context)!.markAsTaken,
+                          ? loc.markAsTakenLate
+                          : loc.markAsTaken,
                       style: TextStyle(
                         fontSize: buttonFontSize,
                         fontWeight: FontWeight.bold,
@@ -1159,71 +1232,50 @@ class _TodayMedicationCard extends StatelessWidget {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: canMarkAsTaken
-                          ? (status == DoseStatus.missed
-                                ? const Color.fromARGB(
-                                    255,
-                                    174,
-                                    30,
-                                    30,
-                                  ) // 🔴 Red for missed
-                                : isStrictlyPastDue
-                                ? const Color.fromARGB(
-                                    255,
-                                    210,
-                                    85,
-                                    8,
-                                  ) // 🟠 Orange for past due
-                                : const Color.fromARGB(
-                                    255,
-                                    26,
-                                    81,
-                                    154,
-                                  )) // 🔵 Blue for on time
-                          : Colors.grey.shade400,
-                      foregroundColor: const Color.fromARGB(255, 255, 255, 255),
-                      padding: EdgeInsets.symmetric(vertical: buttonVPadding),
+                          ? buttonColor
+                          : Colors.grey.shade300,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonVPad),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(buttonRadius),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      elevation: canMarkAsTaken ? (isCaregiverView ? 2 : 4) : 0,
+                      elevation: canMarkAsTaken ? 2 : 0,
                     ),
                   ),
                 ),
-              if (showUndoButton)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: onUndoPressed,
-                      icon: Icon(Icons.undo, size: undoIconSize),
-                      label: Text(
-                        AppLocalizations.of(context)!.undo,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
+              ],
+              if (showUndoButton) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onUndoPressed,
+                    icon: const Icon(Icons.undo, size: 24),
+                    label: Text(
+                      loc.undo,
+                      style: TextStyle(
+                        fontSize: buttonFontSize,
+                        fontWeight: FontWeight.w700,
                       ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color.fromARGB(255, 1, 54, 6),
-                        padding: EdgeInsets.symmetric(vertical: undoVPadding),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(buttonRadius),
-                        ),
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          207,
-                          207,
-                          207,
-                        ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF1A2340),
+                      side: BorderSide(
+                        color: const Color(0xFF1A2340).withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: buttonVPad - 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                   ),
                 ),
+              ],
             ],
           ],
         ),
       ),
     );
   }
-} // End _TodayMedicationCard
+}
