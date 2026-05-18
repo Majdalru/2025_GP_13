@@ -197,6 +197,62 @@ class _AddMedScreenState extends State<AddMedScreen> {
     return null;
   }
 
+  String _normalizeMedicationName(String name) {
+    return name
+        .toLowerCase()
+        .trim()
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ة', 'ه')
+        .replaceAll('ى', 'ي')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[^\u0600-\u06FFa-zA-Z0-9 ]'), '');
+  }
+
+  Future<bool> _medicationNameAlreadyExists(String newName) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('medications')
+        .doc(widget.elderlyId)
+        .get();
+
+    if (!doc.exists) return false;
+
+    final medsList = (doc.data()?['medsList'] as List?) ?? [];
+    final normalizedNewName = _normalizeMedicationName(newName);
+
+    for (final med in medsList) {
+      final medMap = Map<String, dynamic>.from(med as Map);
+      final existingName = (medMap['name'] ?? '').toString();
+      final existingId = (medMap['id'] ?? '').toString();
+
+      // In edit mode, do not compare the medication against itself.
+      if (_isEditing && existingId == widget.medicationToEdit?.id) {
+        continue;
+      }
+
+      final normalizedExistingName = _normalizeMedicationName(existingName);
+
+      if (normalizedExistingName == normalizedNewName) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<String?> _validateMedicationNameBeforeNext(String name) async {
+    final exists = await _medicationNameAlreadyExists(name);
+
+    if (exists) {
+      return Localizations.localeOf(context).languageCode == 'ar'
+          ? '$name مضاف مسبقًا في قائمة الأدوية.'
+          : '$name already exists in the medication list.';
+    }
+
+    return null;
+  }
+
   // --- Firestore Logic ---
   Future<void> _saveMedication() async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -294,9 +350,34 @@ class _AddMedScreenState extends State<AddMedScreen> {
       }
     } else {
       // --- ADD NEW LOGIC ---
+      final medName = (_medicationName ?? '').trim();
+      final exists = await _medicationNameAlreadyExists(medName);
+
+      if (exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                Localizations.localeOf(context).languageCode == 'ar'
+                    ? '$medName مضاف مسبقًا في قائمة الأدوية.'
+                    : '$medName already exists in the medication list.',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              backgroundColor: Colors.orange.shade700,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
       final newMed = Medication(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _medicationName ?? 'Unnamed',
+        name: medName.isNotEmpty ? medName : 'Unnamed',
         doseForm: _doseForm,
         doseStrength: _doseStrength,
         days: _selectedDays,
@@ -1244,10 +1325,31 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     ),
                                   ),
                                   onPressed: canApply
-                                      ? () {
+                                      ? () async {
+                                          final scannedName = nameCtrl.text.trim();
+                                          final errorMessage =
+                                              await _validateMedicationNameBeforeNext(scannedName);
+
+                                          if (errorMessage != null) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  errorMessage,
+                                                  style: const TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                backgroundColor: Colors.orange.shade700,
+                                                behavior: SnackBarBehavior.floating,
+                                                duration: const Duration(seconds: 3),
+                                              ),
+                                            );
+                                            return;
+                                          }
+
                                           setState(() {
-                                            _medicationName = nameCtrl.text
-                                                .trim();
+                                            _medicationName = scannedName;
                                             _doseForm = selectedForm;
                                             _doseStrength =
                                                 strengthCtrl.text
@@ -1601,9 +1703,17 @@ class _AddMedScreenState extends State<AddMedScreen> {
                         _Step1MedName(
                           initialValue: _medicationName,
                           buttonStyle: tealButtonStyle,
-                          onNext: (name) {
+                          onNext: (name) async {
+                            final errorMessage =
+                                await _validateMedicationNameBeforeNext(name);
+
+                            if (errorMessage != null) {
+                              return errorMessage;
+                            }
+
                             setState(() => _medicationName = name);
                             _goToNextPage();
+                            return null;
                           },
                         ),
                         _Step2Duration(
@@ -1851,7 +1961,7 @@ Widget _elderlyCard({required Widget child}) {
 
 // --- Step 1: Medicine Name ---
 class _Step1MedName extends StatefulWidget {
-  final ValueChanged<String> onNext;
+  final Future<String?> Function(String) onNext;
   final String? initialValue;
   final ButtonStyle buttonStyle;
   const _Step1MedName({
@@ -1866,6 +1976,8 @@ class _Step1MedName extends StatefulWidget {
 
 class _Step1MedNameState extends State<_Step1MedName> {
   late final TextEditingController _nameController;
+  String? _nameError;
+  bool _isCheckingName = false;
 
   @override
   void initState() {
@@ -1900,6 +2012,13 @@ class _Step1MedNameState extends State<_Step1MedName> {
               decoration: InputDecoration(
                 labelText: AppLocalizations.of(context)!.medicineName,
                 labelStyle: const TextStyle(fontSize: 20),
+                errorText: _nameError,
+                errorMaxLines: 2,
+                errorStyle: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFD62828),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(width: 2),
@@ -1909,15 +2028,45 @@ class _Step1MedNameState extends State<_Step1MedName> {
                   vertical: 20,
                 ),
               ),
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) {
+                if (_nameError != null) {
+                  setState(() => _nameError = null);
+                } else {
+                  setState(() {});
+                }
+              },
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: _nameController.text.trim().isNotEmpty
-                  ? () => widget.onNext(_nameController.text.trim())
+              onPressed: _nameController.text.trim().isNotEmpty && !_isCheckingName
+                  ? () async {
+                      setState(() {
+                        _isCheckingName = true;
+                        _nameError = null;
+                      });
+
+                      final error = await widget.onNext(
+                        _nameController.text.trim(),
+                      );
+
+                      if (!mounted) return;
+                      setState(() {
+                        _isCheckingName = false;
+                        _nameError = error;
+                      });
+                    }
                   : null,
               style: widget.buttonStyle,
-              child: Text(AppLocalizations.of(context)!.next),
+              child: _isCheckingName
+                  ? const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(AppLocalizations.of(context)!.next),
             ),
           ],
         ),

@@ -967,6 +967,19 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                           ),
                                         );
                                         break;
+                                      case VoiceCommand.goToFamilyMessages:
+                                        await _arabicVoice.speak(
+                                          'سأفتح رسائل العائلة.',
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const SharedMediaListPage(),
+                                          ),
+                                        );
+                                        break;
                                       case VoiceCommand.goToHome:
                                         await _arabicVoice.speak(
                                           'أنت بالفعل في الصفحة الرئيسية.',
@@ -1165,6 +1178,19 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (_) => const MediaPage(),
+                                          ),
+                                        );
+                                        break;
+                                      case VoiceCommand.goToFamilyMessages:
+                                        await _voice.speak(
+                                          "Opening family messages.",
+                                        );
+                                        if (!mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const SharedMediaListPage(),
                                           ),
                                         );
                                         break;

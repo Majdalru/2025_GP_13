@@ -210,7 +210,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "أستطيع مساعدتك في التنقل داخل التطبيق أو معرفة أدويتك لليوم.",
+        "أستطيع مساعدتك في التنقل داخل التطبيق، أو معرفة أدويتك لليوم، أو فتح رسائل العائلة.",
       );
     }
 
@@ -305,7 +305,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
     } else {
       final String errorMessage =
           widget.customErrorResponse ??
-          "لم أفهم طلبك. يمكنك قول الأدوية، أو الوسائط، أو الصفحة الرئيسية، أو المكتبة اليومية.";
+          "لم أفهم طلبك. يمكنك قول الأدوية، أو الوسائط، أو رسائل العائلة، أو الصفحة الرئيسية، أو المكتبة اليومية.";
 
       await _speak(errorMessage);
 
@@ -344,6 +344,8 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
         return "حسنًا، ما الدواء الذي تريد حذفه؟";
       case VoiceCommand.goToMedia:
         return "جاري فتح الوسائط.";
+      case VoiceCommand.goToFamilyMessages:
+        return "جاري فتح رسائل العائلة.";
       case VoiceCommand.goToHome:
         return "جاري الانتقال إلى الصفحة الرئيسية.";
       case VoiceCommand.sos:

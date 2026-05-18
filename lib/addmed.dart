@@ -233,6 +233,62 @@ class _AddMedScreenState extends State<AddMedScreen> {
     return null;
   }
 
+
+  String _normalizeMedicationName(String name) {
+    final diacritics = RegExp(
+      r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]',
+    );
+
+    return name
+        .toLowerCase()
+        .trim()
+        .replaceAll(diacritics, '')
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[^\u0600-\u06FFa-zA-Z0-9 ]'), '');
+  }
+
+  Future<bool> _medicationAlreadyExists(
+    String newName, {
+    String? ignoreMedicationId,
+  }) async {
+    final normalizedNewName = _normalizeMedicationName(newName);
+    if (normalizedNewName.isEmpty) return false;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('medications')
+        .doc(widget.elderlyId)
+        .get();
+
+    if (!doc.exists) return false;
+
+    final medsList = (doc.data()?['medsList'] as List?) ?? [];
+
+    for (final med in medsList) {
+      if (med is! Map) continue;
+
+      final medMap = Map<String, dynamic>.from(med);
+      final existingId = (medMap['id'] ?? '').toString();
+
+      if (ignoreMedicationId != null && existingId == ignoreMedicationId) {
+        continue;
+      }
+
+      final existingName = (medMap['name'] ?? '').toString();
+      final normalizedExistingName = _normalizeMedicationName(existingName);
+
+      if (normalizedExistingName == normalizedNewName) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   String _formatEndDate(int days) {
     final base = _startDate ?? DateTime.now();
     final end = base.add(Duration(days: days));
@@ -1347,6 +1403,45 @@ class _AddMedScreenState extends State<AddMedScreen> {
       return;
     }
 
+    final medName = (_medicationName ?? '').trim();
+
+    if (medName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Localizations.localeOf(context).languageCode == 'ar'
+                ? 'الرجاء إدخال اسم الدواء.'
+                : 'Please enter the medication name.',
+          ),
+          backgroundColor: Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final duplicateExists = await _medicationAlreadyExists(
+      medName,
+      ignoreMedicationId: _isEditing ? widget.medicationToEdit!.id : null,
+    );
+
+    if (duplicateExists) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              Localizations.localeOf(context).languageCode == 'ar'
+                  ? 'هذا الدواء مضاف مسبقًا.'
+                  : 'This medication already exists.',
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
     final docRef = FirebaseFirestore.instance
         .collection('medications')
         .doc(widget.elderlyId);
@@ -1356,7 +1451,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       // UPDATE
       final updatedMed = Medication(
         id: widget.medicationToEdit!.id,
-        name: _medicationName ?? 'Unnamed',
+        name: medName,
         doseForm: _doseForm, // ← NEW
         doseStrength: _doseStrength, // ← NEW
         days: _selectedDays,
@@ -1431,7 +1526,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
       // ADD NEW
       final newMed = Medication(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _medicationName ?? 'Unnamed',
+        name: medName,
         doseForm: _doseForm, // ← NEW
         doseStrength: _doseStrength, // ← NEW
 
@@ -1718,9 +1813,23 @@ class _AddMedScreenState extends State<AddMedScreen> {
                   _Step1MedName(
                     initialValue: _medicationName,
                     buttonStyle: tealButtonStyle,
-                    onNext: (name) {
+                    onNext: (name) async {
+                      final duplicateExists = await _medicationAlreadyExists(
+                        name,
+                        ignoreMedicationId: _isEditing
+                            ? widget.medicationToEdit!.id
+                            : null,
+                      );
+
+                      if (duplicateExists) {
+                        return Localizations.localeOf(context).languageCode == 'ar'
+                            ? '$name مضاف مسبقًا في قائمة الأدوية.'
+                            : '$name already exists in the medication list.';
+                      }
+
                       setState(() => _medicationName = name);
                       _goToNextPage();
+                      return null;
                     },
                   ),
                   _Step2Duration(
@@ -1957,7 +2066,9 @@ class _StepHeader extends StatelessWidget {
 // Step 1
 // =====================
 class _Step1MedName extends StatefulWidget {
-  final ValueChanged<String> onNext;
+  /// Returns an error message when the name is invalid/duplicate.
+  /// Returns null when the screen can continue to the next step.
+  final Future<String?> Function(String) onNext;
   final String? initialValue;
   final ButtonStyle buttonStyle;
   const _Step1MedName({
@@ -1972,6 +2083,8 @@ class _Step1MedName extends StatefulWidget {
 
 class _Step1MedNameState extends State<_Step1MedName> {
   late final TextEditingController _nameController;
+  String? _nameError;
+  bool _isCheckingName = false;
 
   @override
   void initState() {
@@ -2016,6 +2129,8 @@ class _Step1MedNameState extends State<_Step1MedName> {
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: AppLocalizations.of(context)!.medicineName,
+                  errorText: _nameError,
+                  errorMaxLines: 2,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -2023,16 +2138,55 @@ class _Step1MedNameState extends State<_Step1MedName> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: _kTeal, width: 1.5),
                   ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.orange.shade700, width: 1.5),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.orange.shade700, width: 1.5),
+                  ),
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) {
+                  if (_nameError != null) {
+                    setState(() => _nameError = null);
+                  } else {
+                    setState(() {});
+                  }
+                },
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: _nameController.text.trim().isNotEmpty
-                    ? () => widget.onNext(_nameController.text.trim())
+                onPressed:
+                    _nameController.text.trim().isNotEmpty && !_isCheckingName
+                    ? () async {
+                        setState(() {
+                          _isCheckingName = true;
+                          _nameError = null;
+                        });
+
+                        final error = await widget.onNext(
+                          _nameController.text.trim(),
+                        );
+
+                        if (!mounted) return;
+                        setState(() {
+                          _isCheckingName = false;
+                          _nameError = error;
+                        });
+                      }
                     : null,
                 style: widget.buttonStyle,
-                child: Text(AppLocalizations.of(context)!.next),
+                child: _isCheckingName
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(AppLocalizations.of(context)!.next),
               ),
             ],
           ),

@@ -591,7 +591,7 @@
   "manageMedicationsInstruction": "To manage your medications, please go back to the home page and open the medications section.",
   "startingSosFlow": "Here we will start the SOS emergency flow.",
   "settingsNotAvailableHere": "Settings are not available from the media page yet.",
-  "mediaCategoryPrompt": "You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story , Caregiver or favorites",
+  "mediaCategoryPrompt": "You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story or favorites",
   "stoppingVoiceAssistant": "Okay, I will stop now.",
   "didNotCatchThat": "Sorry, I didn't catch that.",
   "categoryNotUnderstood": "Sorry, I didn't understand that category. Please try again.",

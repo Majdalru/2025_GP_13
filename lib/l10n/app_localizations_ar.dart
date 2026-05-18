@@ -1013,7 +1013,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mediaCategoryPrompt =>
-      'أنت في صفحة الوسائط. من أي فئة تريدني أن أشغل شيئًا؟ اختر صحة، قرآن، قصص، مقدم الرعاية أو المفضلة.';
+      'أنت في صفحة الوسائط. من أي فئة تريدني أن أشغل شيئًا؟ اختر صحة، قرآن، قصص أو المفضلة.';
 
   @override
   String get stoppingVoiceAssistant => 'حسنا، سأتوقف الآن.';

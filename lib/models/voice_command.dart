@@ -11,4 +11,5 @@ enum VoiceCommand {
   news,
   todayMedications,
   goToDailyLibrary,
+  goToFamilyMessages,
 }

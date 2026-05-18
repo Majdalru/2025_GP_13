@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'audio_list_page.dart';
 import 'Favoritespage.dart';
 import 'audio_player_page.dart';
+import 'shared_media_list_page.dart';
 
 import '../../models/audio_item.dart';
 import '../../services/voice_assistant_service.dart';
@@ -16,7 +17,6 @@ import '../../providers/locale_provider.dart';
 import 'package:flutter_application_1/models/voice_command.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 import 'youtube_player_page.dart';
-//import 'shared_media_list_page.dart';
 
 class MediaPage extends StatefulWidget {
   const MediaPage({super.key});
@@ -172,7 +172,6 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final isArabic = localeProvider.isArabic;
-    const kTeal = Color(0xFF4E949C);
     const kBg = Color(0xFFF7F8FA);
 
     return Scaffold(
@@ -255,7 +254,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                           Icons.menu_book_outlined,
                           'Quran',
                           AppLocalizations.of(context)!.quran,
-                          Color(0xFFF5C35D),
+                          const Color(0xFFF5C35D),
                           const Color(0xFFFEF3D7),
                         ),
                         _buildMediaCard(
@@ -301,7 +300,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                                     ),
                                     child: const Icon(
                                       Icons.favorite_outline,
-                                      color: const Color(0xFF4E949C),
+                                      color: Color(0xFF4E949C),
                                       size: 36,
                                     ),
                                   ),
@@ -367,7 +366,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   } else if (_isSpeakingState) {
                     buttonColor = Colors.red;
                   } else {
-                    buttonColor = Color(0xFF1A2340);
+                    buttonColor = const Color(0xFF1A2340);
                   }
                   return Transform.scale(
                     scale: scale,
@@ -658,6 +657,17 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
 
   Future<void> _handleGlobalCommand(VoiceCommand cmd) async {
     switch (cmd) {
+      case VoiceCommand.goToFamilyMessages:
+        await _speak(
+          _isArabic ? 'جاري فتح رسائل العائلة.' : 'Opening family messages.',
+        );
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SharedMediaListPage()),
+        );
+        break;
+
       case VoiceCommand.goToMedia:
         await _speak(AppLocalizations.of(context)!.alreadyOnMediaPage);
         break;
@@ -733,7 +743,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                 globalCmd == VoiceCommand.editMedication ||
                 globalCmd == VoiceCommand.deleteMedication ||
                 globalCmd == VoiceCommand.sos ||
-                globalCmd == VoiceCommand.goToSettings)) {
+                globalCmd == VoiceCommand.goToSettings ||
+                globalCmd == VoiceCommand.goToFamilyMessages)) {
           await _handleGlobalCommand(globalCmd);
           _resetVoiceState();
           return;

@@ -217,7 +217,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
 
       await _speak(greeting);
       await _speak(
-        "I can help you check your medications, open the daily library, or navigate through the app.",
+        "I can help you check your medications, open the daily library, open family messages, or navigate through the app.",
       );
     }
 
@@ -309,7 +309,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         widget.onCommand(command);
       } else {
         await _speak(
-          "I'm not sure what you mean. Try saying medications, media, daily library, or home.",
+          "I'm not sure what you mean. Try saying medications, media, family messages, daily library, or home.",
         );
       }
     } else {
@@ -354,6 +354,8 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         return "Okay, which medicine do you want to delete?";
       case VoiceCommand.goToMedia:
         return "Opening your media.";
+      case VoiceCommand.goToFamilyMessages:
+        return "Opening family messages.";
       case VoiceCommand.goToHome:
         return "Going to home.";
       case VoiceCommand.sos:

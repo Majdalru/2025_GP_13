@@ -227,7 +227,7 @@ class ArabicVoiceAssistantService {
       onCommand(command);
     } else {
       await speak(
-        'عذرًا، لم أفهم طلبك. يمكنك السؤال عن المكتبة اليومية او قول  الأدوية أو الوسائط أو الصفحة الرئيسية أو الطوارئ.',
+        'عذرًا، لم أفهم طلبك. يمكنك السؤال عن المكتبة اليومية أو قول الأدوية أو الوسائط أو رسائل العائلة أو الصفحة الرئيسية أو الطوارئ.',
       );
     }
   }
@@ -272,7 +272,7 @@ class ArabicVoiceAssistantService {
                   'You are an intent classifier for an elderly medication app. '
                   'The user may speak Arabic or English. '
                   'Valid intents are: goToMedication, addMedication, editMedication, deleteMedication, '
-                  'goToMedia, goToHome, sos, goToSettings, weather, news, todayMedications, none. '
+                  'goToMedia, goToFamilyMessages, goToHome, sos, goToSettings, weather, news, todayMedications, none. '
                   'Respond ONLY with pure JSON like {"intent":"addMedication"}.',
             },
             {'role': 'user', 'content': text},
@@ -349,6 +349,15 @@ class ArabicVoiceAssistantService {
       case 'delete':
         return VoiceCommand.deleteMedication;
 
+      case 'gotofamilymessages':
+      case 'go_to_family_messages':
+      case 'familymessages':
+      case 'family_messages':
+      case 'sharedmessages':
+      case 'shared_messages':
+      case 'messages':
+        return VoiceCommand.goToFamilyMessages;
+
       case 'gotomedia':
       case 'media':
         return VoiceCommand.goToMedia;
@@ -395,6 +404,34 @@ class ArabicVoiceAssistantService {
       'نجدة',
     ])) {
       return VoiceCommand.sos;
+    }
+
+    if (_containsAny(lower, [
+      'family messages',
+      'family message',
+      'shared messages',
+      'shared media',
+      'messages from family',
+      'open family messages',
+      'go to family messages',
+      'رسائل العائله',
+      'رسائل العائلة',
+      'رسايل العائله',
+      'رسايل العائلة',
+      'رسائل الاهل',
+      'رسائل الأهل',
+      'رسايل الاهل',
+      'رسايل الأهل',
+      'رسائل الاسره',
+      'رسائل الأسرة',
+      'افتح رسائل العائله',
+      'افتح رسائل العائلة',
+      'وديني رسائل العائله',
+      'وديني رسائل العائلة',
+      'مقاطع العائله',
+      'مقاطع العائلة',
+    ])) {
+      return VoiceCommand.goToFamilyMessages;
     }
 
     if (_containsAny(lower, [
@@ -572,6 +609,52 @@ class ArabicVoiceAssistantService {
         .replaceAll('ة', 'ه');
   }
 
+  String _normalizeMedicationNameForDuplicate(String name) {
+    return name
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]'), '')
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[^\u0600-\u06FFa-zA-Z0-9 ]'), '');
+  }
+
+  Future<bool> _medicationAlreadyExistsForUser(
+    String elderlyId,
+    String newName,
+  ) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('medications')
+          .doc(elderlyId)
+          .get();
+
+      if (!doc.exists) return false;
+
+      final medsList = (doc.data()?['medsList'] as List?) ?? [];
+      final normalizedNewName = _normalizeMedicationNameForDuplicate(newName);
+
+      for (final med in medsList) {
+        final medMap = Map<String, dynamic>.from(med as Map);
+        final existingName = (medMap['name'] ?? '').toString();
+        final normalizedExistingName =
+            _normalizeMedicationNameForDuplicate(existingName);
+
+        if (normalizedExistingName == normalizedNewName) {
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Duplicate medication check error: $e');
+    }
+
+    return false;
+  }
+
   // =========================
   // MEDICATION FLOWS
   // =========================
@@ -615,6 +698,14 @@ class ArabicVoiceAssistantService {
 
     if (_isNo(confirmName)) {
       await speak('حسنًا، تم إلغاء إضافة الدواء.');
+      return;
+    }
+
+    final exists = await _medicationAlreadyExistsForUser(elderlyId, name);
+    if (exists) {
+      await speak(
+        '$name موجود مسبقًا في قائمة الأدوية، لذلك لن أضيفه مرة أخرى.',
+      );
       return;
     }
 

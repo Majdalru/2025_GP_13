@@ -1907,7 +1907,7 @@ abstract class AppLocalizations {
   /// No description provided for @mediaCategoryPrompt.
   ///
   /// In en, this message translates to:
-  /// **'You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story , Caregiver or favorites'**
+  /// **'You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story or favorites'**
   String get mediaCategoryPrompt;
 
   /// No description provided for @stoppingVoiceAssistant.

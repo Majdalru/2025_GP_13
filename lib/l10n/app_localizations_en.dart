@@ -1023,7 +1023,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaCategoryPrompt =>
-      'You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story , Caregiver or favorites';
+      'You are on your media page. What category do you want me to play something from? Choose Health , Quraan, Story or favorites';
 
   @override
   String get stoppingVoiceAssistant => 'Okay, I will stop now.';
