@@ -918,5 +918,35 @@
 "accessMedications": "الأدوية",
 "accessLibrary": "المكتبة اليومية",
 "accessMedia": "الوسائط والمحتوى المشترك",
-"featureDisabledByCaregiver": "تم تعطيل هذه الميزة من قبل مقدم الرعاية."
+"featureDisabledByCaregiver": "تم تعطيل هذه الميزة من قبل مقدم الرعاية.",
+"goodMorning": "صباح الخير،",
+  "goodAfternoon": "مساء الخير،",
+  "goodEvening": "مساء النور،",
+  "managing": "تدير الآن",
+  "selectProfile": "اختر الملف الشخصي",
+  "linkedElderly": "كبار السن المرتبطون",
+  "noLinkedProfiles": "لا توجد ملفات شخصية مرتبطة بعد.",
+  "linkNewElderly": "ربط كبير سن جديد",
+  "enterElderlyCode": "أدخل رمز ربط كبير السن",
+  "invalidCode": "الرمز غير صالح. يرجى المحاولة مرة أخرى.",
+  "profileLinkedSuccessfully": "تم ربط الملف الشخصي بنجاح",
+  "appSettings": "إعدادات التطبيق",
+  "account": "الحساب",
+  "logout": "تسجيل الخروج",
+  "language": "اللغة",
+  "notifications": "الإشعارات",
+  "upcomingDoses": "الجرعات القادمة",
+  "allDosesCompleted": "تم أخذ جميع جرعات اليوم",
+  "soon": "قريباً",
+  "later": "لاحقاً",
+  "scan": " ",
+  "info": "معلومات الدواء",
+  "moreDoses": "جرعات إضافية",
+  "dosesCompletedOf": "{completed} من {total} جرعة مكتملة",
+  "@dosesCompletedOf": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }

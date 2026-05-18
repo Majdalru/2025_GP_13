@@ -1888,27 +1888,31 @@ class _ElderlySettingsPage extends StatelessWidget {
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceEvenly,
-                                      children: const [
-                                        Text(
-                                          'EN',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.white70,
-                                            fontWeight: FontWeight.w700,
+                                    // 👇 WRAP THE BACKGROUND ROW WITH DIRECTIONALITY TO PREVENT RTL FLIPPING
+                                    Directionality(
+                                      textDirection: TextDirection.ltr,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: const [
+                                          Text(
+                                            'EN',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.white70,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          'ع',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.white70,
-                                            fontWeight: FontWeight.w700,
+                                          Text(
+                                            'ع',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.white70,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                     AnimatedAlign(
                                       duration: const Duration(

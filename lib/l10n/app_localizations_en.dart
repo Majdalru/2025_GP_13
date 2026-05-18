@@ -1595,4 +1595,78 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get featureDisabledByCaregiver =>
       'This feature has been disabled by your caregiver.';
+
+  @override
+  String get goodMorning => 'Good morning,';
+
+  @override
+  String get goodAfternoon => 'Good afternoon,';
+
+  @override
+  String get goodEvening => 'Good evening,';
+
+  @override
+  String get managing => 'Managing';
+
+  @override
+  String get selectProfile => 'Select profile';
+
+  @override
+  String get linkedElderly => 'Linked Elderly';
+
+  @override
+  String get noLinkedProfiles => 'No profiles linked yet.';
+
+  @override
+  String get linkNewElderly => 'Link new elderly';
+
+  @override
+  String get enterElderlyCode => 'Enter elderly linking code';
+
+  @override
+  String get invalidCode => 'Invalid code. Please try again.';
+
+  @override
+  String get profileLinkedSuccessfully => 'Profile linked successfully';
+
+  @override
+  String get appSettings => 'App Settings';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get logout => 'Log out';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get upcomingDoses => 'Upcoming doses';
+
+  @override
+  String get allDosesCompleted => 'All doses completed for today';
+
+  @override
+  String get soon => 'Soon';
+
+  @override
+  String get later => 'Later';
+
+  @override
+  String get scan => '';
+
+  @override
+  String get info => 'Medication Info';
+
+  @override
+  String get moreDoses => 'more doses';
+
+  @override
+  String dosesCompletedOf(int completed, int total) {
+    return '$completed of $total doses completed';
+  }
 }

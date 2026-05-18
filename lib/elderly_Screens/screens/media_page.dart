@@ -172,7 +172,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final isArabic = localeProvider.isArabic;
-    const kTeal = Color(0xFF4DB6AC);
+    const kTeal = Color(0xFF4E949C);
     const kBg = Color(0xFFF7F8FA);
 
     return Scaffold(
@@ -180,19 +180,25 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Top bar ─────────────────────────────────────────
+            // ── Top bar ──────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 20, 4),
+              padding: const EdgeInsets.fromLTRB(50, 50, 20, 4),
               child: Row(
                 children: [
                   IconButton(
+                    onPressed: () => Navigator.pop(context),
                     icon: const Icon(
-                      Icons.arrow_back_ios_new,
-                      size: 26,
+                      Icons.arrow_back,
+                      size: 22,
                       color: Color(0xFF1A2340),
                     ),
-                    onPressed: () => Navigator.pop(context),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 184, 214, 217),
+                      shape: const CircleBorder(),
+                      padding: const EdgeInsets.all(12),
+                    ),
                   ),
+                  const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -219,51 +225,47 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
               ),
             ),
 
-            // ── Content ──────────────────────────────────────────
+            // ── Content ───────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Section label
                     _sectionLabel(isArabic ? 'الأقسام' : 'Categories'),
-                    const SizedBox(height: 10),
-
-                    // 2-column grid: Story + Quran top row, Health alone or centered
+                    const SizedBox(height: 12),
                     GridView.count(
+                      crossAxisCount: 2,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 14,
                       mainAxisSpacing: 14,
-                      childAspectRatio: 1.05,
+                      crossAxisSpacing: 14,
+                      childAspectRatio: 0.95,
                       children: [
                         _buildMediaCard(
                           context,
                           Icons.auto_stories_outlined,
                           'Story',
                           AppLocalizations.of(context)!.story,
-                          const Color(0xFF7E57C2),
-                          const Color(0xFFEDE7F6),
+                          const Color(0xFF102E50),
+                          const Color(0xFFD6E4EE),
                         ),
                         _buildMediaCard(
                           context,
                           Icons.menu_book_outlined,
                           'Quran',
                           AppLocalizations.of(context)!.quran,
-                          const Color(0xFF00897B),
-                          const Color(0xFFE0F2F1),
+                          Color(0xFFF5C35D),
+                          const Color(0xFFFEF3D7),
                         ),
                         _buildMediaCard(
                           context,
-                          Icons.favorite_border_outlined,
+                          Icons.medical_services_outlined,
                           'Health',
                           AppLocalizations.of(context)!.health,
-                          const Color(0xFFE53935),
-                          const Color(0xFFFFEBEE),
+                          const Color(0xFF3A8C78),
+                          const Color(0xFFE8F7F2),
                         ),
-                        // Favorites tile
                         GestureDetector(
                           onTap: () => Navigator.push(
                             context,
@@ -285,8 +287,8 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                             ),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 20,
+                                horizontal: 18,
+                                vertical: 24,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,22 +296,23 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFF8E1),
+                                      color: const Color(0xFFDEF0EC),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(
-                                      Icons.star_outline_rounded,
-                                      color: Color(0xFFFF8F00),
-                                      size: 32,
+                                      Icons.favorite_outline,
+                                      color: const Color(0xFF4E949C),
+                                      size: 36,
                                     ),
                                   ),
                                   const Spacer(),
                                   Text(
                                     AppLocalizations.of(context)!.favorites,
                                     style: const TextStyle(
-                                      fontSize: 18,
+                                      fontSize: 20,
                                       fontWeight: FontWeight.w700,
                                       color: Color(0xFF1A2340),
+                                      height: 1.3,
                                     ),
                                   ),
                                 ],
@@ -364,7 +367,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
                   } else if (_isSpeakingState) {
                     buttonColor = Colors.red;
                   } else {
-                    buttonColor = kTeal;
+                    buttonColor = Color(0xFF1A2340);
                   }
                   return Transform.scale(
                     scale: scale,
@@ -411,7 +414,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
     return Text(
       text.toUpperCase(),
       style: const TextStyle(
-        fontSize: 12,
+        fontSize: 16,
         fontWeight: FontWeight.w700,
         color: Color(0xFF9CA3AF),
         letterSpacing: 0.8,
@@ -445,23 +448,23 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: iconBg,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: iconColor, size: 32),
+                child: Icon(icon, color: iconColor, size: 36),
               ),
               const Spacer(),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1A2340),
                   height: 1.3,
@@ -921,6 +924,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             .collection('users')
             .doc(user.uid)
             .collection('favorites')
+            .where('category', whereIn: ['Quran', 'Story', 'Health'])
             .get();
       } else {
         qs = await _getMediaByCategory(category);
@@ -958,6 +962,7 @@ class _MediaPageState extends State<MediaPage> with TickerProviderStateMixin {
             .collection('users')
             .doc(user.uid)
             .collection('favorites')
+            .where('category', whereIn: ['Quran', 'Story', 'Health'])
             .get();
       } else {
         qs = await _getMediaByCategory(category);

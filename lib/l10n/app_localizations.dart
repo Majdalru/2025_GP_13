@@ -2947,6 +2947,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This feature has been disabled by your caregiver.'**
   String get featureDisabledByCaregiver;
+
+  /// No description provided for @goodMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning,'**
+  String get goodMorning;
+
+  /// No description provided for @goodAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon,'**
+  String get goodAfternoon;
+
+  /// No description provided for @goodEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening,'**
+  String get goodEvening;
+
+  /// No description provided for @managing.
+  ///
+  /// In en, this message translates to:
+  /// **'Managing'**
+  String get managing;
+
+  /// No description provided for @selectProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Select profile'**
+  String get selectProfile;
+
+  /// No description provided for @linkedElderly.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked Elderly'**
+  String get linkedElderly;
+
+  /// No description provided for @noLinkedProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'No profiles linked yet.'**
+  String get noLinkedProfiles;
+
+  /// No description provided for @linkNewElderly.
+  ///
+  /// In en, this message translates to:
+  /// **'Link new elderly'**
+  String get linkNewElderly;
+
+  /// No description provided for @enterElderlyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter elderly linking code'**
+  String get enterElderlyCode;
+
+  /// No description provided for @invalidCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid code. Please try again.'**
+  String get invalidCode;
+
+  /// No description provided for @profileLinkedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile linked successfully'**
+  String get profileLinkedSuccessfully;
+
+  /// No description provided for @appSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'App Settings'**
+  String get appSettings;
+
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get logout;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @upcomingDoses.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming doses'**
+  String get upcomingDoses;
+
+  /// No description provided for @allDosesCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'All doses completed for today'**
+  String get allDosesCompleted;
+
+  /// No description provided for @soon.
+  ///
+  /// In en, this message translates to:
+  /// **'Soon'**
+  String get soon;
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
+
+  /// No description provided for @scan.
+  ///
+  /// In en, this message translates to:
+  /// **''**
+  String get scan;
+
+  /// No description provided for @info.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication Info'**
+  String get info;
+
+  /// No description provided for @moreDoses.
+  ///
+  /// In en, this message translates to:
+  /// **'more doses'**
+  String get moreDoses;
+
+  /// No description provided for @dosesCompletedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{completed} of {total} doses completed'**
+  String dosesCompletedOf(int completed, int total);
 }
 
 class _AppLocalizationsDelegate

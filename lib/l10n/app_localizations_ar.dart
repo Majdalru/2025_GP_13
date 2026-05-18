@@ -1582,4 +1582,78 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get featureDisabledByCaregiver =>
       'تم تعطيل هذه الميزة من قبل مقدم الرعاية.';
+
+  @override
+  String get goodMorning => 'صباح الخير،';
+
+  @override
+  String get goodAfternoon => 'مساء الخير،';
+
+  @override
+  String get goodEvening => 'مساء النور،';
+
+  @override
+  String get managing => 'تدير الآن';
+
+  @override
+  String get selectProfile => 'اختر الملف الشخصي';
+
+  @override
+  String get linkedElderly => 'كبار السن المرتبطون';
+
+  @override
+  String get noLinkedProfiles => 'لا توجد ملفات شخصية مرتبطة بعد.';
+
+  @override
+  String get linkNewElderly => 'ربط كبير سن جديد';
+
+  @override
+  String get enterElderlyCode => 'أدخل رمز ربط كبير السن';
+
+  @override
+  String get invalidCode => 'الرمز غير صالح. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get profileLinkedSuccessfully => 'تم ربط الملف الشخصي بنجاح';
+
+  @override
+  String get appSettings => 'إعدادات التطبيق';
+
+  @override
+  String get account => 'الحساب';
+
+  @override
+  String get logout => 'تسجيل الخروج';
+
+  @override
+  String get language => 'اللغة';
+
+  @override
+  String get notifications => 'الإشعارات';
+
+  @override
+  String get upcomingDoses => 'الجرعات القادمة';
+
+  @override
+  String get allDosesCompleted => 'تم أخذ جميع جرعات اليوم';
+
+  @override
+  String get soon => 'قريباً';
+
+  @override
+  String get later => 'لاحقاً';
+
+  @override
+  String get scan => ' ';
+
+  @override
+  String get info => 'معلومات الدواء';
+
+  @override
+  String get moreDoses => 'جرعات إضافية';
+
+  @override
+  String dosesCompletedOf(int completed, int total) {
+    return '$completed من $total جرعة مكتملة';
+  }
 }

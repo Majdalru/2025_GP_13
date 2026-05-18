@@ -13,6 +13,11 @@ import 'services/medication_scan_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 
+// ─── Palette ─────────────────────────────────────────────────────────────────
+const _kTeal = Color(0xFF4DB6AC);
+const _kNavy = Color(0xFF0D2D5D);
+const _kBg = Color(0xFFF7F8FA);
+
 // ── Translation helpers (used across multiple widgets) ──
 
 /// Converts ASCII digits 0-9 to Arabic-Indic (٠-٩).
@@ -762,7 +767,7 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                       scanCustomEndDate = null;
                                       constrainDays();
                                     }),
-                                    selectedColor: Colors.teal.shade700,
+                                    selectedColor: Colors.teal.shade100,
                                     backgroundColor: Colors.grey.shade100,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
@@ -963,6 +968,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     }
                                   },
                                   selectedColor: Colors.teal.shade100,
+                                  labelStyle: TextStyle(
+                                    color: _kTeal == (_kTeal)
+                                        ? Colors.white
+                                        : null,
+                                  ),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
                                     vertical: 4,
@@ -1014,6 +1024,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                 onSelected: (_) =>
                                     setSheetState(() => selectedFreq = opt),
                                 selectedColor: Colors.teal.shade100,
+                                labelStyle: TextStyle(
+                                  color: _kTeal == (_kTeal)
+                                      ? Colors.white
+                                      : null,
+                                ),
                               );
                             }).toList(),
                           ),
@@ -1071,6 +1086,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                         onSelected: (_) =>
                                             toggleDay('Every day'),
                                         selectedColor: Colors.teal.shade100,
+                                        labelStyle: TextStyle(
+                                          color: _kTeal == (_kTeal)
+                                              ? Colors.white
+                                              : null,
+                                        ),
                                       ),
                                       ...allowed.map((d) {
                                         final selected = selectedDays.contains(
@@ -1081,6 +1101,11 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                           selected: selected,
                                           onSelected: (_) => toggleDay(d),
                                           selectedColor: Colors.teal.shade100,
+                                          labelStyle: TextStyle(
+                                            color: _kTeal == (_kTeal)
+                                                ? Colors.white
+                                                : null,
+                                          ),
                                         );
                                       }),
                                     ],
@@ -1583,186 +1608,234 @@ class _AddMedScreenState extends State<AddMedScreen> {
   @override
   Widget build(BuildContext context) {
     final ButtonStyle tealButtonStyle = ElevatedButton.styleFrom(
-      backgroundColor: Colors.teal,
+      backgroundColor: _kTeal,
       foregroundColor: Colors.white,
       minimumSize: const Size.fromHeight(50),
+      elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 90,
-        title: Text(
-          _isEditing
-              ? AppLocalizations.of(context)!.editMedication
-              : AppLocalizations.of(context)!.addNewMedication,
-        ),
-        titleTextStyle: const TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-        backgroundColor: const Color.fromRGBO(12, 45, 93, 1),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _goToPreviousPage,
-        ),
-        actions: [
-          IconButton(
-            icon: _isScanning
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.camera_alt, color: Colors.white),
-            onPressed: _isScanning ? null : _scanFromCamera,
-            tooltip: 'Scan medication',
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              AppLocalizations.of(context)!.cancel,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-            ),
-          ),
-        ],
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-        ),
-      ),
-      body: Column(
-        children: [
-          _Stepper(currentIndex: _currentPageIndex, stepCount: 8),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPageIndex = index;
-                });
-              },
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _Step1MedName(
-                  initialValue: _medicationName,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (name) {
-                    setState(() => _medicationName = name);
-                    _goToNextPage();
-                  },
-                ),
-                _Step2Duration(
-                  medicationName: _medicationName,
-                  initialDurationDays: _durationDays,
-                  initialCustomEndDate: _customEndDate,
-                  initialStartDate: _startDate,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (days, customDate, startDate) {
-                    setState(() {
-                      _durationDays = days;
-                      _customEndDate = customDate;
-                      _startDate = startDate;
-                    });
-                    _goToNextPage();
-                  },
-                ),
-                _Step3SelectDays(
-                  key: ValueKey(
-                    'days_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
-                  ),
-                  medicationName: _medicationName,
-                  durationDays: _durationDays,
-                  customEndDate: _customEndDate,
-                  initialDays: _selectedDays,
-                  startDate: _startDate,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (days) {
-                    setState(() => _selectedDays = days);
-                    _goToNextPage();
-                  },
-                ),
-                _Step4HowManyTimesPerDay(
-                  medicationName: _medicationName,
-                  initialFrequency: _frequency,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (freq) {
-                    if (_frequency != freq) {
-                      _initializeTimesForFrequency(freq);
-                    }
-                    setState(() => _frequency = freq);
-                    _goToNextPage();
-                  },
-                ),
-                _Step5SetTimes(
-                  medicationName: _medicationName,
-                  frequency: _frequency,
-                  selectedTimes: _selectedTimes,
-                  buttonStyle: tealButtonStyle,
-                  onTimeChanged: _updateTimes,
-                  onClearTimes: _clearAllTimes,
-                  onAddTime: _frequency == 'Custom'
-                      ? _addCustomTimeField
-                      : null,
-                  onRemoveTime: _frequency == 'Custom'
-                      ? _removeCustomTimeField
-                      : null,
-                  onNext: () {
-                    _goToNextPage();
-                  },
-                ),
-                _Step2Dose(
-                  medicationName: _medicationName,
-                  initialForm: _doseForm,
-                  initialStrength: _doseStrength,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (form, strength) {
-                    setState(() {
-                      _doseForm = form;
-                      _doseStrength = strength;
-                    });
-                    _goToNextPage();
-                  },
-                ),
+    final loc = AppLocalizations.of(context)!;
 
-                _Step6AddNotes(
-                  medicationName: _medicationName,
-                  initialNotes: _notes,
-                  initialRefillReminder: _refillReminder,
-                  hasEndDate: _durationDays != null || _customEndDate != null,
-                  buttonStyle: tealButtonStyle,
-                  onNext: (notes, remind) {
-                    setState(() {
-                      _notes = notes;
-                      _refillReminder = remind;
-                    });
-                    _goToNextPage();
-                  },
-                ),
-                _Step8Summary(
-                  key: ValueKey(
-                    'summary_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
+    return Scaffold(
+      backgroundColor: _kBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Custom header ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 10, 16, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 20,
+                      color: _kTeal,
+                    ),
+                    onPressed: _goToPreviousPage,
                   ),
-                  medicationName: _medicationName,
-                  doseForm: _doseForm,
-                  doseStrength: _doseStrength,
-                  durationDays: _durationDays,
-                  customEndDate: _customEndDate,
-                  startDate: _startDate,
-                  selectedDays: _selectedDays,
-                  frequency: _frequency,
-                  selectedTimes: _selectedTimes.whereType<TimeOfDay>().toList(),
-                  notes: _notes,
-                  refillReminder: _refillReminder,
-                  isEditing: _isEditing,
-                  buttonStyle: tealButtonStyle,
-                  onSave: _saveMedication,
-                ),
-              ],
+                  Expanded(
+                    child: Text(
+                      _isEditing ? loc.editMedication : loc.addNewMedication,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: _kNavy,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _isScanning ? null : _scanFromCamera,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _isScanning
+                            ? Colors.grey.shade200
+                            : _kNavy.withOpacity(0.07),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _isScanning
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _kTeal,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.camera_alt_outlined,
+                                  size: 16,
+                                  color: _kNavy,
+                                ),
+                          const SizedBox(width: 5),
+                          Text(
+                            loc.scan ?? 'Scan',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _kNavy,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Text(
+                      loc.cancel,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            _Stepper(currentIndex: _currentPageIndex, stepCount: 8),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPageIndex = index;
+                  });
+                },
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _Step1MedName(
+                    initialValue: _medicationName,
+                    buttonStyle: tealButtonStyle,
+                    onNext: (name) {
+                      setState(() => _medicationName = name);
+                      _goToNextPage();
+                    },
+                  ),
+                  _Step2Duration(
+                    medicationName: _medicationName,
+                    initialDurationDays: _durationDays,
+                    initialCustomEndDate: _customEndDate,
+                    initialStartDate: _startDate,
+                    buttonStyle: tealButtonStyle,
+                    onNext: (days, customDate, startDate) {
+                      setState(() {
+                        _durationDays = days;
+                        _customEndDate = customDate;
+                        _startDate = startDate;
+                      });
+                      _goToNextPage();
+                    },
+                  ),
+                  _Step3SelectDays(
+                    key: ValueKey(
+                      'days_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
+                    ),
+                    medicationName: _medicationName,
+                    durationDays: _durationDays,
+                    customEndDate: _customEndDate,
+                    initialDays: _selectedDays,
+                    startDate: _startDate,
+                    buttonStyle: tealButtonStyle,
+                    onNext: (days) {
+                      setState(() => _selectedDays = days);
+                      _goToNextPage();
+                    },
+                  ),
+                  _Step4HowManyTimesPerDay(
+                    medicationName: _medicationName,
+                    initialFrequency: _frequency,
+                    buttonStyle: tealButtonStyle,
+                    onNext: (freq) {
+                      if (_frequency != freq) {
+                        _initializeTimesForFrequency(freq);
+                      }
+                      setState(() => _frequency = freq);
+                      _goToNextPage();
+                    },
+                  ),
+                  _Step5SetTimes(
+                    medicationName: _medicationName,
+                    frequency: _frequency,
+                    selectedTimes: _selectedTimes,
+                    buttonStyle: tealButtonStyle,
+                    onTimeChanged: _updateTimes,
+                    onClearTimes: _clearAllTimes,
+                    onAddTime: _frequency == 'Custom'
+                        ? _addCustomTimeField
+                        : null,
+                    onRemoveTime: _frequency == 'Custom'
+                        ? _removeCustomTimeField
+                        : null,
+                    onNext: () {
+                      _goToNextPage();
+                    },
+                  ),
+                  _Step2Dose(
+                    medicationName: _medicationName,
+                    initialForm: _doseForm,
+                    initialStrength: _doseStrength,
+                    buttonStyle: tealButtonStyle,
+                    onNext: (form, strength) {
+                      setState(() {
+                        _doseForm = form;
+                        _doseStrength = strength;
+                      });
+                      _goToNextPage();
+                    },
+                  ),
+
+                  _Step6AddNotes(
+                    medicationName: _medicationName,
+                    initialNotes: _notes,
+                    initialRefillReminder: _refillReminder,
+                    hasEndDate: _durationDays != null || _customEndDate != null,
+                    buttonStyle: tealButtonStyle,
+                    onNext: (notes, remind) {
+                      setState(() {
+                        _notes = notes;
+                        _refillReminder = remind;
+                      });
+                      _goToNextPage();
+                    },
+                  ),
+                  _Step8Summary(
+                    key: ValueKey(
+                      'summary_${_durationDays}_${_customEndDate?.millisecondsSinceEpoch}',
+                    ),
+                    medicationName: _medicationName,
+                    doseForm: _doseForm,
+                    doseStrength: _doseStrength,
+                    durationDays: _durationDays,
+                    customEndDate: _customEndDate,
+                    startDate: _startDate,
+                    selectedDays: _selectedDays,
+                    frequency: _frequency,
+                    selectedTimes: _selectedTimes
+                        .whereType<TimeOfDay>()
+                        .toList(),
+                    notes: _notes,
+                    refillReminder: _refillReminder,
+                    isEditing: _isEditing,
+                    buttonStyle: tealButtonStyle,
+                    onSave: _saveMedication,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1779,22 +1852,38 @@ class _Stepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-      child: Row(
-        children: List.generate(stepCount, (index) {
-          return Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4.0),
-              height: 8.0,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: index <= currentIndex
-                    ? Colors.teal
-                    : Colors.grey.shade300,
-              ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: List.generate(stepCount, (index) {
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.symmetric(horizontal: 2.0),
+                  height: 4.0,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    color: index <= currentIndex
+                        ? _kTeal
+                        : Colors.grey.shade200,
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '${currentIndex + 1} / $stepCount',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF9CA3AF),
+              letterSpacing: .3,
             ),
-          );
-        }),
+          ),
+        ],
       ),
     );
   }
@@ -1818,27 +1907,47 @@ class _StepHeader extends StatelessWidget {
       children: [
         if (medicationName != null && medicationName!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              medicationName!,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+            padding: const EdgeInsets.only(bottom: 10.0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: _kTeal.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(20),
               ),
-              overflow: TextOverflow.ellipsis,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.medication_rounded, size: 14, color: _kTeal),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      medicationName!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _kTeal,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         Text(
           title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: _kNavy,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: const TextStyle(fontSize: 16, color: Colors.grey),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -1880,13 +1989,20 @@ class _Step1MedNameState extends State<_Step1MedName> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1900,7 +2016,13 @@ class _Step1MedNameState extends State<_Step1MedName> {
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: AppLocalizations.of(context)!.medicineName,
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _kTeal, width: 1.5),
+                  ),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -2025,20 +2147,27 @@ class _Step2DoseState extends State<_Step2Dose> {
     final bool canProceed = _selectedForm != null;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: AppLocalizations.of(context)!.stepTimesTitle,
-                subtitle: AppLocalizations.of(context)!.stepTimesSub,
+                title: AppLocalizations.of(context)!.stepDoseTitle,
+                subtitle: AppLocalizations.of(context)!.stepDoseSub,
               ),
 
               // ── Form grid ──
@@ -2070,20 +2199,21 @@ class _Step2DoseState extends State<_Step2Dose> {
                     avatar: Icon(
                       icon,
                       size: 18,
-                      color: isSelected
-                          ? Colors.teal.shade800
-                          : Colors.grey.shade600,
+                      color: isSelected ? Colors.white : _kNavy,
                     ),
-                    label: Text(translatedLabel), // Display translated
+                    label: Text(translatedLabel),
                     selected: isSelected,
                     showCheckmark: false,
                     elevation: 0,
                     pressElevation: 0,
                     onSelected: (_) => setState(() {
-                      // Save the English value to the database
                       _selectedForm = isSelected ? null : englishLabel;
                     }),
-                    selectedColor: Colors.teal.shade100,
+                    selectedColor: _kTeal,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : _kNavy,
+                      fontWeight: FontWeight.w600,
+                    ),
                   );
                 }).toList(),
               ),
@@ -2103,6 +2233,10 @@ class _Step2DoseState extends State<_Step2Dose> {
                   hintText: _strengthHint(context),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _kTeal, width: 1.5),
                   ),
                 ),
                 onChanged: (_) => setState(() {}),
@@ -2326,13 +2460,20 @@ class _Step2DurationState extends State<_Step2Duration> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -2483,7 +2624,11 @@ class _Step2DurationState extends State<_Step2Duration> {
                           setState(() => _mode = 'wheel');
                           _switchUnit(i);
                         },
-                        selectedColor: Colors.teal.shade700,
+                        selectedColor: _kTeal,
+                        labelStyle: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                         backgroundColor: Colors.grey.shade100,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -2836,13 +2981,20 @@ class _Step3SelectDaysState extends State<_Step3SelectDays> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -3000,13 +3152,20 @@ class _Step4HowManyTimesPerDayState extends State<_Step4HowManyTimesPerDay> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -3111,20 +3270,27 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _StepHeader(
                 medicationName: widget.medicationName,
-                title: AppLocalizations.of(context)!.stepDoseTitle,
-                subtitle: AppLocalizations.of(context)!.stepDoseSub,
+                title: AppLocalizations.of(context)!.stepTimesTitle,
+                subtitle: AppLocalizations.of(context)!.stepTimesSub,
               ),
               ...widget.selectedTimes.asMap().entries.map((entry) {
                 final int index = entry.key;
@@ -3142,7 +3308,16 @@ class _Step4SetTimesState extends State<_Step5SetTimes> {
                               labelText: AppLocalizations.of(
                                 context,
                               )!.timeNumber(index + 1),
-                              border: const OutlineInputBorder(),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: _kTeal,
+                                  width: 1.5,
+                                ),
+                              ),
                             ),
                             child: Text(
                               time?.format(context) ??
@@ -3252,13 +3427,20 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
     final loc = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -3275,7 +3457,13 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
                 decoration: InputDecoration(
                   labelText: loc.notes,
                   hintText: loc.optionalInstructions,
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _kTeal, width: 1.5),
+                  ),
                 ),
               ),
 
@@ -3543,10 +3731,17 @@ class _Step8Summary extends StatelessWidget {
               subtitle: AppLocalizations.of(context)!.stepSummarySub,
             ),
           ),
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.0),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -3587,16 +3782,25 @@ class _Step8Summary extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: ElevatedButton(
-              onPressed: onSave,
-              style: buttonStyle,
-              child: Text(
-                isEditing
-                    ? AppLocalizations.of(context)!.saveChangesBtn
-                    : AppLocalizations.of(context)!.addMedBtn,
+          ElevatedButton(
+            onPressed: onSave,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kNavy,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(50),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
+              textStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            child: Text(
+              isEditing
+                  ? AppLocalizations.of(context)!.saveChangesBtn
+                  : AppLocalizations.of(context)!.addMedBtn,
             ),
           ),
         ],
@@ -3611,15 +3815,32 @@ class _SummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 9.0),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          Expanded(
+            flex: 2,
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A2340),
+              ),
+            ),
           ),
         ],
       ),

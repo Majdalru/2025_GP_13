@@ -749,9 +749,9 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
               onTap: () => setState(() => _filter = i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 11,
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.isCaregiverView ? 12 : 18,
+                  vertical: widget.isCaregiverView ? 7 : 11,
                 ),
                 decoration: BoxDecoration(
                   color: selected ? color : Colors.white,
@@ -776,7 +776,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                     Text(
                       labels[i],
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: widget.isCaregiverView ? 13 : 17,
                         fontWeight: FontWeight.w700,
                         color: selected
                             ? Colors.white
@@ -797,7 +797,7 @@ class _TodaysMedsTabState extends State<TodaysMedsTab> {
                         child: Text(
                           '${missed.length}',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: widget.isCaregiverView ? 11 : 13,
                             fontWeight: FontWeight.w800,
                             color: selected
                                 ? Colors.red.shade700
@@ -1048,233 +1048,290 @@ class _TodayMedicationCard extends StatelessWidget {
         break;
     }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: isCaregiverView ? 10 : 14),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cardBorder, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDimmed ? 0.03 : 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isCaregiverView ? 14 : 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header: icon + name + status pill ──────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(isCaregiverView ? 10 : 13),
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    Icons.medication_outlined,
-                    color: iconColor,
-                    size: isCaregiverView ? 26 : 32,
-                  ),
+    // ── Caregiver: clean white card, left accent line, no tint/border ─
+    final Color effectiveCardBg = isCaregiverView ? Colors.white : cardBg;
+    final Color effectiveCardBorder = isCaregiverView
+        ? Colors.transparent
+        : cardBorder;
+    final double effectiveBorderW = isCaregiverView ? 0.0 : 1.5;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(isCaregiverView ? 14 : 18),
+      child: Stack(
+        children: [
+          Container(
+            margin: EdgeInsets.only(bottom: isCaregiverView ? 10 : 14),
+            decoration: BoxDecoration(
+              color: effectiveCardBg,
+              borderRadius: BorderRadius.circular(isCaregiverView ? 14 : 18),
+              border: effectiveBorderW > 0
+                  ? Border.all(
+                      color: effectiveCardBorder,
+                      width: effectiveBorderW,
+                    )
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDimmed ? 0.03 : 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: isCaregiverView ? 18 : (isCaregiverView ? 14 : 18),
+                right: isCaregiverView ? 14 : 18,
+                top: isCaregiverView ? 14 : 18,
+                bottom: isCaregiverView ? 14 : 18,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Header: icon + name + status pill ──────────────
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        med.name,
-                        style: TextStyle(
-                          fontSize: nameFontSize,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1A2340),
+                      Container(
+                        padding: EdgeInsets.all(isCaregiverView ? 10 : 13),
+                        decoration: BoxDecoration(
+                          color: iconBg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.medication_outlined,
+                          color: iconColor,
+                          size: isCaregiverView ? 26 : 32,
                         ),
                       ),
-                      if (med.doseForm != null ||
-                          (med.doseStrength != null &&
-                              med.doseStrength!.isNotEmpty)) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          [
-                            if (med.doseForm != null) med.doseForm!,
-                            if (med.doseStrength != null &&
-                                med.doseStrength!.isNotEmpty)
-                              med.doseStrength!,
-                          ].join(' · '),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              med.name,
+                              style: TextStyle(
+                                fontSize: nameFontSize,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1A2340),
+                              ),
+                            ),
+                            if (med.doseForm != null ||
+                                (med.doseStrength != null &&
+                                    med.doseStrength!.isNotEmpty)) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                [
+                                  if (med.doseForm != null) med.doseForm!,
+                                  if (med.doseStrength != null &&
+                                      med.doseStrength!.isNotEmpty)
+                                    med.doseStrength!,
+                                ].join(' · '),
+                                style: TextStyle(
+                                  fontSize: subFontSize - 1,
+                                  color: const Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusPillBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          statusLabel,
                           style: TextStyle(
-                            fontSize: subFontSize - 1,
-                            color: const Color(0xFF6B7280),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: statusPillText,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: const Color(0xFFF0F1F3),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Time chip ────────────────────────────────────────
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isCaregiverView
+                              ? const Color(0xFFF3F4F6)
+                              : iconBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isCaregiverView
+                                ? const Color(0xFFE5E7EB)
+                                : cardBorder,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.access_time_outlined,
+                              size: 17,
+                              color: iconColor,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              time.format(context),
+                              style: TextStyle(
+                                fontSize: subFontSize,
+                                fontWeight: FontWeight.w700,
+                                color: iconColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (takenTime != null) ...[
+                        const SizedBox(width: 10),
+                        Text(
+                          '${loc.at} ${DateFormat('h:mm a').format(takenTime.toDate())}',
+                          style: TextStyle(
+                            fontSize: subFontSize - 2,
+                            color: iconColor.withOpacity(0.8),
                           ),
                         ),
                       ],
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusPillBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: statusPillText,
-                    ),
-                  ),
-                ),
-              ],
-            ),
 
-            const SizedBox(height: 14),
-            Divider(height: 1, thickness: 1, color: const Color(0xFFF0F1F3)),
-            const SizedBox(height: 12),
-
-            // ── Time chip ────────────────────────────────────────
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: cardBorder, width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.access_time_outlined,
-                        size: 17,
-                        color: iconColor,
+                  // ── Frequency ────────────────────────────────────────
+                  if (med.frequency != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${loc.frequency}: ${med.frequency}',
+                      style: TextStyle(
+                        fontSize: subFontSize - 1,
+                        color: const Color(0xFF6B7280),
                       ),
-                      const SizedBox(width: 5),
-                      Text(
-                        time.format(context),
-                        style: TextStyle(
-                          fontSize: subFontSize,
-                          fontWeight: FontWeight.w700,
-                          color: iconColor,
+                    ),
+                  ],
+
+                  // ── Notes ────────────────────────────────────────────
+                  if (med.notes != null && med.notes!.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      '${loc.notes}: ${med.notes}',
+                      style: TextStyle(
+                        fontSize: subFontSize - 1,
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+
+                  // ── Action buttons ───────────────────────────────────
+                  if (!isCaregiverView) ...[
+                    if (showTakenButton) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: canMarkAsTaken ? onTakenPressed : null,
+                          icon: const Icon(
+                            Icons.check_circle_outline,
+                            size: 26,
+                          ),
+                          label: Text(
+                            isStrictlyPastDue || status == DoseStatus.missed
+                                ? loc.markAsTakenLate
+                                : loc.markAsTaken,
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: canMarkAsTaken
+                                ? buttonColor
+                                : Colors.grey.shade300,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: buttonVPad),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: canMarkAsTaken ? 2 : 0,
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ),
-                if (takenTime != null) ...[
-                  const SizedBox(width: 10),
-                  Text(
-                    '${loc.at} ${DateFormat('h:mm a').format(takenTime.toDate())}',
-                    style: TextStyle(
-                      fontSize: subFontSize - 2,
-                      color: iconColor.withOpacity(0.8),
-                    ),
-                  ),
+                    if (showUndoButton) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: onUndoPressed,
+                          icon: const Icon(Icons.undo, size: 24),
+                          label: Text(
+                            loc.undo,
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1A2340),
+                            side: BorderSide(
+                              color: const Color(0xFF1A2340).withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              vertical: buttonVPad - 2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ],
-              ],
+              ),
             ),
-
-            // ── Frequency ────────────────────────────────────────
-            if (med.frequency != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${loc.frequency}: ${med.frequency}',
-                style: TextStyle(
-                  fontSize: subFontSize - 1,
-                  color: const Color(0xFF6B7280),
-                ),
-              ),
-            ],
-
-            // ── Notes ────────────────────────────────────────────
-            if (med.notes != null && med.notes!.isNotEmpty) ...[
-              const SizedBox(height: 5),
-              Text(
-                '${loc.notes}: ${med.notes}',
-                style: TextStyle(
-                  fontSize: subFontSize - 1,
-                  color: const Color(0xFF6B7280),
-                ),
-              ),
-            ],
-
-            // ── Action buttons ───────────────────────────────────
-            if (!isCaregiverView) ...[
-              if (showTakenButton) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: canMarkAsTaken ? onTakenPressed : null,
-                    icon: const Icon(Icons.check_circle_outline, size: 26),
-                    label: Text(
-                      isStrictlyPastDue || status == DoseStatus.missed
-                          ? loc.markAsTakenLate
-                          : loc.markAsTaken,
-                      style: TextStyle(
-                        fontSize: buttonFontSize,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: canMarkAsTaken
-                          ? buttonColor
-                          : Colors.grey.shade300,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: buttonVPad),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      elevation: canMarkAsTaken ? 2 : 0,
-                    ),
+          ),
+          // ── Left accent bar (caregiver only) ─────────────────────
+          if (isCaregiverView)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 10, // matches margin
+              child: Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: statusPillBg,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(14),
+                    bottomLeft: Radius.circular(14),
                   ),
                 ),
-              ],
-              if (showUndoButton) ...[
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: onUndoPressed,
-                    icon: const Icon(Icons.undo, size: 24),
-                    label: Text(
-                      loc.undo,
-                      style: TextStyle(
-                        fontSize: buttonFontSize,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1A2340),
-                      side: BorderSide(
-                        color: const Color(0xFF1A2340).withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: buttonVPad - 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ],
-        ),
+              ),
+            ),
+        ],
       ),
     );
   }

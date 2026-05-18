@@ -5,11 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-import '../widgets/app_drawer.dart';
 import 'home_page.dart';
 import 'browse_page.dart';
 import 'meds_summary_page.dart';
 import 'location_page.dart';
+import 'settings_page.dart';
 import '../medmain.dart';
 import '../services/medication_scheduler.dart';
 import '../services/notification_service.dart';
@@ -17,7 +17,6 @@ import '../services/notification_service.dart';
 class ElderlyProfile {
   final String uid;
   final String name;
-
   ElderlyProfile({required this.uid, required this.name});
 }
 
@@ -41,14 +40,20 @@ class _HomeShellState extends State<HomeShell> {
   String? _activeAlertId;
   String? _activeAlertElderlyId;
   String? _activeAlertElderlyName;
+  String? _caregiverName; // for greeting
 
   final Set<String> _shownAlertDialogs = {};
   final AudioPlayer _emergencyPlayer = AudioPlayer();
+
+  // ── Palette ───────────────────────────────────────────────────────────────
+  static const _kNavy = Color(0xFF102E50);
+  static const _kTeal = Color(0xFF4E949C);
 
   @override
   void initState() {
     super.initState();
     _fetchLinkedProfiles();
+    _fetchCaregiverName();
     _subscribeToCaregiverDoc();
     _scheduleNotificationsForUser();
     _listenToEmergencyAlerts();
@@ -63,6 +68,30 @@ class _HomeShellState extends State<HomeShell> {
     super.dispose();
   }
 
+  // ── Caregiver name for greeting ───────────────────────────────────────────
+  Future<void> _fetchCaregiverName() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final data = doc.data() ?? {};
+    final first = (data['firstName'] ?? '').toString().trim();
+    if (mounted && first.isNotEmpty) {
+      setState(() => _caregiverName = first);
+    }
+  }
+
+  // ── Greeting ──────────────────────────────────────────────────────────────
+  String _greeting(AppLocalizations loc) {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return loc.goodMorning;
+    if (hour < 17) return loc.goodAfternoon;
+    return loc.goodEvening;
+  }
+
+  // ── Emergency sound ───────────────────────────────────────────────────────
   Future<void> _playEmergencySound() async {
     try {
       await _emergencyPlayer.stop();
@@ -92,81 +121,73 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  // =========================
-  // 🚨 SOS LISTENER
-  // =========================
+  // ── SOS listener ─────────────────────────────────────────────────────────
   void _listenToEmergencyAlerts() {
     _emergencySub = FirebaseFirestore.instance
         .collection('emergency_alerts')
         .where('status', whereIn: ['active', 'seen'])
         .snapshots()
         .listen((snapshot) async {
-      final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
-      if (caregiverUid == null) return;
+          final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
+          if (caregiverUid == null) return;
 
-      final caregiverDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(caregiverUid)
-          .get();
+          final caregiverDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(caregiverUid)
+              .get();
 
-      final linkedIds = List<String>.from(
-        caregiverDoc.data()?['elderlyIds'] ?? [],
-      );
+          final linkedIds = List<String>.from(
+            caregiverDoc.data()?['elderlyIds'] ?? [],
+          );
 
-      QueryDocumentSnapshot? activeDoc;
+          QueryDocumentSnapshot? activeDoc;
+          for (final doc in snapshot.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final elderlyId = data['elderlyId']?.toString();
+            if (elderlyId != null && linkedIds.contains(elderlyId)) {
+              activeDoc = doc;
+              break;
+            }
+          }
 
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final elderlyId = data['elderlyId']?.toString();
+          if (!mounted) return;
 
-        if (elderlyId != null && linkedIds.contains(elderlyId)) {
-          activeDoc = doc;
-          break;
-        }
-      }
+          if (activeDoc == null) {
+            await _stopEmergencySound();
+            setState(() {
+              _activeAlertId = null;
+              _activeAlertElderlyId = null;
+              _activeAlertElderlyName = null;
+            });
+            return;
+          }
 
-      if (!mounted) return;
+          final data = activeDoc.data() as Map<String, dynamic>;
+          final elderlyId = data['elderlyId']?.toString() ?? '';
+          final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
+          final alertStatus = data['status']?.toString() ?? 'active';
 
-      if (activeDoc == null) {
-        await _stopEmergencySound();
+          setState(() {
+            _activeAlertId = activeDoc!.id;
+            _activeAlertElderlyId = elderlyId;
+            _activeAlertElderlyName = elderlyName;
+          });
 
-        setState(() {
-          _activeAlertId = null;
-          _activeAlertElderlyId = null;
-          _activeAlertElderlyName = null;
+          if (alertStatus == 'active' &&
+              !_shownAlertDialogs.contains(activeDoc.id)) {
+            _shownAlertDialogs.add(activeDoc.id);
+            await _playEmergencySound();
+            await _showEmergencyLocalNotification(
+              elderlyName: elderlyName,
+              elderlyId: elderlyId,
+            );
+            _showEmergencyDialog(
+              alertId: activeDoc.id,
+              elderlyId: elderlyId,
+              elderlyName: elderlyName,
+            );
+          }
         });
-        return;
-      }
-
-      final data = activeDoc.data() as Map<String, dynamic>;
-      final elderlyId = data['elderlyId']?.toString() ?? '';
-      final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
-      final alertStatus = data['status']?.toString() ?? 'active';
-
-      setState(() {
-        _activeAlertId = activeDoc!.id;
-        _activeAlertElderlyId = elderlyId;
-        _activeAlertElderlyName = elderlyName;
-      });
-
-      // Show popup + local notification + emergency sound only once for each new active alert.
-      if (alertStatus == 'active' && !_shownAlertDialogs.contains(activeDoc.id)) {
-        _shownAlertDialogs.add(activeDoc.id);
-
-        await _playEmergencySound();
-
-        await _showEmergencyLocalNotification(
-          elderlyName: elderlyName,
-          elderlyId: elderlyId,
-        );
-
-        _showEmergencyDialog(
-          alertId: activeDoc.id,
-          elderlyId: elderlyId,
-          elderlyName: elderlyName,
-        );
-      }
-    });
   }
 
   void _showEmergencyDialog({
@@ -175,88 +196,70 @@ class _HomeShellState extends State<HomeShell> {
     required String elderlyName,
   }) {
     if (!mounted) return;
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.red.shade50,
-          title: Row(
-            children: const [
-              Icon(Icons.warning_amber_rounded, color: Colors.red),
-              SizedBox(width: 8),
-              Text(
-                "Emergency Alert",
-                style: TextStyle(color: Colors.red),
-              ),
-            ],
-          ),
-          content: Text(
-            "$elderlyName needs help!\nOpen location now.",
-            style: const TextStyle(fontSize: 18),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                await _stopEmergencySound();
-                if (!context.mounted) return;
-                Navigator.pop(context);
-              },
-              child: const Text("Dismiss"),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              onPressed: () async {
-                await FirebaseFirestore.instance
-                    .collection('emergency_alerts')
-                    .doc(alertId)
-                    .update({
-                  'status': 'seen',
-                  'seenAt': FieldValue.serverTimestamp(),
-                });
-
-                await _stopEmergencySound();
-
-                if (!context.mounted) return;
-                Navigator.pop(context);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => LocationPage(
-                      elderlyId: elderlyId,
-                    ),
-                  ),
-                );
-              },
-              child: const Text("View Location"),
-            ),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.red.shade50,
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Emergency Alert', style: TextStyle(color: Colors.red)),
           ],
-        );
-      },
+        ),
+        content: Text(
+          '$elderlyName needs help!\nOpen location now.',
+          style: const TextStyle(fontSize: 18),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await _stopEmergencySound();
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            },
+            child: const Text('Dismiss'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('emergency_alerts')
+                  .doc(alertId)
+                  .update({
+                    'status': 'seen',
+                    'seenAt': FieldValue.serverTimestamp(),
+                  });
+              await _stopEmergencySound();
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LocationPage(elderlyId: elderlyId),
+                ),
+              );
+            },
+            child: const Text('View Location'),
+          ),
+        ],
+      ),
     );
   }
 
   Future<void> _markEmergencyInactive() async {
     final alertId = _activeAlertId;
-
     if (alertId == null) return;
-
     await FirebaseFirestore.instance
         .collection('emergency_alerts')
         .doc(alertId)
         .update({
-      'status': 'inactive',
-      'endedAt': FieldValue.serverTimestamp(),
-    });
-
+          'status': 'inactive',
+          'endedAt': FieldValue.serverTimestamp(),
+        });
     await _stopEmergencySound();
-
     if (!mounted) return;
-
     setState(() {
       _activeAlertId = null;
       _activeAlertElderlyId = null;
@@ -267,37 +270,32 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _confirmDangerResolved() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Confirm Safety"),
-          content: const Text(
-            "Are you sure the danger is gone and the elderly is safe?",
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Safety'),
+        content: const Text(
+          'Are you sure the danger is gone and the elderly is safe?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("No"),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.green),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Yes, safe"),
-            ),
-          ],
-        );
-      },
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes, safe'),
+          ),
+        ],
+      ),
     );
-
-    if (confirmed == true) {
-      await _markEmergencyInactive();
-    }
+    if (confirmed == true) await _markEmergencyInactive();
   }
 
+  // ── Emergency banner ──────────────────────────────────────────────────────
   Widget _buildEmergencyBanner() {
     if (_activeAlertId == null || _activeAlertElderlyId == null) {
       return const SizedBox.shrink();
     }
-
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
@@ -322,7 +320,7 @@ class _HomeShellState extends State<HomeShell> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  "Active Emergency: ${_activeAlertElderlyName ?? 'Elderly'}",
+                  'Active Emergency: ${_activeAlertElderlyName ?? 'Elderly'}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -334,7 +332,7 @@ class _HomeShellState extends State<HomeShell> {
           ),
           const SizedBox(height: 8),
           const Text(
-            "An emergency alert is currently active.",
+            'An emergency alert is currently active.',
             style: TextStyle(color: Colors.white, fontSize: 14),
           ),
           const SizedBox(height: 12),
@@ -352,25 +350,22 @@ class _HomeShellState extends State<HomeShell> {
                           .collection('emergency_alerts')
                           .doc(_activeAlertId)
                           .update({
-                        'status': 'seen',
-                        'seenAt': FieldValue.serverTimestamp(),
-                      });
+                            'status': 'seen',
+                            'seenAt': FieldValue.serverTimestamp(),
+                          });
                     }
-
                     await _stopEmergencySound();
-
                     if (!mounted) return;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => LocationPage(
-                          elderlyId: _activeAlertElderlyId!,
-                        ),
+                        builder: (_) =>
+                            LocationPage(elderlyId: _activeAlertElderlyId!),
                       ),
                     );
                   },
                   icon: const Icon(Icons.location_on),
-                  label: const Text("View Location"),
+                  label: const Text('View Location'),
                 ),
               ),
               const SizedBox(width: 8),
@@ -382,7 +377,7 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                   onPressed: _confirmDangerResolved,
                   icon: const Icon(Icons.check_circle),
-                  label: const Text("Danger is gone"),
+                  label: const Text('Danger is gone'),
                 ),
               ),
             ],
@@ -392,46 +387,33 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  // =========================
-  // 📦 FETCH PROFILES
-  // =========================
+  // ── Fetch profiles ────────────────────────────────────────────────────────
   Future<void> _fetchLinkedProfiles() async {
     setState(() => _isLoading = true);
-
     final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
     if (caregiverUid == null) {
       setState(() => _isLoading = false);
       return;
     }
-
     try {
       final meSnap = await FirebaseFirestore.instance
           .collection('users')
           .doc(caregiverUid)
           .get();
-
-      final elderlyIds =
-          List<String>.from(meSnap.data()?['elderlyIds'] ?? []);
-
+      final elderlyIds = List<String>.from(meSnap.data()?['elderlyIds'] ?? []);
       final profiles = <ElderlyProfile>[];
-
       for (final id in elderlyIds) {
         final d = await FirebaseFirestore.instance
             .collection('users')
             .doc(id)
             .get();
-
         final x = d.data() ?? {};
-        final name =
-            "${x['firstName'] ?? ''} ${x['lastName'] ?? ''}".trim();
-
+        final name = '${x['firstName'] ?? ''} ${x['lastName'] ?? ''}'.trim();
         profiles.add(ElderlyProfile(uid: id, name: name));
       }
-
       setState(() {
         _linkedProfiles = profiles;
-        _selectedProfile =
-            profiles.isNotEmpty ? profiles.first : null;
+        _selectedProfile = profiles.isNotEmpty ? profiles.first : null;
         _isLoading = false;
       });
     } catch (e) {
@@ -442,7 +424,6 @@ class _HomeShellState extends State<HomeShell> {
   void _subscribeToCaregiverDoc() {
     final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
     if (caregiverUid == null) return;
-
     _caregiverSub = FirebaseFirestore.instance
         .collection('users')
         .doc(caregiverUid)
@@ -452,115 +433,376 @@ class _HomeShellState extends State<HomeShell> {
 
   void _selectProfile(ElderlyProfile profile) {
     setState(() => _selectedProfile = profile);
-    Navigator.pop(context);
   }
 
-  // =========================
-  // 🧠 UI
-  // =========================
-  @override
-  Widget build(BuildContext context) {
-    final pages = [
-      _selectedProfile != null
-          ? HomePage(
-              elderlyId: _selectedProfile!.uid,
-              elderlyName: _selectedProfile!.name,
+  // ── Elderly chip initials ─────────────────────────────────────────────────
+  String _initials(String name) {
+    final parts = name.split(' ').where((w) => w.isNotEmpty).take(2).toList();
+    return parts.map((w) => w[0].toUpperCase()).join();
+  }
 
-              onTapArrowToMedsSummary: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MedsSummaryPage(
-                      elderlyId: _selectedProfile!.uid,
+  // ── Top bar (inline, no AppBar — matches elderly home style) ─────────────
+  Widget _buildTopBar(AppLocalizations loc) {
+    final greet = _greeting(loc);
+    final name = _caregiverName ?? '';
+    final profile = _selectedProfile;
+
+    return Container(
+      color: const Color(0xFFF7F8FA),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.of(context).padding.top + 14,
+        20,
+        12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Row 1: greeting + settings ───────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greet,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFF4DB6AC),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                );
-              },
-
-              onTapArrowToMedmain: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => Medmain(
-                      elderlyProfile: _selectedProfile!,
+                    Text(
+                      name.isNotEmpty ? name : loc.caregiver,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1A2340),
+                      ),
                     ),
-                  ),
-                );
-              },
-
-              onTapEmergency: () {
-                Navigator.push(
+                  ],
+                ),
+              ),
+              // Settings icon
+              GestureDetector(
+                onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => LocationPage(
-                      elderlyId: _selectedProfile!.uid,
+                    builder: (_) => SettingsPage(
+                      linkedProfiles: _linkedProfiles,
+                      selectedProfile: _selectedProfile,
+                      onProfileSelected: _selectProfile,
+                      onLogoutConfirmed: () {},
+                      onProfileLinked: _fetchLinkedProfiles,
                     ),
                   ),
-                );
-              },
-            )
-          : const Center(child: Text("No profile selected")),
-
-      BrowsePage(selectedProfile: _selectedProfile),
-    ];
-
-    return Scaffold(
-      drawer: AppDrawer(
-        linkedProfiles: _linkedProfiles,
-        selectedProfile: _selectedProfile,
-        onProfileSelected: _selectProfile,
-        onLogoutConfirmed: () {},
-        onProfileLinked: _fetchLinkedProfiles,
-      ),
-      appBar: AppBar(
-        title: Text(
-          _bottomNavIndex == 0 ? "Home" : "Browse",
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _buildEmergencyBanner(),
-                Expanded(
-                  child: pages[_bottomNavIndex],
                 ),
-              ],
+                child: const Icon(
+                  Icons.settings_outlined,
+                  size: 34,
+                  color: Color(0xFF1A2340),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Row 2: managing chip (wider, bigger) ─────────────────
+          if (profile != null)
+            GestureDetector(
+              onTap: () => _showProfileSwitcher(loc),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4DB6AC), Color(0xFF00897B)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4DB6AC).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _initials(profile.name),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            loc.managing,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.75),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            profile.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_linkedProfiles.length > 1) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              loc.change,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(
+                              Icons.expand_more,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SettingsPage(
+                    linkedProfiles: _linkedProfiles,
+                    selectedProfile: _selectedProfile,
+                    onProfileSelected: _selectProfile,
+                    onLogoutConfirmed: () {},
+                    onProfileLinked: _fetchLinkedProfiles,
+                  ),
+                ),
+              ),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.person_add_outlined,
+                      color: Color(0xFF4DB6AC),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      loc.linkNewElderly,
+                      style: const TextStyle(
+                        color: Color(0xFF4DB6AC),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _bottomNavIndex,
-        onDestinationSelected: (i) =>
-            setState(() => _bottomNavIndex = i),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.home), label: "Home"),
-          NavigationDestination(
-              icon: Icon(Icons.apps), label: "Browse"),
         ],
       ),
     );
   }
 
-  // =========================
-  // 🔔 (اختياري)
-  // =========================
+  // kept for compatibility — returns null so Scaffold uses no AppBar
+  PreferredSizeWidget? _buildAppBar(AppLocalizations loc) => null;
+
+  // ── Profile switcher
+  void _showProfileSwitcher(AppLocalizations loc) {
+    if (_linkedProfiles.length <= 1) return;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              loc.selectProfile,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 14),
+            ..._linkedProfiles.map((p) {
+              final isSelected = _selectedProfile?.uid == p.uid;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: isSelected
+                      ? _kTeal
+                      : const Color(0xFFF0F2F5),
+                  child: Text(
+                    _initials(p.name),
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.grey,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  p.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                trailing: isSelected
+                    ? const Icon(Icons.check_circle_rounded, color: _kTeal)
+                    : null,
+                onTap: () {
+                  _selectProfile(p);
+                  Navigator.pop(ctx);
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
+    final pages = [
+      _selectedProfile != null
+          ? HomePage(
+              elderlyId: _selectedProfile!.uid,
+              elderlyName: _selectedProfile!.name,
+              onTapArrowToMedsSummary: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      MedsSummaryPage(elderlyId: _selectedProfile!.uid),
+                ),
+              ),
+              onTapArrowToMedmain: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => Medmain(elderlyProfile: _selectedProfile!),
+                ),
+              ),
+              onTapEmergency: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      LocationPage(elderlyId: _selectedProfile!.uid),
+                ),
+              ),
+            )
+          : Center(child: Text(loc.noProfileSelected)),
+      BrowsePage(selectedProfile: _selectedProfile),
+    ];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildTopBar(loc),
+                _buildEmergencyBanner(),
+                Expanded(child: pages[_bottomNavIndex]),
+              ],
+            ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _bottomNavIndex,
+        onDestinationSelected: (i) => setState(() => _bottomNavIndex = i),
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: loc.home,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.apps_outlined),
+            selectedIcon: const Icon(Icons.apps),
+            label: loc.browse,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Notifications ─────────────────────────────────────────────────────────
   Future<void> _scheduleNotificationsForUser() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-
     try {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
           .get();
-
       final role = userDoc.data()?['role'] as String?;
-
       if (role == 'elderly') {
         await MedicationScheduler().scheduleAllMedications(currentUser.uid);
       } else if (role == 'caregiver') {
         final elderlyIds = List<String>.from(
           userDoc.data()?['elderlyIds'] ?? [],
         );
-
         for (final elderlyId in elderlyIds) {
           await MedicationScheduler().scheduleAllMedications(elderlyId);
         }

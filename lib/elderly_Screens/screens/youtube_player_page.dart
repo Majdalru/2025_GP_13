@@ -28,9 +28,11 @@ class _YouTubePlayerPageState extends State<YouTubePlayerPage> {
         '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
       )
       ..setBackgroundColor(Colors.black)
-      ..setNavigationDelegate(NavigationDelegate(
-        onWebResourceError: (e) => debugPrint('Error: ${e.description}'),
-      ));
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onWebResourceError: (e) => debugPrint('Error: ${e.description}'),
+        ),
+      );
 
     // نفتح m.youtube.com مباشرة بدل iframe
     if (videoId != null) {
@@ -47,12 +49,12 @@ class _YouTubePlayerPageState extends State<YouTubePlayerPage> {
     final url = widget.item.url;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1B3A52),
+        backgroundColor: const Color(0xFF102E50),
         iconTheme: const IconThemeData(color: Colors.white, size: 32),
         title: Text(
           widget.item.title,
           style: const TextStyle(
-            color: Colors.white,
+            color: Color.fromARGB(255, 255, 255, 255),
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),

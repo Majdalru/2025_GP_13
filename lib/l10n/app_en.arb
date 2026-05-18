@@ -915,5 +915,36 @@
 "accessMedications": "Medications",
 "accessLibrary": "Daily Library",
 "accessMedia": "Media & Shared Content",
-"featureDisabledByCaregiver": "This feature has been disabled by your caregiver."
+"featureDisabledByCaregiver": "This feature has been disabled by your caregiver.",
+"goodMorning": "Good morning,",
+  "goodAfternoon": "Good afternoon,",
+  "goodEvening": "Good evening,",
+  "managing": "Managing",
+  "selectProfile": "Select profile",
+  "linkedElderly": "Linked Elderly",
+  "noLinkedProfiles": "No profiles linked yet.",
+  "linkNewElderly": "Link new elderly",
+  "enterElderlyCode": "Enter elderly linking code",
+  "invalidCode": "Invalid code. Please try again.",
+  "profileLinkedSuccessfully": "Profile linked successfully",
+  "appSettings": "App Settings",
+  "account": "Account",
+  "logout": "Log out",
+  "language": "Language",
+  "notifications": "Notifications",
+  "upcomingDoses": "Upcoming doses",
+  "allDosesCompleted": "All doses completed for today",
+  "soon": "Soon",
+  "later": "Later",
+  "scan": "",
+  "info": "Medication Info",
+  "moreDoses": "more doses",
+  "dosesCompletedOf": "{completed} of {total} doses completed",
+  "@dosesCompletedOf": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
+
 }
