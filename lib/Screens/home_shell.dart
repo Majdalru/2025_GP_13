@@ -122,32 +122,66 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   // ── SOS listener ─────────────────────────────────────────────────────────
-  void _listenToEmergencyAlerts() {
+  void _listenToEmergencyAlerts() async {
+    await _emergencySub?.cancel();
+
+    final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
+    if (caregiverUid == null) return;
+
+    final caregiverDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(caregiverUid)
+        .get();
+
+    final linkedIds = List<String>.from(
+      caregiverDoc.data()?['elderlyIds'] ?? [],
+    );
+
+    debugPrint('👤 CURRENT CAREGIVER UID: $caregiverUid');
+    debugPrint('🔗 Linked elderly IDs: $linkedIds');
+
+    if (linkedIds.isEmpty) {
+      await _stopEmergencySound();
+
+      if (!mounted) return;
+      setState(() {
+        _activeAlertId = null;
+        _activeAlertElderlyId = null;
+        _activeAlertElderlyName = null;
+      });
+      return;
+    }
+
+    // Firestore whereIn supports up to 10 values.
+    // Your app usually links a small number of elderly profiles.
+    final idsForQuery = linkedIds.take(10).toList();
+
     _emergencySub = FirebaseFirestore.instance
         .collection('emergency_alerts')
-        .where('status', whereIn: ['active', 'seen'])
+        .where('elderlyId', whereIn: idsForQuery)
         .snapshots()
         .listen(
       (snapshot) async {
-        final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
-        if (caregiverUid == null) return;
+        debugPrint('🔥 Emergency listener triggered: ${snapshot.docs.length}');
 
-        final caregiverDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(caregiverUid)
-            .get();
-
-        final linkedIds = List<String>.from(
-          caregiverDoc.data()?['elderlyIds'] ?? [],
-        );
-
-        final linkedAlerts = snapshot.docs.where((doc) {
+        final validAlerts = snapshot.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
+
           final elderlyId = data['elderlyId']?.toString();
-          return elderlyId != null && linkedIds.contains(elderlyId);
+          final status = data['status']?.toString();
+
+          final isLinked = elderlyId != null && linkedIds.contains(elderlyId);
+          final isOpenStatus = status == 'active' || status == 'seen';
+
+          debugPrint('🚨 Alert ID: ${doc.id}');
+          debugPrint('🚨 Alert elderlyId: $elderlyId');
+          debugPrint('🚨 Alert status: $status');
+          debugPrint('✅ Is linked? $isLinked');
+
+          return isLinked && isOpenStatus;
         }).toList();
 
-        linkedAlerts.sort((a, b) {
+        validAlerts.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
 
@@ -170,7 +204,7 @@ class _HomeShellState extends State<HomeShell> {
 
         if (!mounted) return;
 
-        if (linkedAlerts.isEmpty) {
+        if (validAlerts.isEmpty) {
           await _stopEmergencySound();
 
           setState(() {
@@ -181,7 +215,7 @@ class _HomeShellState extends State<HomeShell> {
           return;
         }
 
-        final latestAlert = linkedAlerts.first;
+        final latestAlert = validAlerts.first;
         final data = latestAlert.data() as Map<String, dynamic>;
 
         final elderlyId = data['elderlyId']?.toString() ?? '';
@@ -454,11 +488,15 @@ class _HomeShellState extends State<HomeShell> {
   void _subscribeToCaregiverDoc() {
     final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
     if (caregiverUid == null) return;
+
     _caregiverSub = FirebaseFirestore.instance
         .collection('users')
         .doc(caregiverUid)
         .snapshots()
-        .listen((_) => _fetchLinkedProfiles());
+        .listen((_) {
+      _fetchLinkedProfiles();
+      _listenToEmergencyAlerts();
+    });
   }
 
   void _selectProfile(ElderlyProfile profile) {
