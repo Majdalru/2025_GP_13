@@ -126,77 +126,98 @@ class _HomeShellState extends State<HomeShell> {
     _emergencySub = FirebaseFirestore.instance
         .collection('emergency_alerts')
         .where('status', whereIn: ['active', 'seen'])
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .listen((snapshot) async {
-          final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
-          if (caregiverUid == null) return;
+        .listen(
+      (snapshot) async {
+        final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
+        if (caregiverUid == null) return;
 
-          final caregiverDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(caregiverUid)
-              .get();
+        final caregiverDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(caregiverUid)
+            .get();
 
-          final linkedIds = List<String>.from(
-            caregiverDoc.data()?['elderlyIds'] ?? [],
-          );
+        final linkedIds = List<String>.from(
+          caregiverDoc.data()?['elderlyIds'] ?? [],
+        );
 
-          QueryDocumentSnapshot? latestLinkedAlert;
+        final linkedAlerts = snapshot.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final elderlyId = data['elderlyId']?.toString();
+          return elderlyId != null && linkedIds.contains(elderlyId);
+        }).toList();
 
-          for (final doc in snapshot.docs) {
-            final data = doc.data() as Map<String, dynamic>;
-            final elderlyId = data['elderlyId']?.toString();
+        linkedAlerts.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
 
-            if (elderlyId != null && linkedIds.contains(elderlyId)) {
-              latestLinkedAlert = doc;
-              break; // Because alerts are ordered from newest to oldest.
-            }
+          final aTime = aData['createdAt'];
+          final bTime = bData['createdAt'];
+
+          DateTime aDate = DateTime.fromMillisecondsSinceEpoch(0);
+          DateTime bDate = DateTime.fromMillisecondsSinceEpoch(0);
+
+          if (aTime is Timestamp) {
+            aDate = aTime.toDate();
           }
 
-          if (!mounted) return;
-
-          if (latestLinkedAlert == null) {
-            await _stopEmergencySound();
-
-            setState(() {
-              _activeAlertId = null;
-              _activeAlertElderlyId = null;
-              _activeAlertElderlyName = null;
-            });
-            return;
+          if (bTime is Timestamp) {
+            bDate = bTime.toDate();
           }
 
-          final data = latestLinkedAlert.data() as Map<String, dynamic>;
-          final elderlyId = data['elderlyId']?.toString() ?? '';
-          final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
-          final alertStatus = data['status']?.toString() ?? 'active';
+          return bDate.compareTo(aDate); // newest first
+        });
+
+        if (!mounted) return;
+
+        if (linkedAlerts.isEmpty) {
+          await _stopEmergencySound();
 
           setState(() {
-            _activeAlertId = latestLinkedAlert!.id;
-            _activeAlertElderlyId = elderlyId;
-            _activeAlertElderlyName = elderlyName;
+            _activeAlertId = null;
+            _activeAlertElderlyId = null;
+            _activeAlertElderlyName = null;
           });
+          return;
+        }
 
-          // Only play sound and show popup for a new ACTIVE alert.
-          // Seen alerts keep the banner visible but do not replay the sound.
-          if (alertStatus == 'active' &&
-              !_shownAlertDialogs.contains(latestLinkedAlert.id)) {
-            _shownAlertDialogs.add(latestLinkedAlert.id);
+        final latestAlert = linkedAlerts.first;
+        final data = latestAlert.data() as Map<String, dynamic>;
 
-            await _playEmergencySound();
+        final elderlyId = data['elderlyId']?.toString() ?? '';
+        final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
+        final alertStatus = data['status']?.toString() ?? 'active';
 
-            await _showEmergencyLocalNotification(
-              elderlyName: elderlyName,
-              elderlyId: elderlyId,
-            );
-
-            _showEmergencyDialog(
-              alertId: latestLinkedAlert.id,
-              elderlyId: elderlyId,
-              elderlyName: elderlyName,
-            );
-          }
+        setState(() {
+          _activeAlertId = latestAlert.id;
+          _activeAlertElderlyId = elderlyId;
+          _activeAlertElderlyName = elderlyName;
         });
+
+        // Only play sound and show popup for a new ACTIVE alert.
+        // Seen alerts keep the banner visible but do not replay the sound.
+        if (alertStatus == 'active' &&
+            !_shownAlertDialogs.contains(latestAlert.id)) {
+          _shownAlertDialogs.add(latestAlert.id);
+
+          await _playEmergencySound();
+
+          await _showEmergencyLocalNotification(
+            elderlyName: elderlyName,
+            elderlyId: elderlyId,
+          );
+
+          _showEmergencyDialog(
+            alertId: latestAlert.id,
+            elderlyId: elderlyId,
+            elderlyName: elderlyName,
+          );
+        }
+      },
+      onError: (e) {
+        debugPrint('❌ Emergency listener error: $e');
+      },
+    );
   }
 
   void _showEmergencyDialog({
