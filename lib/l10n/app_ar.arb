@@ -368,6 +368,18 @@
   "verificationCode": "رمز التحقق",
   "shareWithElderly": "مشاركة مع كبير السن",
   "shareLifeUpdates": "شارك تحديثات حياتك مع من تحب",
+  "accessGenerateCode": "إنشاء رمز ربط حساب",
+  "accessDeleteCaregiver": "إزالة مقدم الرعاية",
+  "lastAccessUpdate": "آخر تحديث: {name} قام بـ {action} {feature}",
+  "@lastAccessUpdate": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "action": { "type": "String" },
+      "feature": { "type": "String" }
+    }
+  },
+  "actionEnabled": "تفعيل",
+  "actionDisabled": "إيقاف",
   "pleaseSelectElderlyProfileFirst": "يرجى تحديد ملف شخصي لكبير السن من القائمة الجانبية أولاً.",
   "pleaseSelectElderlyProfile": "يرجى تحديد ملف شخصي لكبير السن أولاً.",
   "elderlyInfo": "معلومات كبير السن",

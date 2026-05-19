@@ -629,6 +629,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareLifeUpdates => 'Share your life updates with your loved';
 
   @override
+  String get accessGenerateCode => 'Generate Link Code';
+
+  @override
+  String get accessDeleteCaregiver => 'Remove Caregiver';
+
+  @override
+  String lastAccessUpdate(String name, String action, String feature) {
+    return 'Last update: $name $action $feature';
+  }
+
+  @override
+  String get actionEnabled => 'enabled';
+
+  @override
+  String get actionDisabled => 'disabled';
+
+  @override
   String get pleaseSelectElderlyProfileFirst =>
       'Please select an elderly profile from the drawer menu first.';
 

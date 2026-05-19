@@ -1214,6 +1214,36 @@ abstract class AppLocalizations {
   /// **'Share your life updates with your loved'**
   String get shareLifeUpdates;
 
+  /// No description provided for @accessGenerateCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Link Code'**
+  String get accessGenerateCode;
+
+  /// No description provided for @accessDeleteCaregiver.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Caregiver'**
+  String get accessDeleteCaregiver;
+
+  /// No description provided for @lastAccessUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Last update: {name} {action} {feature}'**
+  String lastAccessUpdate(String name, String action, String feature);
+
+  /// No description provided for @actionEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'enabled'**
+  String get actionEnabled;
+
+  /// No description provided for @actionDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'disabled'**
+  String get actionDisabled;
+
   /// No description provided for @pleaseSelectElderlyProfileFirst.
   ///
   /// In en, this message translates to:

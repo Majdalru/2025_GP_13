@@ -347,7 +347,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
   String? gender;
   String? phone;
-  List<String> caregiverNames = [];
+  List<Map<String, String>> caregiverList = [];
   bool loading = true;
 
   final VoiceAssistantService _voice = VoiceAssistantService();
@@ -362,6 +362,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   bool _medicationsEnabled = true;
   bool _libraryEnabled = true;
   bool _mediaEnabled = true;
+  bool _generateCodeEnabled = true;
+  bool _deleteCaregiverEnabled = true;
 
   // Voice card state — updated via onStateChange callbacks from the button widgets
   bool _voiceIsListening = false;
@@ -542,7 +544,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                 ? List<String>.from(data['caregiverIds'])
                 : <String>[];
 
-            final names = <String>[];
+            final currentCaregivers = <Map<String, String>>[];
 
             if (ids.isNotEmpty) {
               for (final batch in _chunk(ids, 10)) {
@@ -557,14 +559,13 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   final l = (x['lastName'] ?? '').toString().trim();
                   final email = (x['email'] ?? '').toString().trim();
                   final n = [f, l].where((s) => s.isNotEmpty).join(' ');
-                  names.add(
-                    n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown'),
-                  );
+                  final nameStr = n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown');
+                  currentCaregivers.add({'id': d.id, 'name': nameStr});
                 }
               }
             }
 
-            final newCount = names.length;
+            final newCount = currentCaregivers.length;
 
             if (!_initialCaregiverLoaded) {
               _prevCaregiverCount = newCount;
@@ -587,6 +588,26 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             }
 
             final permissions = data['permissions'] as Map<String, dynamic>?;
+            final caregiverPerms = data['caregiver_permissions'] as Map<String, dynamic>?;
+
+            bool calcMed = permissions?['medications'] ?? true;
+            bool calcLib = permissions?['library'] ?? true;
+            bool calcMedia = permissions?['media'] ?? true;
+            bool calcGenCode = permissions?['generate_code'] ?? true;
+            bool calcDeleteCaregiver = permissions?['delete_caregiver'] ?? true;
+
+            if (caregiverPerms != null) {
+              for (final cid in ids) {
+                 final cp = caregiverPerms[cid] as Map<String, dynamic>?;
+                 if (cp != null) {
+                    if (cp['medications'] == false) calcMed = false;
+                    if (cp['library'] == false) calcLib = false;
+                    if (cp['media'] == false) calcMedia = false;
+                    if (cp['generate_code'] == false) calcGenCode = false;
+                    if (cp['delete_caregiver'] == false) calcDeleteCaregiver = false;
+                 }
+              }
+            }
 
             if (!mounted) return;
 
@@ -594,10 +615,12 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               fullName = newFullName;
               gender = newGender;
               phone = newPhone;
-              caregiverNames = names;
-              _medicationsEnabled = permissions?['medications'] ?? true;
-              _libraryEnabled = permissions?['library'] ?? true;
-              _mediaEnabled = permissions?['media'] ?? true;
+              caregiverList = currentCaregivers;
+              _medicationsEnabled = calcMed;
+              _libraryEnabled = calcLib;
+              _mediaEnabled = calcMedia;
+              _generateCodeEnabled = calcGenCode;
+              _deleteCaregiverEnabled = calcDeleteCaregiver;
               loading = false;
             });
           },
@@ -715,7 +738,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                             fullName: fullName ?? '',
                             gender: gender ?? '',
                             phone: phone ?? '',
-                            caregiverNames: caregiverNames,
+                            caregiverList: caregiverList,
+                            deleteCaregiverEnabled: _deleteCaregiverEnabled,
+                            generateCodeEnabled: _generateCodeEnabled,
                             onSave: (newName, newGender, newPhone) async {
                               final user = FirebaseAuth.instance.currentUser;
                               if (user != null) {
@@ -1394,41 +1419,43 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                           },
                         ),
                         // News & Weather (Daily Library)
-                        _GridServiceCard(
-                          icon: Icons.wb_sunny_outlined,
-                          iconColor: const Color(0xFFFF8F00),
-                          iconBg: const Color(0xFFFFF8E1),
-                          title: isArabic
-                              ? 'الأخبار\nوالطقس'
-                              : 'News &\nWeather',
-                          enabled: _libraryEnabled,
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const DailyLibraryPage(),
-                              ),
-                            );
-                          },
-                        ),
+                        if (_libraryEnabled)
+                          _GridServiceCard(
+                            icon: Icons.wb_sunny_outlined,
+                            iconColor: const Color(0xFFFF8F00),
+                            iconBg: const Color(0xFFFFF8E1),
+                            title: isArabic
+                                ? 'الأخبار\nوالطقس'
+                                : 'News &\nWeather',
+                            enabled: true,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const DailyLibraryPage(),
+                                ),
+                              );
+                            },
+                          ),
                         // Media Library
-                        _GridServiceCard(
-                          icon: Icons.library_music_outlined,
-                          iconColor: const Color(0xFF7E57C2),
-                          iconBg: const Color(0xFFEDE7F6),
-                          title: isArabic ? 'مكتبة الوسائط' : 'Media Library',
-                          enabled: _mediaEnabled,
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const MediaPage(),
-                              ),
-                            );
-                          },
-                        ),
+                        if (_mediaEnabled)
+                          _GridServiceCard(
+                            icon: Icons.library_music_outlined,
+                            iconColor: const Color(0xFF7E57C2),
+                            iconBg: const Color(0xFFEDE7F6),
+                            title: isArabic ? 'مكتبة الوسائط' : 'Media Library',
+                            enabled: true,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const MediaPage(),
+                                ),
+                              );
+                            },
+                          ),
                         // Family Messages (stub — functions applied later)
                         _GridServiceCard(
                           icon: Icons.videocam_outlined,
@@ -1610,14 +1637,18 @@ class _ElderlySettingsPage extends StatelessWidget {
   final String fullName;
   final String gender;
   final String phone;
-  final List<String> caregiverNames;
+  final List<Map<String, String>> caregiverList;
+  final bool deleteCaregiverEnabled;
+  final bool generateCodeEnabled;
   final Function(String name, String gender, String phone) onSave;
 
   const _ElderlySettingsPage({
     required this.fullName,
     required this.gender,
     required this.phone,
-    required this.caregiverNames,
+    required this.caregiverList,
+    required this.deleteCaregiverEnabled,
+    required this.generateCodeEnabled,
     required this.onSave,
   });
 
@@ -1835,18 +1866,23 @@ class _ElderlySettingsPage extends StatelessWidget {
                     // ── Caregivers section ─────────────────────────
                     _SectionLabel(AppLocalizations.of(context)!.caregivers),
                     const SizedBox(height: 10),
-                    _SettingsCard(child: _CaregiversBox(names: caregiverNames)),
+                    _SettingsCard(child: _CaregiversBox(
+                      caregivers: caregiverList, 
+                      deleteEnabled: deleteCaregiverEnabled,
+                    )),
 
                     const SizedBox(height: 22),
 
-                    // ── Pairing code section ───────────────────────
-                    _SectionLabel(
-                      AppLocalizations.of(context)!.verificationCode,
-                    ),
-                    const SizedBox(height: 10),
-                    _SettingsCard(child: const _PairingCodeBox()),
+                    if (generateCodeEnabled) ...[
+                      // ── Pairing code section ───────────────────────
+                      _SectionLabel(
+                        AppLocalizations.of(context)!.verificationCode,
+                      ),
+                      const SizedBox(height: 10),
+                      _SettingsCard(child: const _PairingCodeBox()),
 
-                    const SizedBox(height: 22),
+                      const SizedBox(height: 22),
+                    ],
 
                     // ── Language section ───────────────────────────
                     _SectionLabel(isArabic ? 'اللغة' : 'Language'),
@@ -2420,13 +2456,60 @@ class _InfoBox extends StatelessWidget {
 }
 
 class _CaregiversBox extends StatelessWidget {
-  final List<String> names;
+  final List<Map<String, String>> caregivers;
+  final bool deleteEnabled;
 
-  const _CaregiversBox({required this.names});
+  const _CaregiversBox({required this.caregivers, required this.deleteEnabled});
+
+  Future<void> _unlinkCaregiver(BuildContext context, String caregiverId, String name) async {
+    final elderlyId = FirebaseAuth.instance.currentUser?.uid;
+    if (elderlyId == null) return;
+
+    final loc = AppLocalizations.of(context)!;
+    
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.deleteItem),
+        content: Text(loc.confirmDeleteProfile(name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(loc.unlink),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(elderlyId).update({
+          'caregiverIds': FieldValue.arrayRemove([caregiverId])
+        });
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc.profileUnlinked(name))),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc.errorUnlinkingProfile(e.toString()))),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (names.isEmpty) {
+    if (caregivers.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
@@ -2454,9 +2537,11 @@ class _CaregiversBox extends StatelessWidget {
     }
 
     return Column(
-      children: names.asMap().entries.map((entry) {
-        final name = entry.value;
-        final isLast = entry.key == names.length - 1;
+      children: caregivers.asMap().entries.map((entry) {
+        final caregiver = entry.value;
+        final name = caregiver['name']!;
+        final id = caregiver['id']!;
+        final isLast = entry.key == caregivers.length - 1;
         return Column(
           children: [
             Padding(
@@ -2504,6 +2589,11 @@ class _CaregiversBox extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (deleteEnabled)
+                    IconButton(
+                      icon: const Icon(Icons.person_remove_outlined, color: Colors.red),
+                      onPressed: () => _unlinkCaregiver(context, id, name),
+                    ),
                 ],
               ),
             ),

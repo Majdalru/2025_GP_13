@@ -626,6 +626,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareLifeUpdates => 'شارك تحديثات حياتك مع من تحب';
 
   @override
+  String get accessGenerateCode => 'إنشاء رمز ربط حساب';
+
+  @override
+  String get accessDeleteCaregiver => 'إزالة مقدم الرعاية';
+
+  @override
+  String lastAccessUpdate(String name, String action, String feature) {
+    return 'آخر تحديث: $name قام بـ $action $feature';
+  }
+
+  @override
+  String get actionEnabled => 'تفعيل';
+
+  @override
+  String get actionDisabled => 'إيقاف';
+
+  @override
   String get pleaseSelectElderlyProfileFirst =>
       'يرجى تحديد ملف شخصي لكبير السن من القائمة الجانبية أولاً.';
 

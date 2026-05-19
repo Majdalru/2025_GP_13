@@ -368,6 +368,18 @@
   },
   "shareWithElderly": "Share with Elderly",
   "shareLifeUpdates": "Share your life updates with your loved",
+  "accessGenerateCode": "Generate Link Code",
+  "accessDeleteCaregiver": "Remove Caregiver",
+  "lastAccessUpdate": "Last update: {name} {action} {feature}",
+  "@lastAccessUpdate": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "action": { "type": "String" },
+      "feature": { "type": "String" }
+    }
+  },
+  "actionEnabled": "enabled",
+  "actionDisabled": "disabled",
   "pleaseSelectElderlyProfileFirst": "Please select an elderly profile from the drawer menu first.",
   "pleaseSelectElderlyProfile": "Please select an elderly profile first.",
   "elderlyInfo": "Elderly Info",
