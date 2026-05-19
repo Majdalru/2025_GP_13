@@ -156,6 +156,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
       if (mounted) {
         setState(() {
+          _latestAlertId = alertRef.id;
           _latestAlertStatus = 'active';
         });
       }
@@ -231,39 +232,111 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    _emergencyStatusSub?.cancel();
+
     _emergencyStatusSub = FirebaseFirestore.instance
         .collection('emergency_alerts')
         .where('elderlyId', isEqualTo: user.uid)
-        .orderBy('createdAt', descending: true)
-        .limit(1)
         .snapshots()
-        .listen((snapshot) {
-          if (!mounted || snapshot.docs.isEmpty) return;
+        .listen(
+      (snapshot) {
+        if (!mounted) return;
 
-          final data = snapshot.docs.first.data();
-          final status = data['status']?.toString();
-
+        if (snapshot.docs.isEmpty) {
           setState(() {
-            _latestAlertStatus = status;
+            _latestAlertId = null;
+            _latestAlertStatus = null;
           });
+          return;
+        }
 
-          if (status == 'seen') {
-            final localeProvider = Provider.of<LocaleProvider>(
-              context,
-              listen: false,
+        final alerts = snapshot.docs.toList();
+
+        alerts.sort((a, b) {
+          final aData = a.data();
+          final bData = b.data();
+
+          final aTime = aData['createdAt'];
+          final bTime = bData['createdAt'];
+
+          DateTime aDate = DateTime.fromMillisecondsSinceEpoch(0);
+          DateTime bDate = DateTime.fromMillisecondsSinceEpoch(0);
+
+          if (aTime is Timestamp) {
+            aDate = aTime.toDate();
+          }
+
+          if (bTime is Timestamp) {
+            bDate = bTime.toDate();
+          }
+
+          return bDate.compareTo(aDate); // newest first
+        });
+
+        final latestDoc = alerts.first;
+        final data = latestDoc.data();
+
+        final status = data['status']?.toString();
+
+        debugPrint('👴 Elderly latest emergency alert: ${latestDoc.id}');
+        debugPrint('👴 Elderly latest status: $status');
+
+        setState(() {
+          _latestAlertId = latestDoc.id;
+          _latestAlertStatus = status;
+        });
+
+        if (status == 'seen' &&
+            _lastSeenAlertMessageShownForId != latestDoc.id) {
+          _lastSeenAlertMessageShownForId = latestDoc.id;
+
+          final localeProvider = Provider.of<LocaleProvider>(
+            context,
+            listen: false,
+          );
+          final isArabic = localeProvider.isArabic;
+
+          _showStatusMessage(
+            title: isArabic ? 'تمت مشاهدة التنبيه' : 'Alert Seen',
+            message: isArabic
+                ? 'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.'
+                : 'Your caregiver has seen your emergency alert.',
+            icon: Icons.visibility_rounded,
+            color: Colors.green.shade700,
+          );
+
+          if (isArabic) {
+            _arabicVoice.speak(
+              'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.',
             );
-            final isArabic = localeProvider.isArabic;
-
-            _showStatusMessage(
-              title: isArabic ? 'تمت مشاهدة التنبيه' : 'Alert Seen',
-              message: isArabic
-                  ? 'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.'
-                  : 'Your caregiver has seen your emergency alert.',
-              icon: Icons.visibility_rounded,
-              color: Colors.green.shade700,
+          } else {
+            _voice.speak(
+              'Your caregiver has seen your emergency alert.',
             );
           }
-        });
+        }
+
+        if (status == 'inactive') {
+          final localeProvider = Provider.of<LocaleProvider>(
+            context,
+            listen: false,
+          );
+          final isArabic = localeProvider.isArabic;
+
+          _showStatusMessage(
+            title: isArabic ? 'انتهى التنبيه' : 'Alert Resolved',
+            message: isArabic
+                ? 'تم تأكيد زوال الخطر من قبل الكيرقيفر.'
+                : 'Your caregiver confirmed that the danger is gone.',
+            icon: Icons.check_circle_rounded,
+            color: Colors.green.shade700,
+          );
+        }
+      },
+      onError: (e) {
+        debugPrint('❌ Elderly emergency status listener error: $e');
+      },
+    );
   }
 
   void _startSosHold(bool isArabic) {
@@ -371,6 +444,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
   bool _isSendingEmergency = false;
   String? _latestAlertStatus;
+  String? _latestAlertId;
+  String? _lastSeenAlertMessageShownForId;
   StreamSubscription<QuerySnapshot>? _emergencyStatusSub;
 
   Timer? _sosHoldTimer;
@@ -1252,33 +1327,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                           )!.voiceSosPreamble,
                                         );
                                         await sendEmergencyAlert();
-                                        if (!mounted) return;
-                                        showDialog(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: Text(
-                                              AppLocalizations.of(
-                                                context,
-                                              )!.emergencyTitle,
-                                            ),
-                                            content: Text(
-                                              AppLocalizations.of(
-                                                context,
-                                              )!.emergencyFlowDesc,
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: Text(
-                                                  AppLocalizations.of(
-                                                    context,
-                                                  )!.ok,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
                                         break;
                                       case VoiceCommand.goToSettings:
                                         await _voice.speak(
