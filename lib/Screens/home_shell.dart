@@ -279,7 +279,16 @@ class _HomeShellState extends State<HomeShell> {
         actions: [
           TextButton(
             onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('emergency_alerts')
+                  .doc(alertId)
+                  .update({
+                    'status': 'seen',
+                    'seenAt': FieldValue.serverTimestamp(),
+                  });
+
               await _stopEmergencySound();
+
               if (!context.mounted) return;
               Navigator.pop(context);
             },
