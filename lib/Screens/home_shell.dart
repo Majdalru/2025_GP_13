@@ -126,6 +126,7 @@ class _HomeShellState extends State<HomeShell> {
     _emergencySub = FirebaseFirestore.instance
         .collection('emergency_alerts')
         .where('status', whereIn: ['active', 'seen'])
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) async {
           final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
@@ -140,20 +141,23 @@ class _HomeShellState extends State<HomeShell> {
             caregiverDoc.data()?['elderlyIds'] ?? [],
           );
 
-          QueryDocumentSnapshot? activeDoc;
+          QueryDocumentSnapshot? latestLinkedAlert;
+
           for (final doc in snapshot.docs) {
             final data = doc.data() as Map<String, dynamic>;
             final elderlyId = data['elderlyId']?.toString();
+
             if (elderlyId != null && linkedIds.contains(elderlyId)) {
-              activeDoc = doc;
-              break;
+              latestLinkedAlert = doc;
+              break; // Because alerts are ordered from newest to oldest.
             }
           }
 
           if (!mounted) return;
 
-          if (activeDoc == null) {
+          if (latestLinkedAlert == null) {
             await _stopEmergencySound();
+
             setState(() {
               _activeAlertId = null;
               _activeAlertElderlyId = null;
@@ -162,27 +166,32 @@ class _HomeShellState extends State<HomeShell> {
             return;
           }
 
-          final data = activeDoc.data() as Map<String, dynamic>;
+          final data = latestLinkedAlert.data() as Map<String, dynamic>;
           final elderlyId = data['elderlyId']?.toString() ?? '';
           final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
           final alertStatus = data['status']?.toString() ?? 'active';
 
           setState(() {
-            _activeAlertId = activeDoc!.id;
+            _activeAlertId = latestLinkedAlert!.id;
             _activeAlertElderlyId = elderlyId;
             _activeAlertElderlyName = elderlyName;
           });
 
+          // Only play sound and show popup for a new ACTIVE alert.
+          // Seen alerts keep the banner visible but do not replay the sound.
           if (alertStatus == 'active' &&
-              !_shownAlertDialogs.contains(activeDoc.id)) {
-            _shownAlertDialogs.add(activeDoc.id);
+              !_shownAlertDialogs.contains(latestLinkedAlert.id)) {
+            _shownAlertDialogs.add(latestLinkedAlert.id);
+
             await _playEmergencySound();
+
             await _showEmergencyLocalNotification(
               elderlyName: elderlyName,
               elderlyId: elderlyId,
             );
+
             _showEmergencyDialog(
-              alertId: activeDoc.id,
+              alertId: latestLinkedAlert.id,
               elderlyId: elderlyId,
               elderlyName: elderlyName,
             );

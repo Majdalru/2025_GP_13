@@ -1024,10 +1024,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                     }
                                   },
                                   selectedColor: Colors.teal.shade100,
-                                  labelStyle: TextStyle(
-                                    color: _kTeal == (_kTeal)
-                                        ? Colors.white
-                                        : null,
+                                  labelStyle: const TextStyle(
+                                      color: _kNavy,
+                                      fontWeight: FontWeight.w600,
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
@@ -1080,10 +1079,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                 onSelected: (_) =>
                                     setSheetState(() => selectedFreq = opt),
                                 selectedColor: Colors.teal.shade100,
-                                labelStyle: TextStyle(
-                                  color: _kTeal == (_kTeal)
-                                      ? Colors.white
-                                      : null,
+                                labelStyle: const TextStyle(
+                                   color: _kNavy,
+                                   fontWeight: FontWeight.w600,
                                 ),
                               );
                             }).toList(),
@@ -1142,10 +1140,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                         onSelected: (_) =>
                                             toggleDay('Every day'),
                                         selectedColor: Colors.teal.shade100,
-                                        labelStyle: TextStyle(
-                                          color: _kTeal == (_kTeal)
-                                              ? Colors.white
-                                              : null,
+                                        labelStyle: const TextStyle(
+                                            color: _kNavy,
+                                            fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                       ...allowed.map((d) {
@@ -1157,10 +1154,9 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                           selected: selected,
                                           onSelected: (_) => toggleDay(d),
                                           selectedColor: Colors.teal.shade100,
-                                          labelStyle: TextStyle(
-                                            color: _kTeal == (_kTeal)
-                                                ? Colors.white
-                                                : null,
+                                          labelStyle: const TextStyle(
+                                            color: _kNavy,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         );
                                       }),
