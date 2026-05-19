@@ -299,7 +299,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           _showStatusMessage(
             title: isArabic ? 'تمت مشاهدة التنبيه' : 'Alert Seen',
             message: isArabic
-                ? 'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.'
+                ? 'مقدم الرعاية شاهد تنبيه الطوارئ الخاص بك.'
                 : 'Your caregiver has seen your emergency alert.',
             icon: Icons.visibility_rounded,
             color: Colors.green.shade700,
@@ -307,7 +307,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
           if (isArabic) {
             _arabicVoice.speak(
-              'الكيرقيفر شاهد تنبيه الطوارئ الخاص بك.',
+              'مقدم الرعاية شاهد تنبيه الطوارئ الخاص بك.',
             );
           } else {
             _voice.speak(
@@ -316,22 +316,6 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           }
         }
 
-        if (status == 'inactive') {
-          final localeProvider = Provider.of<LocaleProvider>(
-            context,
-            listen: false,
-          );
-          final isArabic = localeProvider.isArabic;
-
-          _showStatusMessage(
-            title: isArabic ? 'انتهى التنبيه' : 'Alert Resolved',
-            message: isArabic
-                ? 'تم تأكيد زوال الخطر من قبل الكيرقيفر.'
-                : 'Your caregiver confirmed that the danger is gone.',
-            icon: Icons.check_circle_rounded,
-            color: Colors.green.shade700,
-          );
-        }
       },
       onError: (e) {
         debugPrint('❌ Elderly emergency status listener error: $e');
@@ -1630,11 +1614,11 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                               Text(
                                 alertSeen
                                     ? (isArabic
-                                          ? 'الكيرقيفر شاهد تنبيه الطوارئ'
+                                          ? 'مقدم الرعاية شاهد تنبيه الطوارئ'
                                           : 'Caregiver has seen your alert')
                                     : alertActive
                                     ? (isArabic
-                                          ? 'بانتظار مشاهدة الكيرقيفر للتنبيه'
+                                          ? 'بانتظار مشاهدة مقدم الرعاية للتنبيه'
                                           : 'Waiting for caregiver to view the alert')
                                     : _isHoldingSos
                                     ? (isArabic
