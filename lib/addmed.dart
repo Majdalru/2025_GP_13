@@ -3620,165 +3620,133 @@ class _Step6AddNotesState extends State<_Step6AddNotes> {
               const SizedBox(height: 24),
 
               // ── Refill Reminder box ──
-              Container(
-                decoration: BoxDecoration(
-                  color: widget.hasEndDate
-                      ? Colors.teal.shade50
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: widget.hasEndDate
-                        ? Colors.teal.shade200
-                        : Colors.grey.shade300,
+              // Show this section only when the medication has an end date.
+              if (widget.hasEndDate)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.teal.shade200),
                   ),
-                ),
-                padding: const EdgeInsets.all(14),
-                child: widget.hasEndDate
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.notifications_active_outlined,
-                                color: Colors.teal.shade700,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  loc.stepRefillQuestion,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.teal.shade900,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _refillReminder = true),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _refillReminder
-                                          ? Colors.teal
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: _refillReminder
-                                            ? Colors.teal
-                                            : Colors.grey.shade300,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Icon(
-                                          Icons.notifications_active,
-                                          color: _refillReminder
-                                              ? Colors.white
-                                              : Colors.grey.shade400,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          loc.stepRefillYes,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: _refillReminder
-                                                ? Colors.white
-                                                : Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _refillReminder = false),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: !_refillReminder
-                                          ? const Color(0xFF9A9999)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: !_refillReminder
-                                            ? const Color(0xFF9A9999)
-                                            : Colors.grey.shade300,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Icon(
-                                          Icons.notifications_off_outlined,
-                                          color: !_refillReminder
-                                              ? Colors.white
-                                              : Colors.grey.shade400,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          loc.stepRefillNo,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: !_refillReminder
-                                                ? Colors.white
-                                                : Colors.grey.shade500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : Row(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
                           Icon(
-                            Icons.info_outline,
-                            color: Colors.grey.shade500,
-                            size: 20,
+                            Icons.notifications_active_outlined,
+                            color: Colors.teal.shade700,
+                            size: 22,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              loc.stepRefillOnlyIfDuration,
+                              loc.stepRefillQuestion,
                               style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 13,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.teal.shade900,
                               ),
                             ),
                           ),
                         ],
                       ),
-              ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _refillReminder = true),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: _refillReminder ? Colors.teal : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: _refillReminder
+                                        ? Colors.teal
+                                        : Colors.grey.shade300,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.notifications_active,
+                                      color: _refillReminder
+                                          ? Colors.white
+                                          : Colors.grey.shade400,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      loc.stepRefillYes,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: _refillReminder
+                                            ? Colors.white
+                                            : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _refillReminder = false),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: !_refillReminder
+                                      ? const Color(0xFF9A9999)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: !_refillReminder
+                                        ? const Color(0xFF9A9999)
+                                        : Colors.grey.shade300,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.notifications_off_outlined,
+                                      color: !_refillReminder
+                                          ? Colors.white
+                                          : Colors.grey.shade400,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      loc.stepRefillNo,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: !_refillReminder
+                                            ? Colors.white
+                                            : Colors.grey.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
 
               const SizedBox(height: 32),
               ElevatedButton(

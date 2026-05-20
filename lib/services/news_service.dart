@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class NewsService {
-  static const String _apiKey = ''; //PUT_YOUR_API_KEY_HERE
+  static const String _apiKey = 'd5dc159f6037840bbd5a5e0442a7adc6'; //PUT_YOUR_API_KEY_HERE
   static const String _baseUrl = 'https://gnews.io/api/v4/top-headlines';
   bool _isSafeNews(Map<String, dynamic> item) {
     final text = [
