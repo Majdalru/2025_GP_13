@@ -155,14 +155,19 @@ class _SharedMediaListPageState extends State<SharedMediaListPage> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(
-                      Icons.arrow_back_ios_new,
+                      Icons.arrow_back,
                       size: 20,
                       color: Color(0xFF1A2340),
                     ),
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF0F2F5),
+                      backgroundColor: Color.fromARGB(
+                        255,
+                        230,
+                        232,
+                        234,
+                      ), // light circle
                       shape: const CircleBorder(),
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(12),
                     ),
                   ),
                   const SizedBox(width: 10),

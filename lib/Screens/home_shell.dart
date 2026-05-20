@@ -161,97 +161,100 @@ class _HomeShellState extends State<HomeShell> {
         .where('elderlyId', whereIn: idsForQuery)
         .snapshots()
         .listen(
-      (snapshot) async {
-        debugPrint('🔥 Emergency listener triggered: ${snapshot.docs.length}');
+          (snapshot) async {
+            debugPrint(
+              '🔥 Emergency listener triggered: ${snapshot.docs.length}',
+            );
 
-        final validAlerts = snapshot.docs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
+            final validAlerts = snapshot.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
 
-          final elderlyId = data['elderlyId']?.toString();
-          final status = data['status']?.toString();
+              final elderlyId = data['elderlyId']?.toString();
+              final status = data['status']?.toString();
 
-          final isLinked = elderlyId != null && linkedIds.contains(elderlyId);
-          final isOpenStatus = status == 'active' || status == 'seen';
+              final isLinked =
+                  elderlyId != null && linkedIds.contains(elderlyId);
+              final isOpenStatus = status == 'active' || status == 'seen';
 
-          debugPrint('🚨 Alert ID: ${doc.id}');
-          debugPrint('🚨 Alert elderlyId: $elderlyId');
-          debugPrint('🚨 Alert status: $status');
-          debugPrint('✅ Is linked? $isLinked');
+              debugPrint('🚨 Alert ID: ${doc.id}');
+              debugPrint('🚨 Alert elderlyId: $elderlyId');
+              debugPrint('🚨 Alert status: $status');
+              debugPrint('✅ Is linked? $isLinked');
 
-          return isLinked && isOpenStatus;
-        }).toList();
+              return isLinked && isOpenStatus;
+            }).toList();
 
-        validAlerts.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
+            validAlerts.sort((a, b) {
+              final aData = a.data() as Map<String, dynamic>;
+              final bData = b.data() as Map<String, dynamic>;
 
-          final aTime = aData['createdAt'];
-          final bTime = bData['createdAt'];
+              final aTime = aData['createdAt'];
+              final bTime = bData['createdAt'];
 
-          DateTime aDate = DateTime.fromMillisecondsSinceEpoch(0);
-          DateTime bDate = DateTime.fromMillisecondsSinceEpoch(0);
+              DateTime aDate = DateTime.fromMillisecondsSinceEpoch(0);
+              DateTime bDate = DateTime.fromMillisecondsSinceEpoch(0);
 
-          if (aTime is Timestamp) {
-            aDate = aTime.toDate();
-          }
+              if (aTime is Timestamp) {
+                aDate = aTime.toDate();
+              }
 
-          if (bTime is Timestamp) {
-            bDate = bTime.toDate();
-          }
+              if (bTime is Timestamp) {
+                bDate = bTime.toDate();
+              }
 
-          return bDate.compareTo(aDate); // newest first
-        });
+              return bDate.compareTo(aDate); // newest first
+            });
 
-        if (!mounted) return;
+            if (!mounted) return;
 
-        if (validAlerts.isEmpty) {
-          await _stopEmergencySound();
+            if (validAlerts.isEmpty) {
+              await _stopEmergencySound();
 
-          setState(() {
-            _activeAlertId = null;
-            _activeAlertElderlyId = null;
-            _activeAlertElderlyName = null;
-          });
-          return;
-        }
+              setState(() {
+                _activeAlertId = null;
+                _activeAlertElderlyId = null;
+                _activeAlertElderlyName = null;
+              });
+              return;
+            }
 
-        final latestAlert = validAlerts.first;
-        final data = latestAlert.data() as Map<String, dynamic>;
+            final latestAlert = validAlerts.first;
+            final data = latestAlert.data() as Map<String, dynamic>;
 
-        final elderlyId = data['elderlyId']?.toString() ?? '';
-        final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
-        final alertStatus = data['status']?.toString() ?? 'active';
+            final elderlyId = data['elderlyId']?.toString() ?? '';
+            final elderlyName = data['elderlyName']?.toString() ?? 'Elderly';
+            final alertStatus = data['status']?.toString() ?? 'active';
 
-        setState(() {
-          _activeAlertId = latestAlert.id;
-          _activeAlertElderlyId = elderlyId;
-          _activeAlertElderlyName = elderlyName;
-        });
+            setState(() {
+              _activeAlertId = latestAlert.id;
+              _activeAlertElderlyId = elderlyId;
+              _activeAlertElderlyName = elderlyName;
+            });
 
-        // Only play sound and show popup for a new ACTIVE alert.
-        // Seen alerts keep the banner visible but do not replay the sound.
-        if (alertStatus == 'active' &&
-            !_shownAlertDialogs.contains(latestAlert.id)) {
-          _shownAlertDialogs.add(latestAlert.id);
+            // Only play sound and show popup for a new ACTIVE alert.
+            // Seen alerts keep the banner visible but do not replay the sound.
+            if (alertStatus == 'active' &&
+                !_shownAlertDialogs.contains(latestAlert.id)) {
+              _shownAlertDialogs.add(latestAlert.id);
 
-          await _playEmergencySound();
+              await _playEmergencySound();
 
-          await _showEmergencyLocalNotification(
-            elderlyName: elderlyName,
-            elderlyId: elderlyId,
-          );
+              await _showEmergencyLocalNotification(
+                elderlyName: elderlyName,
+                elderlyId: elderlyId,
+              );
 
-          _showEmergencyDialog(
-            alertId: latestAlert.id,
-            elderlyId: elderlyId,
-            elderlyName: elderlyName,
-          );
-        }
-      },
-      onError: (e) {
-        debugPrint('❌ Emergency listener error: $e');
-      },
-    );
+              _showEmergencyDialog(
+                alertId: latestAlert.id,
+                elderlyId: elderlyId,
+                elderlyName: elderlyName,
+              );
+            }
+          },
+          onError: (e) {
+            debugPrint('❌ Emergency listener error: $e');
+          },
+        );
   }
 
   void _showEmergencyDialog({
@@ -260,64 +263,69 @@ class _HomeShellState extends State<HomeShell> {
     required String elderlyName,
   }) {
     if (!mounted) return;
+    final loc = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.red.shade50,
-        title: Row(
-          children: const [
-            Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Emergency Alert', style: TextStyle(color: Colors.red)),
+      builder: (context) {
+        final loc = AppLocalizations.of(context)!;
+        return AlertDialog(
+          backgroundColor: Colors.red.shade50,
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red),
+              SizedBox(width: 8),
+              Text(loc.emergencyAlert, style: TextStyle(color: Colors.red)),
+            ],
+          ),
+          content: Text(
+            loc.elderlyNeedsHelp(elderlyName),
+            style: const TextStyle(fontSize: 18),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance
+                    .collection('emergency_alerts')
+                    .doc(alertId)
+                    .update({
+                      'status': 'seen',
+                      'seenAt': FieldValue.serverTimestamp(),
+                    });
+
+                await _stopEmergencySound();
+
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              },
+              child: Text(loc.dismiss),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                await FirebaseFirestore.instance
+                    .collection('emergency_alerts')
+                    .doc(alertId)
+                    .update({
+                      'status': 'seen',
+                      'seenAt': FieldValue.serverTimestamp(),
+                    });
+                await _stopEmergencySound();
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LocationPage(elderlyId: elderlyId),
+                  ),
+                );
+              },
+              child: Text(loc.viewLocation),
+            ),
           ],
-        ),
-        content: Text(
-          '$elderlyName needs help!\nOpen location now.',
-          style: const TextStyle(fontSize: 18),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('emergency_alerts')
-                  .doc(alertId)
-                  .update({
-                    'status': 'seen',
-                    'seenAt': FieldValue.serverTimestamp(),
-                  });
-
-              await _stopEmergencySound();
-
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            },
-            child: const Text('Dismiss'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('emergency_alerts')
-                  .doc(alertId)
-                  .update({
-                    'status': 'seen',
-                    'seenAt': FieldValue.serverTimestamp(),
-                  });
-              await _stopEmergencySound();
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => LocationPage(elderlyId: elderlyId),
-                ),
-              );
-            },
-            child: const Text('View Location'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -341,25 +349,27 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _confirmDangerResolved() async {
+    final loc = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Safety'),
-        content: const Text(
-          'Are you sure the danger is gone and the elderly is safe?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Yes, safe'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final loc = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(loc.confirmSafety),
+          content: Text(loc.confirmSafetyDesc),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(loc.no),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(loc.yesSafe),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed == true) await _markEmergencyInactive();
   }
@@ -369,6 +379,7 @@ class _HomeShellState extends State<HomeShell> {
     if (_activeAlertId == null || _activeAlertElderlyId == null) {
       return const SizedBox.shrink();
     }
+    final loc = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
@@ -393,7 +404,7 @@ class _HomeShellState extends State<HomeShell> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Active Emergency: ${_activeAlertElderlyName ?? 'Elderly'}',
+                  loc.activeEmergency(_activeAlertElderlyName ?? ''),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -404,8 +415,8 @@ class _HomeShellState extends State<HomeShell> {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            'An emergency alert is currently active.',
+          Text(
+            loc.emergencyAlertActive,
             style: TextStyle(color: Colors.white, fontSize: 14),
           ),
           const SizedBox(height: 12),
@@ -438,7 +449,7 @@ class _HomeShellState extends State<HomeShell> {
                     );
                   },
                   icon: const Icon(Icons.location_on),
-                  label: const Text('View Location'),
+                  label: Text(loc.viewLocation),
                 ),
               ),
               const SizedBox(width: 8),
@@ -450,7 +461,7 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                   onPressed: _confirmDangerResolved,
                   icon: const Icon(Icons.check_circle),
-                  label: const Text('Danger is gone'),
+                  label: Text(loc.dangerIsGone),
                 ),
               ),
             ],
@@ -503,9 +514,9 @@ class _HomeShellState extends State<HomeShell> {
         .doc(caregiverUid)
         .snapshots()
         .listen((_) {
-      _fetchLinkedProfiles();
-      _listenToEmergencyAlerts();
-    });
+          _fetchLinkedProfiles();
+          _listenToEmergencyAlerts();
+        });
   }
 
   void _selectProfile(ElderlyProfile profile) {

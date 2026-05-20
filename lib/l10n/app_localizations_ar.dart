@@ -59,7 +59,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get networkErrorAuth => 'خطأ في الشبكة. تحقق من اتصالك بالإنترنت.';
 
   @override
-  String get ok => 'موافق';
+  String get ok => 'حسناً';
 
   @override
   String get noProfileSelected =>
@@ -1646,6 +1646,72 @@ class AppLocalizationsAr extends AppLocalizations {
   String get language => 'اللغة';
 
   @override
+  String elderlyNeedsHelp(Object name) {
+    return '$name يحتاج مساعدة!\nافتح الموقع الآن.';
+  }
+
+  @override
+  String get dismiss => 'تجاهل';
+
+  @override
+  String get viewLocation => 'عرض الموقع';
+
+  @override
+  String get confirmSafety => 'تأكيد السلامة';
+
+  @override
+  String get confirmSafetyDesc =>
+      'هل أنت متأكد أن الخطر قد زال وأن المريض بأمان؟';
+
+  @override
+  String get yesSafe => 'نعم، بأمان';
+
+  @override
+  String activeEmergency(Object name) {
+    return 'طوارئ نشطة: $name';
+  }
+
+  @override
+  String get emergencyAlertActive => 'يوجد تنبيه طوارئ نشط حالياً.';
+
+  @override
+  String get dangerIsGone => 'الخطر انتهى';
+
+  @override
+  String get alertSent => 'تم إرسال التنبيه';
+
+  @override
+  String get alertSentDesc =>
+      'تم إرسال تنبيه الطوارئ إلى مقدم الرعاية.\nالمساعدة في الطريق.';
+
+  @override
+  String get alertSeen => 'تمت مشاهدة التنبيه';
+
+  @override
+  String get alertSeenDesc => 'مقدم الرعاية شاهد تنبيه الطوارئ الخاص بك.';
+
+  @override
+  String get noLocationAvailable => 'لا يوجد موقع متاح';
+
+  @override
+  String get elderlyLocation => 'موقع المريض';
+
+  @override
+  String get elderlyCurrentLocation => 'الموقع الحالي للمريض';
+
+  @override
+  String get latitude => 'خط العرض';
+
+  @override
+  String get longitude => 'خط الطول';
+
+  @override
+  String get openInGoogleMaps => 'فتح في خرائط Google';
+
+  @override
+  String get noTime => 'لا يوجد وقت';
+
+  @override
   String get notifications => 'الإشعارات';
 
   @override
@@ -1661,7 +1727,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get later => 'لاحقاً';
 
   @override
+  String get newLabel => 'جديد';
+
+  @override
+  String get reviewLabel => 'مراجعة';
+
+  @override
+  String get reviewTimesHint => 'اضغط على الوقت لتعديله قبل الاسترجاع.';
+
+  @override
   String get scan => ' ';
+
+  @override
+  String get formTablet => 'قرص';
+
+  @override
+  String get medicationAddedBackToList =>
+      'تمت إضافته مجدداً إلى قائمة الأدوية النشطة.';
 
   @override
   String get info => 'معلومات الدواء';

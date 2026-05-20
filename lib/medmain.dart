@@ -388,7 +388,9 @@ class _CaregiverSegmentedControlState
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
-            color: isSelected ? _kTeal : Colors.transparent,
+            color: isSelected
+                ? const Color.fromARGB(255, 11, 69, 63)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(11),
             boxShadow: isSelected
                 ? [

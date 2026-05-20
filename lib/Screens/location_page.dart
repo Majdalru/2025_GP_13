@@ -7,10 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 class LocationPage extends StatelessWidget {
   final String elderlyId;
 
-  const LocationPage({
-    super.key,
-    required this.elderlyId,
-  });
+  const LocationPage({super.key, required this.elderlyId});
 
   Future<void> _openInGoogleMaps(double lat, double lng) async {
     final Uri googleMapsUrl = Uri.parse(
@@ -18,10 +15,7 @@ class LocationPage extends StatelessWidget {
     );
 
     if (await canLaunchUrl(googleMapsUrl)) {
-      await launchUrl(
-        googleMapsUrl,
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -45,14 +39,14 @@ class LocationPage extends StatelessWidget {
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
+            return Center(
               child: Text(
-                "No location available",
+                AppLocalizations.of(context)!.noLocationAvailable,
                 style: TextStyle(fontSize: 20),
               ),
             );
           }
-
+          final loc = AppLocalizations.of(context)!;
           final data = snapshot.data!.data() as Map<String, dynamic>;
 
           final double lat = (data['latitude'] as num).toDouble();
@@ -61,7 +55,7 @@ class LocationPage extends StatelessWidget {
           final updatedAt = data['updatedAt'] as Timestamp?;
           final timeText = updatedAt != null
               ? updatedAt.toDate().toString().substring(0, 16)
-              : "No time";
+              : loc.noTime;
 
           final position = LatLng(lat, lng);
 
@@ -77,9 +71,7 @@ class LocationPage extends StatelessWidget {
                     Marker(
                       markerId: const MarkerId('elderly_location'),
                       position: position,
-                      infoWindow: const InfoWindow(
-                        title: 'Elderly Location',
-                      ),
+                      infoWindow: InfoWindow(title: loc.elderlyLocation),
                     ),
                   },
                   myLocationEnabled: false,
@@ -107,8 +99,8 @@ class LocationPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Elderly Current Location",
+                    Text(
+                      loc.elderlyCurrentLocation,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -125,11 +117,8 @@ class LocationPage extends StatelessWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            "Latitude: $lat\nLongitude: $lng",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              height: 1.4,
-                            ),
+                            '${loc.latitude}: $lat${loc.longitude}: $lng',
+                            style: const TextStyle(fontSize: 16, height: 1.4),
                           ),
                         ),
                       ],
@@ -143,7 +132,7 @@ class LocationPage extends StatelessWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            "Last update: $timeText",
+                            '${loc.lastUpdate}: $timeText',
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),
@@ -164,8 +153,8 @@ class LocationPage extends StatelessWidget {
                         ),
                         onPressed: () => _openInGoogleMaps(lat, lng),
                         icon: const Icon(Icons.map_outlined),
-                        label: const Text(
-                          "Open in Google Maps",
+                        label: Text(
+                          loc.openInGoogleMaps,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

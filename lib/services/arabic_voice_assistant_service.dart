@@ -613,7 +613,10 @@ class ArabicVoiceAssistantService {
     return name
         .toLowerCase()
         .trim()
-        .replaceAll(RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]'), '')
+        .replaceAll(
+          RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]'),
+          '',
+        )
         .replaceAll('أ', 'ا')
         .replaceAll('إ', 'ا')
         .replaceAll('آ', 'ا')
@@ -641,8 +644,9 @@ class ArabicVoiceAssistantService {
       for (final med in medsList) {
         final medMap = Map<String, dynamic>.from(med as Map);
         final existingName = (medMap['name'] ?? '').toString();
-        final normalizedExistingName =
-            _normalizeMedicationNameForDuplicate(existingName);
+        final normalizedExistingName = _normalizeMedicationNameForDuplicate(
+          existingName,
+        );
 
         if (normalizedExistingName == normalizedNewName) {
           return true;

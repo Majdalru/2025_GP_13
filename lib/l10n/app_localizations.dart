@@ -911,7 +911,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyAlert.
   ///
   /// In en, this message translates to:
-  /// **'Emergency alert'**
+  /// **'Emergency Alert'**
   String get emergencyAlert;
 
   /// No description provided for @todayLabel.
@@ -3068,6 +3068,126 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// No description provided for @elderlyNeedsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} needs help!\nOpen location now.'**
+  String elderlyNeedsHelp(Object name);
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// No description provided for @viewLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'View Location'**
+  String get viewLocation;
+
+  /// No description provided for @confirmSafety.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Safety'**
+  String get confirmSafety;
+
+  /// No description provided for @confirmSafetyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure the danger is gone and the elderly is safe?'**
+  String get confirmSafetyDesc;
+
+  /// No description provided for @yesSafe.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, safe'**
+  String get yesSafe;
+
+  /// No description provided for @activeEmergency.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Emergency: {name}'**
+  String activeEmergency(Object name);
+
+  /// No description provided for @emergencyAlertActive.
+  ///
+  /// In en, this message translates to:
+  /// **'An emergency alert is currently active.'**
+  String get emergencyAlertActive;
+
+  /// No description provided for @dangerIsGone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger is gone'**
+  String get dangerIsGone;
+
+  /// No description provided for @alertSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert Sent'**
+  String get alertSent;
+
+  /// No description provided for @alertSentDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your emergency alert has been sent to the caregiver.\nHelp is on the way.'**
+  String get alertSentDesc;
+
+  /// No description provided for @alertSeen.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert Seen'**
+  String get alertSeen;
+
+  /// No description provided for @alertSeenDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your caregiver has seen your emergency alert.'**
+  String get alertSeenDesc;
+
+  /// No description provided for @noLocationAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No location available'**
+  String get noLocationAvailable;
+
+  /// No description provided for @elderlyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Elderly Location'**
+  String get elderlyLocation;
+
+  /// No description provided for @elderlyCurrentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Elderly Current Location'**
+  String get elderlyCurrentLocation;
+
+  /// No description provided for @latitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Latitude'**
+  String get latitude;
+
+  /// No description provided for @longitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Longitude'**
+  String get longitude;
+
+  /// No description provided for @openInGoogleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Google Maps'**
+  String get openInGoogleMaps;
+
+  /// No description provided for @noTime.
+  ///
+  /// In en, this message translates to:
+  /// **'No time'**
+  String get noTime;
+
   /// No description provided for @notifications.
   ///
   /// In en, this message translates to:
@@ -3098,11 +3218,41 @@ abstract class AppLocalizations {
   /// **'Later'**
   String get later;
 
+  /// No description provided for @newLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get newLabel;
+
+  /// No description provided for @reviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get reviewLabel;
+
+  /// No description provided for @reviewTimesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a time to adjust it for the new schedule.'**
+  String get reviewTimesHint;
+
   /// No description provided for @scan.
   ///
   /// In en, this message translates to:
   /// **''**
   String get scan;
+
+  /// No description provided for @formTablet.
+  ///
+  /// In en, this message translates to:
+  /// **'Tablet'**
+  String get formTablet;
+
+  /// No description provided for @medicationAddedBackToList.
+  ///
+  /// In en, this message translates to:
+  /// **'Added back to the active medications list.'**
+  String get medicationAddedBackToList;
 
   /// No description provided for @info.
   ///

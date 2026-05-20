@@ -452,8 +452,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Text(
-                        'Caregiver',
+                      child: Text(
+                        AppLocalizations.of(context)!.caregiver,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,

@@ -431,18 +431,28 @@ class _DailyLibraryPageState extends State<DailyLibraryPage>
           children: [
             // ── Top bar ───────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 20, 4),
+              padding: const EdgeInsets.fromLTRB(10, 20, 20, 4),
               child: Row(
                 children: [
                   IconButton(
                     icon: const Icon(
-                      Icons.arrow_back_ios_new,
+                      Icons.arrow_back,
                       size: 24,
                       color: Color(0xFF1A2340),
                     ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Color.fromARGB(
+                        255,
+                        230,
+                        232,
+                        234,
+                      ), // light circle
+                      shape: const CircleBorder(),
+                      padding: const EdgeInsets.all(12),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

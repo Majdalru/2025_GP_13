@@ -167,32 +167,30 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         context: context,
         barrierDismissible: false,
         builder: (context) {
+          final loc = AppLocalizations.of(context)!;
           return AlertDialog(
             backgroundColor: Colors.red.shade50,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             title: Row(
-              children: const [
+              children: [
                 Icon(Icons.check_circle, color: Colors.green, size: 28),
                 SizedBox(width: 10),
                 Text(
-                  "Alert Sent",
+                  loc.alertSent,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            content: const Text(
-              "Your emergency alert has been sent to the caregiver.\nHelp is on the way.",
-              style: TextStyle(fontSize: 16),
-            ),
+            content: Text(loc.alertSentDesc, style: TextStyle(fontSize: 16)),
             actions: [
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: Colors.red),
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: const Text("OK"),
+                child: Text(loc.ok),
               ),
             ],
           );
@@ -239,88 +237,82 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         .where('elderlyId', isEqualTo: user.uid)
         .snapshots()
         .listen(
-      (snapshot) {
-        if (!mounted) return;
+          (snapshot) {
+            if (!mounted) return;
 
-        if (snapshot.docs.isEmpty) {
-          setState(() {
-            _latestAlertId = null;
-            _latestAlertStatus = null;
-          });
-          return;
-        }
+            if (snapshot.docs.isEmpty) {
+              setState(() {
+                _latestAlertId = null;
+                _latestAlertStatus = null;
+              });
+              return;
+            }
 
-        final alerts = snapshot.docs.toList();
+            final alerts = snapshot.docs.toList();
 
-        alerts.sort((a, b) {
-          final aData = a.data();
-          final bData = b.data();
+            alerts.sort((a, b) {
+              final aData = a.data();
+              final bData = b.data();
 
-          final aTime = aData['createdAt'];
-          final bTime = bData['createdAt'];
+              final aTime = aData['createdAt'];
+              final bTime = bData['createdAt'];
 
-          DateTime aDate = DateTime.fromMillisecondsSinceEpoch(0);
-          DateTime bDate = DateTime.fromMillisecondsSinceEpoch(0);
+              DateTime aDate = DateTime.fromMillisecondsSinceEpoch(0);
+              DateTime bDate = DateTime.fromMillisecondsSinceEpoch(0);
 
-          if (aTime is Timestamp) {
-            aDate = aTime.toDate();
-          }
+              if (aTime is Timestamp) {
+                aDate = aTime.toDate();
+              }
 
-          if (bTime is Timestamp) {
-            bDate = bTime.toDate();
-          }
+              if (bTime is Timestamp) {
+                bDate = bTime.toDate();
+              }
 
-          return bDate.compareTo(aDate); // newest first
-        });
+              return bDate.compareTo(aDate); // newest first
+            });
 
-        final latestDoc = alerts.first;
-        final data = latestDoc.data();
+            final latestDoc = alerts.first;
+            final data = latestDoc.data();
 
-        final status = data['status']?.toString();
+            final status = data['status']?.toString();
 
-        debugPrint('👴 Elderly latest emergency alert: ${latestDoc.id}');
-        debugPrint('👴 Elderly latest status: $status');
+            debugPrint('👴 Elderly latest emergency alert: ${latestDoc.id}');
+            debugPrint('👴 Elderly latest status: $status');
 
-        setState(() {
-          _latestAlertId = latestDoc.id;
-          _latestAlertStatus = status;
-        });
+            setState(() {
+              _latestAlertId = latestDoc.id;
+              _latestAlertStatus = status;
+            });
 
-        if (status == 'seen' &&
-            _lastSeenAlertMessageShownForId != latestDoc.id) {
-          _lastSeenAlertMessageShownForId = latestDoc.id;
+            if (status == 'seen' &&
+                _lastSeenAlertMessageShownForId != latestDoc.id) {
+              _lastSeenAlertMessageShownForId = latestDoc.id;
 
-          final localeProvider = Provider.of<LocaleProvider>(
-            context,
-            listen: false,
-          );
-          final isArabic = localeProvider.isArabic;
+              final localeProvider = Provider.of<LocaleProvider>(
+                context,
+                listen: false,
+              );
+              final isArabic = localeProvider.isArabic;
+              final loc = AppLocalizations.of(context)!;
 
-          _showStatusMessage(
-            title: isArabic ? 'تمت مشاهدة التنبيه' : 'Alert Seen',
-            message: isArabic
-                ? 'مقدم الرعاية شاهد تنبيه الطوارئ الخاص بك.'
-                : 'Your caregiver has seen your emergency alert.',
-            icon: Icons.visibility_rounded,
-            color: Colors.green.shade700,
-          );
+              _showStatusMessage(
+                title: loc.alertSeen,
+                message: loc.alertSeenDesc,
+                icon: Icons.visibility_rounded,
+                color: Colors.green.shade700,
+              );
 
-          if (isArabic) {
-            _arabicVoice.speak(
-              'مقدم الرعاية شاهد تنبيه الطوارئ الخاص بك.',
-            );
-          } else {
-            _voice.speak(
-              'Your caregiver has seen your emergency alert.',
-            );
-          }
-        }
-
-      },
-      onError: (e) {
-        debugPrint('❌ Elderly emergency status listener error: $e');
-      },
-    );
+              if (isArabic) {
+                _arabicVoice.speak('مقدم الرعاية شاهد تنبيه الطوارئ الخاص بك.');
+              } else {
+                _voice.speak('Your caregiver has seen your emergency alert.');
+              }
+            }
+          },
+          onError: (e) {
+            debugPrint('❌ Elderly emergency status listener error: $e');
+          },
+        );
   }
 
   void _startSosHold(bool isArabic) {
@@ -618,7 +610,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   final l = (x['lastName'] ?? '').toString().trim();
                   final email = (x['email'] ?? '').toString().trim();
                   final n = [f, l].where((s) => s.isNotEmpty).join(' ');
-                  final nameStr = n.isNotEmpty ? n : (email.isNotEmpty ? email : 'Unknown');
+                  final nameStr = n.isNotEmpty
+                      ? n
+                      : (email.isNotEmpty ? email : 'Unknown');
                   currentCaregivers.add({'id': d.id, 'name': nameStr});
                 }
               }
@@ -647,7 +641,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             }
 
             final permissions = data['permissions'] as Map<String, dynamic>?;
-            final caregiverPerms = data['caregiver_permissions'] as Map<String, dynamic>?;
+            final caregiverPerms =
+                data['caregiver_permissions'] as Map<String, dynamic>?;
 
             bool calcMed = permissions?['medications'] ?? true;
             bool calcLib = permissions?['library'] ?? true;
@@ -657,14 +652,15 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
             if (caregiverPerms != null) {
               for (final cid in ids) {
-                 final cp = caregiverPerms[cid] as Map<String, dynamic>?;
-                 if (cp != null) {
-                    if (cp['medications'] == false) calcMed = false;
-                    if (cp['library'] == false) calcLib = false;
-                    if (cp['media'] == false) calcMedia = false;
-                    if (cp['generate_code'] == false) calcGenCode = false;
-                    if (cp['delete_caregiver'] == false) calcDeleteCaregiver = false;
-                 }
+                final cp = caregiverPerms[cid] as Map<String, dynamic>?;
+                if (cp != null) {
+                  if (cp['medications'] == false) calcMed = false;
+                  if (cp['library'] == false) calcLib = false;
+                  if (cp['media'] == false) calcMedia = false;
+                  if (cp['generate_code'] == false) calcGenCode = false;
+                  if (cp['delete_caregiver'] == false)
+                    calcDeleteCaregiver = false;
+                }
               }
             }
 
@@ -765,7 +761,13 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isArabic ? 'صباح الخير،' : 'Good morning,',
+                        () {
+                          final hour = DateTime.now().hour;
+                          final loc = AppLocalizations.of(context)!;
+                          if (hour < 12) return loc.goodMorning;
+                          if (hour < 17) return loc.goodAfternoon;
+                          return loc.goodEvening;
+                        }(),
                         style: const TextStyle(
                           fontSize: 18,
                           color: kTealDark,
@@ -1423,7 +1425,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                           iconColor: const Color(0xFF4CAF50),
                           iconBg: const Color(0xFFE8F5E9),
                           title: isArabic ? 'أدويتي' : 'Medications',
-                          enabled: _medicationsEnabled,
+                          enabled: true,
                           onTap: () {
                             HapticFeedback.selectionClick();
                             final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -1898,10 +1900,12 @@ class _ElderlySettingsPage extends StatelessWidget {
                     // ── Caregivers section ─────────────────────────
                     _SectionLabel(AppLocalizations.of(context)!.caregivers),
                     const SizedBox(height: 10),
-                    _SettingsCard(child: _CaregiversBox(
-                      caregivers: caregiverList, 
-                      deleteEnabled: deleteCaregiverEnabled,
-                    )),
+                    _SettingsCard(
+                      child: _CaregiversBox(
+                        caregivers: caregiverList,
+                        deleteEnabled: deleteCaregiverEnabled,
+                      ),
+                    ),
 
                     const SizedBox(height: 22),
 
@@ -2493,12 +2497,16 @@ class _CaregiversBox extends StatelessWidget {
 
   const _CaregiversBox({required this.caregivers, required this.deleteEnabled});
 
-  Future<void> _unlinkCaregiver(BuildContext context, String caregiverId, String name) async {
+  Future<void> _unlinkCaregiver(
+    BuildContext context,
+    String caregiverId,
+    String name,
+  ) async {
     final elderlyId = FirebaseAuth.instance.currentUser?.uid;
     if (elderlyId == null) return;
 
     final loc = AppLocalizations.of(context)!;
-    
+
     // Show confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
@@ -2521,13 +2529,16 @@ class _CaregiversBox extends StatelessWidget {
 
     if (confirm == true) {
       try {
-        await FirebaseFirestore.instance.collection('users').doc(elderlyId).update({
-          'caregiverIds': FieldValue.arrayRemove([caregiverId])
-        });
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(elderlyId)
+            .update({
+              'caregiverIds': FieldValue.arrayRemove([caregiverId]),
+            });
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(loc.profileUnlinked(name))),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(loc.profileUnlinked(name))));
         }
       } catch (e) {
         if (context.mounted) {
@@ -2612,8 +2623,8 @@ class _CaregiversBox extends StatelessWidget {
                       color: const Color(0xFFE0F2F1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      'Caregiver',
+                    child: Text(
+                      AppLocalizations.of(context)!.caregiver,
                       style: TextStyle(
                         fontSize: 13,
                         color: Color(0xFF1A2340),
@@ -2623,7 +2634,10 @@ class _CaregiversBox extends StatelessWidget {
                   ),
                   if (deleteEnabled)
                     IconButton(
-                      icon: const Icon(Icons.person_remove_outlined, color: Colors.red),
+                      icon: const Icon(
+                        Icons.person_remove_outlined,
+                        color: Colors.red,
+                      ),
                       onPressed: () => _unlinkCaregiver(context, id, name),
                     ),
                 ],

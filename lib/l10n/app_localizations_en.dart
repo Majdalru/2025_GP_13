@@ -460,7 +460,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noValidYoutubeUrl => 'No valid YouTube URL provided.';
 
   @override
-  String get emergencyAlert => 'Emergency alert';
+  String get emergencyAlert => 'Emergency Alert';
 
   @override
   String todayLabel(Object date) {
@@ -1659,6 +1659,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
+  String elderlyNeedsHelp(Object name) {
+    return '$name needs help!\nOpen location now.';
+  }
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String get viewLocation => 'View Location';
+
+  @override
+  String get confirmSafety => 'Confirm Safety';
+
+  @override
+  String get confirmSafetyDesc =>
+      'Are you sure the danger is gone and the elderly is safe?';
+
+  @override
+  String get yesSafe => 'Yes, safe';
+
+  @override
+  String activeEmergency(Object name) {
+    return 'Active Emergency: $name';
+  }
+
+  @override
+  String get emergencyAlertActive => 'An emergency alert is currently active.';
+
+  @override
+  String get dangerIsGone => 'Danger is gone';
+
+  @override
+  String get alertSent => 'Alert Sent';
+
+  @override
+  String get alertSentDesc =>
+      'Your emergency alert has been sent to the caregiver.\nHelp is on the way.';
+
+  @override
+  String get alertSeen => 'Alert Seen';
+
+  @override
+  String get alertSeenDesc => 'Your caregiver has seen your emergency alert.';
+
+  @override
+  String get noLocationAvailable => 'No location available';
+
+  @override
+  String get elderlyLocation => 'Elderly Location';
+
+  @override
+  String get elderlyCurrentLocation => 'Elderly Current Location';
+
+  @override
+  String get latitude => 'Latitude';
+
+  @override
+  String get longitude => 'Longitude';
+
+  @override
+  String get openInGoogleMaps => 'Open in Google Maps';
+
+  @override
+  String get noTime => 'No time';
+
+  @override
   String get notifications => 'Notifications';
 
   @override
@@ -1674,7 +1740,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get later => 'Later';
 
   @override
+  String get newLabel => 'New';
+
+  @override
+  String get reviewLabel => 'Review';
+
+  @override
+  String get reviewTimesHint => 'Tap a time to adjust it for the new schedule.';
+
+  @override
   String get scan => '';
+
+  @override
+  String get formTablet => 'Tablet';
+
+  @override
+  String get medicationAddedBackToList =>
+      'Added back to the active medications list.';
 
   @override
   String get info => 'Medication Info';

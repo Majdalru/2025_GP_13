@@ -8,7 +8,6 @@ import '../../models/medication.dart';
 import '../../services/medication_scheduler.dart';
 import '../../widgets/todays_meds_tab.dart';
 import '../../services/medication_history_service.dart';
-import '../../widgets/medication_history_page.dart';
 
 import '../../widgets/floating_voice_button.dart';
 import '../../widgets/arabic_floating_voice_button.dart';
@@ -249,17 +248,29 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
           children: [
             // ── Top bar ───────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 20, 4),
+              padding: const EdgeInsets.fromLTRB(10, 20, 20, 4),
               child: Row(
                 children: [
                   IconButton(
                     icon: const Icon(
-                      Icons.arrow_back_ios_new,
+                      Icons.arrow_back,
                       size: 26,
-                      color: kTeal,
+                      color: Color(0xFF0D2D5D),
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Color.fromARGB(
+                        255,
+                        230,
+                        232,
+                        234,
+                      ), // light circle
+                      shape: const CircleBorder(),
+                      padding: const EdgeInsets.all(12),
                     ),
                     onPressed: () => Navigator.pop(context),
                   ),
+                  const SizedBox(width: 16),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,7 +280,7 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                           style: const TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
-                            color: kTeal,
+                            color: Color(0xFF0D2D5D),
                           ),
                         ),
                         StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -319,15 +330,6 @@ class _ElderlyMedicationPageState extends State<ElderlyMedicationPage>
                           onEdit: _navigateAndEditMedication,
                           onDelete: _deleteMedication,
                           onAddMed: () => _navigateAndAddMedication(context),
-                          onHistory: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MedicationHistoryPage(
-                                elderlyId: widget.elderlyId,
-                                isElderlyView: true,
-                              ),
-                            ),
-                          ),
                         ),
                       ],
                     )
@@ -558,7 +560,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const kTeal = Color(0xFF4DB6AC);
+    const kTeal = Color(0xFF0D2D5D);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -604,14 +606,14 @@ class _AllMedsTab extends StatefulWidget {
   final String elderlyId;
   final void Function(Medication) onEdit;
   final void Function(Medication) onDelete;
-  final VoidCallback onHistory;
+  //final VoidCallback onHistory;
   final VoidCallback onAddMed;
 
   const _AllMedsTab({
     required this.elderlyId,
     required this.onEdit,
     required this.onDelete,
-    required this.onHistory,
+    //required this.onHistory,
     required this.onAddMed,
   });
 
@@ -657,29 +659,6 @@ class _AllMedsTabState extends State<_AllMedsTab> {
         ),
 
         // ── History link ───────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: OutlinedButton.icon(
-              onPressed: widget.onHistory,
-              icon: const Icon(Icons.history_rounded, size: 24),
-              label: Text(loc.medicationHistory),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF0D2D5D),
-                side: const BorderSide(color: Color(0xFF0D2D5D), width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ),
 
         // ── Medications list ───────────────────────────────────
         Expanded(
@@ -980,7 +959,7 @@ class MedicationCard extends StatelessWidget {
     const kLabel = TextStyle(
       fontSize: 19,
       fontWeight: FontWeight.w800,
-      color: kTeal,
+      color: kNavy,
     );
     const kValue = TextStyle(
       fontSize: 19,
@@ -1033,10 +1012,21 @@ class MedicationCard extends StatelessWidget {
         ? loc.summaryNotSpecified
         : doseParts.join(' — ');
 
-    final translatedDays = medication.days
-        .map((d) => _translateDay(d, loc))
-        .join(', ');
-
+    final allWeekDays = {
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    };
+    final isEveryDay =
+        medication.days.contains('Every day') ||
+        allWeekDays.every((d) => medication.days.contains(d));
+    final translatedDays = isEveryDay
+        ? loc.everyDay
+        : medication.days.map((d) => _translateDay(d, loc)).join(', ');
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(

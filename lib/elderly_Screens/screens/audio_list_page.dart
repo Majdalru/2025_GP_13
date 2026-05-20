@@ -175,7 +175,12 @@ class _AudioListPageState extends State<AudioListPage> {
                       color: Color(0xFF1A2340),
                     ),
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 184, 214, 217),
+                      backgroundColor: Color.fromARGB(
+                        255,
+                        230,
+                        232,
+                        234,
+                      ), // light circle
                       shape: const CircleBorder(),
                       padding: const EdgeInsets.all(12),
                     ),

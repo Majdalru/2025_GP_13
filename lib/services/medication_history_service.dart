@@ -13,7 +13,6 @@ class MedicationHistoryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Save a medication to history when it's deleted or expires.
-  /// [reason] is either 'deleted' or 'expired'.
   Future<void> saveToHistory({
     required String elderlyId,
     required Medication medication,
@@ -21,17 +20,16 @@ class MedicationHistoryService {
     String? deletedBy,
   }) async {
     try {
-      final historyRef = _firestore
+      await _firestore
           .collection('medications')
           .doc(elderlyId)
-          .collection('history');
-
-      await historyRef.add({
-        ...medication.toMap(),
-        'reason': reason, // 'deleted' | 'expired'
-        'deletedAt': Timestamp.now(),
-        'deletedBy': deletedBy,
-      });
+          .collection('history')
+          .add({
+            ...medication.toMap(),
+            'reason': reason,
+            'deletedAt': Timestamp.now(),
+            'deletedBy': deletedBy,
+          });
 
       debugPrint(
         '📋 Saved ${medication.name} to history (reason: $reason) for $elderlyId',
@@ -48,7 +46,6 @@ class MedicationHistoryService {
     required String reason,
   }) async {
     if (medications.isEmpty) return;
-
     try {
       final historyRef = _firestore
           .collection('medications')
@@ -57,8 +54,7 @@ class MedicationHistoryService {
 
       final batch = _firestore.batch();
       for (final med in medications) {
-        final docRef = historyRef.doc();
-        batch.set(docRef, {
+        batch.set(historyRef.doc(), {
           ...med.toMap(),
           'reason': reason,
           'deletedAt': Timestamp.now(),
@@ -68,14 +64,14 @@ class MedicationHistoryService {
       await batch.commit();
 
       debugPrint(
-        '📋 Saved ${medications.length} medications to history (reason: $reason) for $elderlyId',
+        '📋 Saved ${medications.length} medications to history for $elderlyId',
       );
     } catch (e) {
       debugPrint('❌ Error saving batch to history: $e');
     }
   }
 
-  /// Get history stream for display, ordered by deletedAt descending.
+  /// History stream ordered by deletedAt descending.
   Stream<QuerySnapshot<Map<String, dynamic>>> getHistoryStream(
     String elderlyId,
   ) {
@@ -90,14 +86,14 @@ class MedicationHistoryService {
   /// Clear all history for an elderly user.
   Future<void> clearHistory(String elderlyId) async {
     try {
-      final historyRef = _firestore
+      final snap = await _firestore
           .collection('medications')
           .doc(elderlyId)
-          .collection('history');
+          .collection('history')
+          .get();
 
-      final snapshot = await historyRef.get();
       final batch = _firestore.batch();
-      for (final doc in snapshot.docs) {
+      for (final doc in snap.docs) {
         batch.delete(doc.reference);
       }
       await batch.commit();
@@ -125,8 +121,10 @@ class MedicationHistoryService {
   }
 
   /// Recover a medication from history back to the active medications list.
-  /// Reads the history doc, rebuilds a Medication, adds it to medsList,
-  /// removes it from history, and returns the recovered Medication (or null on error).
+  ///
+  /// The history doc should already have been patched with updated
+  /// [createdAt], [endDate], and [times] by the caller (recovery dialog)
+  /// before this method is invoked.
   Future<Medication?> recoverFromHistory({
     required String elderlyId,
     required String historyDocId,
@@ -146,38 +144,43 @@ class MedicationHistoryService {
 
       final data = historySnap.data()!;
 
-      // Strip history-only fields before rebuilding the Medication
-      final medData = Map<String, dynamic>.from(data);
-      medData.remove('reason');
-      medData.remove('deletedAt');
-      medData.remove('deletedBy');
+      // Strip history-only fields
+      final medData = Map<String, dynamic>.from(data)
+        ..remove('reason')
+        ..remove('deletedAt')
+        ..remove('deletedBy');
 
-      // Give it a fresh ID + timestamps
+      // Normalize times: old docs may store {hour,minute} maps; fromMap expects "HH:mm"
+      if (medData['times'] is List) {
+        medData['times'] = (medData['times'] as List).map((t) {
+          if (t is Map) {
+            final h = (t['hour'] ?? 0).toString().padLeft(2, '0');
+            final m = (t['minute'] ?? 0).toString().padLeft(2, '0');
+            return '$h:$m';
+          }
+          return t;
+        }).toList();
+      }
+
+      // Fresh ID + updatedAt; keep createdAt as already patched by dialog
       medData['id'] = DateTime.now().millisecondsSinceEpoch.toString();
       medData['updatedAt'] = Timestamp.now();
-      if (medData['createdAt'] == null) {
-        medData['createdAt'] = Timestamp.now();
-      }
+      medData['createdAt'] ??= Timestamp.now();
 
       final recoveredMed = Medication.fromMap(medData);
 
-      // Add back to the active medsList
-      final medsDocRef = _firestore.collection('medications').doc(elderlyId);
-
-      await medsDocRef.set({
+      // Add back to active list
+      await _firestore.collection('medications').doc(elderlyId).set({
         'medsList': FieldValue.arrayUnion([recoveredMed.toMap()]),
       }, SetOptions(merge: true));
 
       // Remove from history
       await historyDocRef.delete();
 
-      debugPrint(
-        '♻️ Recovered ${recoveredMed.name} from history for $elderlyId',
-      );
-
+      debugPrint('♻️ Recovered ${recoveredMed.name} for $elderlyId');
       return recoveredMed;
     } catch (e) {
-      debugPrint('❌ Error recovering medication from history: $e');
+      debugPrint('❌ Error recovering from history: $e');
       return null;
     }
   }
