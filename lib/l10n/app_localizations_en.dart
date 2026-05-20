@@ -448,7 +448,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noResultsFound => 'No results found';
 
   @override
-  String get searchForAudio => 'Search for audio...';
+  String get searchForAudio => 'Search for content...';
 
   @override
   String get addedToFavorites => 'Added to Favorites successfully';

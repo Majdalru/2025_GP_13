@@ -887,7 +887,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchForAudio.
   ///
   /// In en, this message translates to:
-  /// **'Search for audio...'**
+  /// **'Search for content...'**
   String get searchForAudio;
 
   /// No description provided for @addedToFavorites.

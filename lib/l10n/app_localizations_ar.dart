@@ -445,7 +445,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noResultsFound => 'لم يتم العثور على نتائج';
 
   @override
-  String get searchForAudio => 'البحث عن مقطع صوتي...';
+  String get searchForAudio => 'البحث عن المحتوى ...';
 
   @override
   String get addedToFavorites => 'تمت الإضافة إلى المفضلة بنجاح';
