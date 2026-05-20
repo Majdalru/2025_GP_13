@@ -30,19 +30,38 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // ── Palette ───────────────────────────────────────────────────────────────
   static const _kNavy = Color(0xFF0D2D5D);
   static const _kTeal = Color(0xFF4DB6AC);
 
-  // ── Edit profile state ────────────────────────────────────────────────────
   bool _editingProfile = false;
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  bool _savingProfile = false;
-
-  // ── Extra controllers for phone/gender ───────────────────────────────────
   final _phoneCtrl = TextEditingController();
+  bool _savingProfile = false;
   String _selectedGender = 'male';
+
+  late List<ElderlyProfile> _localLinkedProfiles;
+  ElderlyProfile? _localSelectedProfile;
+
+  @override
+  void initState() {
+    super.initState();
+    _localLinkedProfiles = List<ElderlyProfile>.from(widget.linkedProfiles);
+    _localSelectedProfile = widget.selectedProfile;
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.linkedProfiles != widget.linkedProfiles) {
+      _localLinkedProfiles = List<ElderlyProfile>.from(widget.linkedProfiles);
+    }
+
+    if (oldWidget.selectedProfile?.uid != widget.selectedProfile?.uid) {
+      _localSelectedProfile = widget.selectedProfile;
+    }
+  }
 
   @override
   void dispose() {
@@ -63,26 +82,28 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
     setState(() => _savingProfile = true);
+
     final parts = _nameCtrl.text.trim().split(RegExp(r'\s+'));
     final first = parts.isNotEmpty ? parts.first : '';
     final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-            'firstName': first,
-            'lastName': last,
-            'phone': _phoneCtrl.text.trim(),
-            'gender': _selectedGender,
-          });
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'firstName': first,
+        'lastName': last,
+        'phone': _phoneCtrl.text.trim(),
+        'gender': _selectedGender,
+      });
+
       if (mounted) setState(() => _editingProfile = false);
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _savingProfile = false);
     }
@@ -100,7 +121,6 @@ class _SettingsPageState extends State<SettingsPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Top bar — matches home style ─────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
@@ -129,174 +149,33 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Profile header — teal gradient ────────────────────
                     _buildProfileHeader(user, loc, isArabic),
-
                     const SizedBox(height: 24),
-
-                    // ── Account info section ──────────────────────────────
                     _sectionLabel(loc.account),
                     const SizedBox(height: 10),
                     _buildInfoCard(user, loc, isArabic),
-
                     const SizedBox(height: 22),
-
-                    // ── Linked elderly ────────────────────────────────────
                     _sectionLabel(loc.linkedElderly),
                     const SizedBox(height: 10),
-                    if (widget.linkedProfiles.isEmpty)
+                    if (_localLinkedProfiles.isEmpty)
                       _buildEmptyProfiles(loc)
                     else
-                      ...widget.linkedProfiles.map(
+                      ..._localLinkedProfiles.map(
                         (p) => _buildElderlyProfileTile(context, p),
                       ),
                     const SizedBox(height: 8),
                     _buildAddElderlyButton(context, loc),
-
                     const SizedBox(height: 22),
-
-                    // ── Language ──────────────────────────────────────────
                     _sectionLabel(loc.language),
                     const SizedBox(height: 10),
-                    _buildCard(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE0F2F1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.language_outlined,
-                                color: Color(0xFF00897B),
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    loc.language,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF1A2340),
-                                    ),
-                                  ),
-                                  Text(
-                                    isArabic ? 'العربية' : 'English',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF6B7280),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Animated toggle
-                            GestureDetector(
-                              onTap: () => localeProvider.toggleLanguage(),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                width: 72,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF4DB6AC),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    // 👇 WRAP YOUR ROW WITH THIS DIRECTIONALITY WIDGET
-                                    Directionality(
-                                      textDirection: TextDirection.ltr,
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                        children: const [
-                                          Text(
-                                            'EN',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.white70,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                          Text(
-                                            'ع',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.white70,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    AnimatedAlign(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      alignment: isArabic
-                                          ? Alignment.centerRight
-                                          : Alignment.centerLeft,
-                                      child: Container(
-                                        margin: const EdgeInsets.all(3),
-                                        width: 30,
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.15,
-                                              ),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            isArabic ? 'ع' : 'EN',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Color(0xFF00897B),
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
+                    _buildLanguageCard(localeProvider, loc, isArabic),
                     const SizedBox(height: 28),
-
-                    // ── Logout ────────────────────────────────────────────
                     SizedBox(
                       width: double.infinity,
                       height: 62,
@@ -334,45 +213,40 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ── Section label ─────────────────────────────────────────────────────────
   Widget _sectionLabel(String text) => Padding(
-    padding: const EdgeInsets.only(left: 2),
-    child: Text(
-      text.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF9CA3AF),
-        letterSpacing: 0.8,
-      ),
-    ),
-  );
-
-  // ── Generic white card ────────────────────────────────────────────────────
-  Widget _buildCard({required Widget child}) => Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
+        padding: const EdgeInsets.only(left: 2),
+        child: Text(
+          text.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF9CA3AF),
+            letterSpacing: 0.8,
+          ),
         ),
-      ],
-    ),
-    child: child,
-  );
+      );
 
-  // ── Profile header card — teal gradient ──────────────────────────────────
+  Widget _buildCard({required Widget child}) => Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: child,
+      );
+
   Widget _buildProfileHeader(User? user, AppLocalizations loc, bool isArabic) {
     if (user == null) return const SizedBox.shrink();
+
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
       builder: (context, snap) {
         final data = snap.data?.data();
         final first = (data?['firstName'] ?? '').toString().trim();
@@ -444,17 +318,14 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         AppLocalizations.of(context)!.caregiver,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -464,7 +335,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-              // Edit button
               Material(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
@@ -472,9 +342,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   borderRadius: BorderRadius.circular(12),
                   onTap: () {
                     final phone = (data?['phone'] ?? '').toString().trim();
-                    final gender = (data?['gender'] ?? 'male')
-                        .toString()
-                        .trim();
+                    final gender = (data?['gender'] ?? 'male').toString().trim();
                     _startEditing(name, email, phone, gender);
                   },
                   child: const Padding(
@@ -494,19 +362,16 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ── Info card — all account fields ────────────────────────────────────────
   Widget _buildInfoCard(User? user, AppLocalizations loc, bool isArabic) {
     if (user == null) return const SizedBox.shrink();
+
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
       builder: (context, snap) {
-        // ✅ أضف هذا: إذا لا يزال يحمّل، اعرض shimmer أو placeholder بدلاً من فراغ
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
+
         final data = snap.data?.data();
         final first = (data?['firstName'] ?? '').toString().trim();
         final last = (data?['lastName'] ?? '').toString().trim();
@@ -611,10 +476,13 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _divider() =>
-      Divider(height: 1, thickness: 1, indent: 62, color: Colors.grey.shade100);
+  Widget _divider() => Divider(
+        height: 1,
+        thickness: 1,
+        indent: 62,
+        color: Colors.grey.shade100,
+      );
 
-  // ── Edit form ─────────────────────────────────────────────────────────────
   Widget _buildEditForm(AppLocalizations loc, bool isArabic) {
     return _buildCard(
       child: Padding(
@@ -648,7 +516,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             const SizedBox(height: 14),
-            // Gender toggle
             Container(
               decoration: BoxDecoration(
                 color: const Color(0xFFF7F8FA),
@@ -658,11 +525,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Row(
                 children: [
                   _genderOption(isArabic ? 'ذكر' : 'Male', Icons.male, 'male'),
-                  _genderOption(
-                    isArabic ? 'أنثى' : 'Female',
-                    Icons.female,
-                    'female',
-                  ),
+                  _genderOption(isArabic ? 'أنثى' : 'Female', Icons.female, 'female'),
                 ],
               ),
             ),
@@ -732,6 +595,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _genderOption(String label, IconData icon, String value) {
     final selected = _selectedGender == value;
+
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _selectedGender = value),
@@ -797,10 +661,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -817,20 +678,16 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ── Linked elderly tile ───────────────────────────────────────────────────
-  Widget _buildElderlyProfileTile(
-    BuildContext context,
-    ElderlyProfile profile,
-  ) {
-    final isSelected = widget.selectedProfile?.uid == profile.uid;
+  Widget _buildElderlyProfileTile(BuildContext context, ElderlyProfile profile) {
+    final isSelected = _localSelectedProfile?.uid == profile.uid;
     final loc = AppLocalizations.of(context)!;
     final initials = profile.name.isNotEmpty
         ? profile.name
-              .split(' ')
-              .where((w) => w.isNotEmpty)
-              .take(2)
-              .map((w) => w[0].toUpperCase())
-              .join()
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .take(2)
+            .map((w) => w[0].toUpperCase())
+            .join()
         : '?';
 
     return Container(
@@ -849,9 +706,7 @@ class _SettingsPageState extends State<SettingsPage> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: isSelected
-                ? _kTeal.withOpacity(0.15)
-                : const Color(0xFFF0F2F5),
+            color: isSelected ? _kTeal.withOpacity(0.15) : const Color(0xFFF0F2F5),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -877,7 +732,7 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isSelected) ...[
-              Icon(Icons.check_circle_rounded, color: _kTeal, size: 20),
+              const Icon(Icons.check_circle_rounded, color: _kTeal, size: 20),
               const SizedBox(width: 4),
             ],
             IconButton(
@@ -891,6 +746,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         onTap: () {
+          setState(() => _localSelectedProfile = profile);
           widget.onProfileSelected(profile);
           Navigator.pop(context);
         },
@@ -898,7 +754,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ── Confirmation Box for Unlinking Elderly Profile ────────────────────────
   void _confirmUnlinkProfile(
     BuildContext context,
     ElderlyProfile profile,
@@ -923,27 +778,16 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             onPressed: () async {
-              Navigator.pop(ctx); // Closes the confirmation dialog
-              await FirebaseAuth.instance.signOut(); // Signs out from Firebase
-              widget
-                  .onLogoutConfirmed(); // Triggers the optional parent callback
-
-              // 👇 ADD THIS ROUTING BLOCK TO REDIRECT THE SCREEN TO LOGIN
-              if (context.mounted) {
-                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false, // Clears the page stack completely
-                );
-              }
+              Navigator.pop(ctx);
+              await _unlinkProfile(context, profile, loc);
             },
-            child: Text(loc.logout),
+            child: Text(loc.unlink),
           ),
         ],
       ),
     );
   }
 
-  // ── Database Transaction logic to Unlink Profile ─────────────────────────
   Future<void> _unlinkProfile(
     BuildContext context,
     ElderlyProfile profile,
@@ -951,9 +795,9 @@ class _SettingsPageState extends State<SettingsPage> {
   ) async {
     final caregiverUid = FirebaseAuth.instance.currentUser?.uid;
     if (caregiverUid == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(loc.errorNotLoggedIn)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(loc.errorNotLoggedIn)),
+      );
       return;
     }
 
@@ -971,7 +815,7 @@ class _SettingsPageState extends State<SettingsPage> {
         });
       });
 
-      widget.onProfileLinked(); // Updates parent list view state safely
+      widget.onProfileLinked();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -993,7 +837,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // ── Empty profiles ────────────────────────────────────────────────────────
   Widget _buildEmptyProfiles(AppLocalizations loc) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1019,7 +862,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ── Add elderly button ────────────────────────────────────────────────────
   Widget _buildAddElderlyButton(BuildContext context, AppLocalizations loc) {
     return GestureDetector(
       onTap: () => _showLinkDialog(context, loc),
@@ -1033,11 +875,11 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_circle_outline, color: _kTeal, size: 22),
+            const Icon(Icons.add_circle_outline, color: _kTeal, size: 22),
             const SizedBox(width: 10),
             Text(
               loc.linkNewElderly,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: _kTeal,
@@ -1049,95 +891,130 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ── Section label ─────────────────────────────────────────────────────────
-  Widget _buildSectionLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 2),
-      child: Text(
-        label.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF9CA3AF),
-          letterSpacing: 0.8,
+  Widget _buildLanguageCard(
+    LocaleProvider localeProvider,
+    AppLocalizations loc,
+    bool isArabic,
+  ) {
+    return _buildCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0F2F1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.language_outlined,
+                color: Color(0xFF00897B),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    loc.language,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A2340),
+                    ),
+                  ),
+                  Text(
+                    isArabic ? 'العربية' : 'English',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => localeProvider.toggleLanguage(),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 72,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4DB6AC),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: const [
+                          Text(
+                            'EN',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'ع',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedAlign(
+                      duration: const Duration(milliseconds: 300),
+                      alignment: isArabic ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.all(3),
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            isArabic ? 'ع' : 'EN',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF00897B),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ── Settings card ─────────────────────────────────────────────────────────
-  Widget _buildSettingsCard(List<_SettingsTile> tiles) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: tiles.asMap().entries.map((entry) {
-          final i = entry.key;
-          final tile = entry.value;
-          return Column(
-            children: [
-              InkWell(
-                onTap: tile.onTap,
-                borderRadius: BorderRadius.circular(18),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: tile.iconBg,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(tile.icon, color: tile.iconColor, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          tile.title,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: tile.titleColor ?? const Color(0xFF1A2340),
-                          ),
-                        ),
-                      ),
-                      tile.trailing ?? const SizedBox.shrink(),
-                    ],
-                  ),
-                ),
-              ),
-              if (i < tiles.length - 1)
-                const Divider(
-                  height: 1,
-                  indent: 72,
-                  endIndent: 16,
-                  color: Color(0xFFF0F2F5),
-                ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // ── Link dialog ───────────────────────────────────────────────────────────
   void _showLinkDialog(BuildContext context, AppLocalizations loc) {
     final controller = TextEditingController();
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1145,6 +1022,7 @@ class _SettingsPageState extends State<SettingsPage> {
         title: Text(loc.linkNewElderly),
         content: TextField(
           controller: controller,
+          textCapitalization: TextCapitalization.characters,
           decoration: InputDecoration(
             hintText: loc.enterElderlyCode,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -1178,14 +1056,27 @@ class _SettingsPageState extends State<SettingsPage> {
     String code,
     AppLocalizations loc,
   ) async {
-    if (code.isEmpty) return;
+    final enteredCode = code.trim().toUpperCase();
+    if (enteredCode.isEmpty) return;
+
     final caregiver = FirebaseAuth.instance.currentUser;
-    if (caregiver == null) return;
+    if (caregiver == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loc.errorNotLoggedIn),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+      return;
+    }
 
     try {
       final snap = await FirebaseFirestore.instance
           .collection('users')
-          .where('linkingCode', isEqualTo: code)
+          .where('pairingCode', isEqualTo: enteredCode)
+          .where('role', isEqualTo: 'elderly')
           .limit(1)
           .get();
 
@@ -1201,34 +1092,143 @@ class _SettingsPageState extends State<SettingsPage> {
         return;
       }
 
-      final elderlyId = snap.docs.first.id;
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(caregiver.uid)
-          .update({
-            'elderlyIds': FieldValue.arrayUnion([elderlyId]),
-          });
+      final elderlyDoc = snap.docs.first;
+      final elderlyId = elderlyDoc.id;
+      final elderlyData = elderlyDoc.data();
+      final first = (elderlyData['firstName'] ?? '').toString().trim();
+      final last = (elderlyData['lastName'] ?? '').toString().trim();
+      final email = (elderlyData['email'] ?? '').toString().trim();
+      final elderlyName = [first, last].where((s) => s.isNotEmpty).join(' ');
+      final displayName = elderlyName.isNotEmpty
+          ? elderlyName
+          : (email.isNotEmpty ? email : 'Unknown');
 
+      final firestore = FirebaseFirestore.instance;
+      final caregiverDocRef = firestore.collection('users').doc(caregiver.uid);
+      final elderlyDocRef = firestore.collection('users').doc(elderlyId);
+
+      await firestore.runTransaction((tx) async {
+        tx.update(caregiverDocRef, {
+          'elderlyIds': FieldValue.arrayUnion([elderlyId]),
+        });
+
+        tx.update(elderlyDocRef, {
+          'caregiverIds': FieldValue.arrayUnion([caregiver.uid]),
+          'pairingCode': FieldValue.delete(),
+          'pairingCodeCreatedAt': FieldValue.delete(),
+        });
+      });
+
+      final newProfile = ElderlyProfile(uid: elderlyId, name: displayName);
+
+      if (mounted) {
+        setState(() {
+          final exists = _localLinkedProfiles.any((p) => p.uid == elderlyId);
+          if (!exists) {
+            _localLinkedProfiles = [..._localLinkedProfiles, newProfile]
+              ..sort(
+                (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+              );
+          }
+          _localSelectedProfile = newProfile;
+        });
+      }
+
+      widget.onProfileSelected(newProfile);
       widget.onProfileLinked();
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(loc.profileLinkedSuccessfully),
-            backgroundColor: Colors.green.shade600,
-          ),
-        );
+        await _showLinkedSuccessDialog(context, displayName);
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
       }
     }
   }
 
-  // ── Logout ────────────────────────────────────────────────────────────────
+  Future<void> _showLinkedSuccessDialog(
+    BuildContext context,
+    String elderlyName,
+  ) async {
+    final isArabic = Provider.of<LocaleProvider>(context, listen: false).isArabic;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        title: Column(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE0F2F1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF00897B),
+                size: 42,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              isArabic ? 'تمت الإضافة بنجاح' : 'Added Successfully',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF1A2340),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          isArabic
+              ? 'تم إضافة $elderlyName إلى قائمة كبار السن المرتبطين.'
+              : '$elderlyName has been added to your linked elderly profiles.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 16,
+            height: 1.4,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF4DB6AC),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                isArabic ? 'حسنًا' : 'OK',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmLogout(BuildContext context, AppLocalizations loc) {
     showDialog(
       context: context,
@@ -1249,10 +1249,10 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             onPressed: () async {
-              Navigator.pop(ctx); // أغلق الـ dialog
+              Navigator.pop(ctx);
               await FirebaseAuth.instance.signOut();
               widget.onLogoutConfirmed();
-              // ✅ أضف هذا السطر:
+
               if (context.mounted) {
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -1268,7 +1268,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-// ── Helper widgets ────────────────────────────────────────────────────────────
 class _SettingsTile {
   final IconData icon;
   final Color iconBg;
@@ -1291,6 +1290,7 @@ class _SettingsTile {
 
 class _ChevronTrailing extends StatelessWidget {
   const _ChevronTrailing();
+
   @override
   Widget build(BuildContext context) =>
       Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20);
