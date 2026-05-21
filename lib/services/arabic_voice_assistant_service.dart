@@ -212,6 +212,11 @@ class ArabicVoiceAssistantService {
 
     final answer = await listenWhisper(seconds: 6);
 
+    if (_isInvalidVoiceInput(answer)) {
+      await speak('لم أسمع طلبًا واضحًا. حاول مرة أخرى.');
+      return;
+    }
+
     if (_isCancelUtterance(answer)) {
       await speak('حسنًا، سأتوقف الآن.');
       return;
@@ -239,6 +244,21 @@ class ArabicVoiceAssistantService {
   Future<VoiceCommand?> analyzeSmartCommand(String text) async {
     final cleaned = text.trim();
     if (cleaned.isEmpty) return null;
+
+    if (_isInvalidVoiceInput(cleaned)) {
+      debugPrint('⚠️ Ignoring invalid Arabic voice input.');
+      return null;
+    }
+
+    if (_openAIApiKey.isNotEmpty) {
+      final emergencyIntent = await _structuredParser.parseEmergencyIntent(
+        cleaned,
+        _openAIApiKey,
+      );
+      if (emergencyIntent == true) {
+        return VoiceCommand.sos;
+      }
+    }
 
     VoiceCommand? fromChat;
 
@@ -396,12 +416,68 @@ class ArabicVoiceAssistantService {
       'emergency',
       'help me',
       'call help',
+      'send help',
+      'i need help',
+      'i need someone',
+      'i am in danger',
+      "i'm in danger",
+      'i feel unsafe',
+      'i do not feel well',
+      "i don't feel well",
+      'i feel sick',
+      'i feel dizzy',
+      'i am dizzy',
+      'i cannot breathe',
+      "i can't breathe",
+      'chest pain',
+      'i fell',
+      'i have fallen',
+      'i cannot move',
+      "i can't move",
+      'i cannot get up',
+      "i can't get up",
+      'call ambulance',
+      'call an ambulance',
       'استغاثه',
       'استغاثة',
       'طوارئ',
       'ساعد',
+      'ساعدني',
       'نجده',
       'نجدة',
+      'الحقني',
+      'الحقوني',
+      'احتاج مساعده',
+      'احتاج مساعدة',
+      'احتاج احد',
+      'انا بخطر',
+      'انا في خطر',
+      'ما احس اني بخير',
+      'ما أحس إني بخير',
+      'مو بخير',
+      'ماني بخير',
+      'تعبان',
+      'تعبانه',
+      'تعبانة',
+      'دوخه',
+      'دوخة',
+      'دايخ',
+      'دايخه',
+      'دايخة',
+      'ما اقدر اتنفس',
+      'ما أقدر أتنفس',
+      'ما اقدر اتحرك',
+      'ما أقدر أتحرك',
+      'ما اقدر اقوم',
+      'ما أقدر أقوم',
+      'الم في صدري',
+      'ألم في صدري',
+      'صدري يعورني',
+      'طحت',
+      'طيحت',
+      'وقعت',
+      'ابغى اسعاف',
+      'اتصلوا بالاسعاف',
     ])) {
       return VoiceCommand.sos;
     }
@@ -1633,6 +1709,32 @@ class ArabicVoiceAssistantService {
         lower.contains('لا') ||
         lower.contains('مو') ||
         lower.contains('خلاص');
+  }
+
+  bool _isInvalidVoiceInput(String? text) {
+    if (text == null) return true;
+
+    final cleaned = _normalizeArabic(text.trim().toLowerCase());
+
+    if (cleaned.isEmpty) return true;
+    if (cleaned.length < 3) return true;
+
+    const invalidPhrases = [
+      'شكرا',
+      'شكرًا',
+      'تمام',
+      'اوكي',
+      'اوك',
+      'اي',
+      'لا',
+      'اه',
+      'مم',
+      'ها',
+      'مرحبا',
+      'هلا',
+    ];
+
+    return invalidPhrases.contains(cleaned);
   }
 
   bool _isCancelUtterance(String? answer) {

@@ -44,6 +44,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
   bool _isSpeaking = false;
   bool _isInitialized = false;
   String? _userName;
+  bool _hasSpokenIntro = false;
 
   late AnimationController _rippleController;
   late AnimationController _pulseController;
@@ -198,30 +199,55 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     if (widget.customGreeting != null) {
       await _speak(widget.customGreeting!);
     } else {
-      final hour = DateTime.now().hour;
-      String greeting;
+      if (!_hasSpokenIntro) {
+        await _speak(_buildIntroGreeting());
+        await _speak(
+          "I can help you check your medications, open the daily library, open family messages, request emergency help, or navigate through the app.",
+        );
 
-      if (hour < 12) {
-        greeting = _userName != null
-            ? "Good morning, $_userName! How can I help you?"
-            : "Good morning! How can I help you?";
-      } else if (hour < 17) {
-        greeting = _userName != null
-            ? "Good afternoon, $_userName! What would you like?"
-            : "Good afternoon! What would you like?";
+        _hasSpokenIntro = true;
       } else {
-        greeting = _userName != null
-            ? "Good evening, $_userName! How can I assist you?"
-            : "Good evening! How can I assist you?";
+        await _speak(_buildShortGreeting());
       }
-
-      await _speak(greeting);
-      await _speak(
-        "I can help you check your medications, open the daily library, open family messages, or navigate through the app.",
-      );
     }
 
     await _startListening();
+  }
+
+  String _buildIntroGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) {
+      return _userName != null
+          ? "Good morning, $_userName! How can I help you?"
+          : "Good morning! How can I help you?";
+    } else if (hour < 17) {
+      return _userName != null
+          ? "Good afternoon, $_userName! What would you like?"
+          : "Good afternoon! What would you like?";
+    } else {
+      return _userName != null
+          ? "Good evening, $_userName! How can I assist you?"
+          : "Good evening! How can I assist you?";
+    }
+  }
+
+  String _buildShortGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) {
+      return _userName != null
+          ? "Good morning, $_userName! How can I assist you?"
+          : "Good morning! How can I assist you?";
+    } else if (hour < 17) {
+      return _userName != null
+          ? "Good afternoon, $_userName! How can I assist you?"
+          : "Good afternoon! How can I assist you?";
+    } else {
+      return _userName != null
+          ? "Good evening, $_userName! How can I assist you?"
+          : "Good evening! How can I assist you?";
+    }
   }
 
   Future<void> _speak(String text) async {
@@ -254,7 +280,9 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
 
       debugPrint('🎤 Whisper result: "$result"');
 
-      if (result != null && result.trim().isNotEmpty) {
+      if (_isInvalidVoiceInput(result)) {
+        await _handleNoResponse();
+      } else if (result != null && result.trim().isNotEmpty) {
         await _processCommand(result);
       } else {
         await _handleNoResponse();
@@ -266,6 +294,32 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
         _isListening = false;
       });
     }
+  }
+
+  bool _isInvalidVoiceInput(String? text) {
+    if (text == null) return true;
+
+    final cleaned = text.trim().toLowerCase();
+
+    if (cleaned.isEmpty) return true;
+    if (cleaned.length < 3) return true;
+
+    const invalidPhrases = [
+      'thank you',
+      'thanks',
+      'you',
+      'bye',
+      'okay',
+      'ok',
+      'hello',
+      'hi',
+      'hmm',
+      'um',
+      'uh',
+      '...',
+    ];
+
+    return invalidPhrases.contains(cleaned);
   }
 
   Future<void> _processCommand(String text) async {
@@ -296,7 +350,9 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     if (command != null) {
       final confirmation = _getConfirmation(command);
       HapticFeedback.heavyImpact();
-      await _speak(confirmation);
+      if (confirmation.trim().isNotEmpty) {
+        await _speak(confirmation);
+      }
 
       _stopAnimations();
 
@@ -359,7 +415,7 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
       case VoiceCommand.goToHome:
         return "Going to home.";
       case VoiceCommand.sos:
-        return "Activating emergency!";
+        return "";
       case VoiceCommand.goToSettings:
         return "Opening settings.";
       case VoiceCommand.weather:

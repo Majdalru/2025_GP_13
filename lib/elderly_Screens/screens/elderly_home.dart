@@ -379,6 +379,92 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     });
   }
 
+  bool _isVoiceSosConfirm(String? answer) {
+    if (answer == null) return false;
+
+    final text = answer.toLowerCase().trim();
+
+    return text.contains('confirm') ||
+        text.contains('yes') ||
+        text.contains('send') ||
+        text.contains('okay') ||
+        text.contains('ok') ||
+        text.contains('نعم') ||
+        text.contains('اي') ||
+        text.contains('ايه') ||
+        text.contains('إيه') ||
+        text.contains('تأكيد') ||
+        text.contains('اكد') ||
+        text.contains('أكد') ||
+        text.contains('ارسل') ||
+        text.contains('أرسل');
+  }
+
+  bool _isVoiceSosCancel(String? answer) {
+    if (answer == null) return true;
+
+    final text = answer.toLowerCase().trim();
+
+    return text.isEmpty ||
+        text.contains('cancel') ||
+        text.contains('stop') ||
+        text.contains('no') ||
+        text.contains('لا') ||
+        text.contains('الغاء') ||
+        text.contains('إلغاء') ||
+        text.contains('وقف') ||
+        text.contains('خلاص');
+  }
+
+  Future<void> _confirmAndSendVoiceSos({required bool isArabic}) async {
+    if (!mounted) return;
+
+    if (isArabic) {
+      await _arabicVoice.speak(
+        'تم التعرف على طلب طوارئ. قل تأكيد لإرسال التنبيه، أو إلغاء للتوقف.',
+      );
+
+      final answer = await _arabicVoice.listenWhisper(seconds: 4);
+
+      if (_isVoiceSosConfirm(answer)) {
+        await _arabicVoice.speak('تم التأكيد. سيتم إرسال تنبيه الطوارئ الآن.');
+        await sendEmergencyAlert();
+        return;
+      }
+
+      if (_isVoiceSosCancel(answer)) {
+        await _arabicVoice.speak('تم إلغاء تنبيه الطوارئ.');
+        return;
+      }
+
+      await _arabicVoice.speak(
+        'لم أسمع تأكيدًا واضحًا. تم إلغاء تنبيه الطوارئ.',
+      );
+      return;
+    }
+
+    await _voice.speak(
+      'Emergency request detected. Say confirm to send SOS, or cancel to stop.',
+    );
+
+    final answer = await _voice.listenWhisper(seconds: 4);
+
+    if (_isVoiceSosConfirm(answer)) {
+      await _voice.speak('Confirmed. Sending emergency alert now.');
+      await sendEmergencyAlert();
+      return;
+    }
+
+    if (_isVoiceSosCancel(answer)) {
+      await _voice.speak('Emergency alert cancelled.');
+      return;
+    }
+
+    await _voice.speak(
+      'I did not hear a clear confirmation. Emergency alert cancelled.',
+    );
+  }
+
   String _translateGender(String? g) {
     if (g == null || g.isEmpty) {
       return AppLocalizations.of(context)!.na;
@@ -1092,13 +1178,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                         );
                                         break;
                                       case VoiceCommand.sos:
-                                        if (!mounted) return;
-                                        await _arabicVoice.speak(
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.voiceSosPreamble,
+                                        await _confirmAndSendVoiceSos(
+                                          isArabic: true,
                                         );
-                                        await sendEmergencyAlert();
                                         break;
                                       case VoiceCommand.goToSettings:
                                         await _arabicVoice.speak(
@@ -1306,13 +1388,9 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                                         );
                                         break;
                                       case VoiceCommand.sos:
-                                        if (!mounted) return;
-                                        await _voice.speak(
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.voiceSosPreamble,
+                                        await _confirmAndSendVoiceSos(
+                                          isArabic: false,
                                         );
-                                        await sendEmergencyAlert();
                                         break;
                                       case VoiceCommand.goToSettings:
                                         await _voice.speak(

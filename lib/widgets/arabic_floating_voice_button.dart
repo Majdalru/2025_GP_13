@@ -45,6 +45,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
   bool _isSpeaking = false;
   bool _isInitialized = false;
   String? _userName;
+  bool _hasSpokenIntro = false;
 
   late AnimationController _rippleController;
   late AnimationController _pulseController;
@@ -191,27 +192,46 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
     if (widget.customGreeting != null) {
       await _speak(widget.customGreeting!);
     } else {
-      final hour = DateTime.now().hour;
-      String greeting;
+      if (!_hasSpokenIntro) {
+        final hour = DateTime.now().hour;
+        String greeting;
 
-      if (hour < 12) {
-        greeting = _userName != null
-            ? "صباح الخير يا $_userName، كيف استطيع مساعدتك"
-            : "صباح الخير، كيف أقدر أساعدك؟";
-      } else if (hour < 17) {
-        greeting = _userName != null
-            ? "مساء الخير يا $_userName، ماذا تريد؟"
-            : "مساء الخير، ماذا تريد؟";
+        if (hour < 12) {
+          greeting = _userName != null
+              ? "صباح الخير يا $_userName، كيف استطيع مساعدتك"
+              : "صباح الخير، كيف أقدر أساعدك؟";
+        } else if (hour < 17) {
+          greeting = _userName != null
+              ? "مساء الخير يا $_userName، ماذا تريد؟"
+              : "مساء الخير، ماذا تريد؟";
+        } else {
+          greeting = _userName != null
+              ? "مساء الخير يا $_userName، كيف أقدر أخدمك؟"
+              : "مساء الخير، كيف أقدر أخدمك؟";
+        }
+
+        await _speak(greeting);
+        await _speak(
+          "أستطيع مساعدتك في التنقل داخل التطبيق، أو معرفة أدويتك لليوم، أو فتح رسائل العائلة، أو طلب الطوارئ.",
+        );
+
+        _hasSpokenIntro = true;
       } else {
-        greeting = _userName != null
-            ? "مساء الخير يا $_userName، كيف أقدر أخدمك؟"
-            : "مساء الخير، كيف أقدر أخدمك؟";
-      }
+        final hour = DateTime.now().hour;
+             String shortGreeting;
 
-      await _speak(greeting);
-      await _speak(
-        "أستطيع مساعدتك في التنقل داخل التطبيق، أو معرفة أدويتك لليوم، أو فتح رسائل العائلة.",
-      );
+              if (hour < 12) {
+              shortGreeting = _userName != null
+              ? "صباح الخير يا $_userName، كيف أستطيع مساعدتك؟"
+              : "صباح الخير، كيف أستطيع مساعدتك؟";
+             } else {
+             shortGreeting = _userName != null
+            ? "مساء الخير يا $_userName، كيف أستطيع مساعدتك؟"
+            : "مساء الخير، كيف أستطيع مساعدتك؟";
+            }
+
+await _speak(shortGreeting);
+      }
     }
 
     await _startListening();
@@ -248,7 +268,9 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
 
       debugPrint('🎤 Whisper result: "$result"');
 
-      if (result != null && result.trim().isNotEmpty) {
+      if (_isInvalidVoiceInput(result)) {
+        await _handleNoResponse();
+      } else if (result != null && result.trim().isNotEmpty) {
         await _processCommand(result);
       } else {
         await _handleNoResponse();
@@ -260,6 +282,32 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
         _isListening = false;
       });
     }
+  }
+
+  bool _isInvalidVoiceInput(String? text) {
+    if (text == null) return true;
+
+    final cleaned = text.trim().toLowerCase();
+
+    if (cleaned.isEmpty) return true;
+    if (cleaned.length < 3) return true;
+
+    const invalidPhrases = [
+      'شكرا',
+      'شكرًا',
+      'تمام',
+      'اوكي',
+      'اوك',
+      'اي',
+      'لا',
+      'اه',
+      'مم',
+      'ها',
+      'مرحبا',
+      'هلا',
+    ];
+
+    return invalidPhrases.contains(cleaned);
   }
 
   Future<void> _processCommand(String text) async {
@@ -290,7 +338,9 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
     if (command != null) {
       final confirmation = _getConfirmation(command);
       HapticFeedback.heavyImpact();
-      await _speak(confirmation);
+      if (confirmation.trim().isNotEmpty) {
+        await _speak(confirmation);
+      }
 
       _stopAnimations();
 
@@ -349,7 +399,7 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
       case VoiceCommand.goToHome:
         return "جاري الانتقال إلى الصفحة الرئيسية.";
       case VoiceCommand.sos:
-        return "جاري تفعيل الطوارئ.";
+        return "";
       case VoiceCommand.goToSettings:
         return "جاري فتح الإعدادات.";
       case VoiceCommand.weather:

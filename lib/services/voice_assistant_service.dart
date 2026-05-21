@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import '../models/voice_command.dart';
 import '../models/medication.dart';
 import 'medication_scheduler.dart';
+import 'voice_structured_parser_service.dart';
 import 'whisper_service.dart';
 
 /// API KEY
@@ -25,6 +26,8 @@ class VoiceAssistantService {
   VoiceAssistantService._internal();
 
   final FlutterTts _tts = FlutterTts();
+  final VoiceStructuredParserService _structuredParser =
+      VoiceStructuredParserService();
 
   bool _isInitialized = false;
   bool _isSpeaking = false;
@@ -164,6 +167,11 @@ class VoiceAssistantService {
 
     final answer = await listenWhisper(seconds: 5);
 
+    if (_isInvalidVoiceInput(answer)) {
+      await speak('I did not hear a clear request. Please try again.');
+      return;
+    }
+
     if (_isCancelUtterance(answer)) {
       await speak('Okay, I will stop now.');
       return;
@@ -194,6 +202,22 @@ class VoiceAssistantService {
     final cleaned = text.trim();
     if (cleaned.isEmpty) return null;
     debugPrint('🧠 analyzeSmartCommand input: "$cleaned"');
+
+    if (_isInvalidVoiceInput(cleaned)) {
+      debugPrint('⚠️ Ignoring invalid voice input.');
+      return null;
+    }
+
+    if (_openAIApiKey.isNotEmpty) {
+      final emergencyIntent = await _structuredParser.parseEmergencyIntent(
+        cleaned,
+        _openAIApiKey,
+      );
+      if (emergencyIntent == true) {
+        debugPrint('🚨 Structured parser emergency intent → true');
+        return VoiceCommand.sos;
+      }
+    }
 
     VoiceCommand? fromChat;
 
@@ -376,10 +400,68 @@ class VoiceAssistantService {
       'emergency',
       'help me',
       'call help',
+      'send help',
+      'i need help',
+      'i need someone',
+      'i am in danger',
+      "i'm in danger",
+      'i feel unsafe',
+      'i do not feel well',
+      "i don't feel well",
+      'i feel sick',
+      'i feel dizzy',
+      'i am dizzy',
+      'i cannot breathe',
+      "i can't breathe",
+      'chest pain',
+      'i fell',
+      'i have fallen',
+      'i cannot move',
+      "i can't move",
+      'i cannot get up',
+      "i can't get up",
+      'call ambulance',
+      'call an ambulance',
       'استغاثة',
+      'استغاثه',
       'طوارئ',
       'ساعد',
+      'ساعدني',
       'نجدة',
+      'نجده',
+      'الحقني',
+      'الحقوني',
+      'احتاج مساعدة',
+      'احتاج مساعده',
+      'احتاج احد',
+      'انا بخطر',
+      'انا في خطر',
+      'ما احس اني بخير',
+      'ما أحس إني بخير',
+      'مو بخير',
+      'ماني بخير',
+      'تعبان',
+      'تعبانه',
+      'تعبانة',
+      'دوخه',
+      'دوخة',
+      'دايخ',
+      'دايخه',
+      'دايخة',
+      'ما اقدر اتنفس',
+      'ما أقدر أتنفس',
+      'ما اقدر اتحرك',
+      'ما أقدر أتحرك',
+      'ما اقدر اقوم',
+      'ما أقدر أقوم',
+      'الم في صدري',
+      'ألم في صدري',
+      'صدري يعورني',
+      'طحت',
+      'طيحت',
+      'وقعت',
+      'ابغى اسعاف',
+      'اتصلوا بالاسعاف',
     ])) {
       return VoiceCommand.sos;
     }
@@ -551,15 +633,11 @@ class VoiceAssistantService {
     }
     return false;
   }
-
   String _normalizeMedicationNameForDuplicate(String name) {
     return name
         .toLowerCase()
         .trim()
-        .replaceAll(
-          RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]'),
-          '',
-        )
+        .replaceAll(RegExp(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]'), '')
         .replaceAll('أ', 'ا')
         .replaceAll('إ', 'ا')
         .replaceAll('آ', 'ا')
@@ -587,9 +665,8 @@ class VoiceAssistantService {
       for (final med in medsList) {
         final medMap = Map<String, dynamic>.from(med as Map);
         final existingName = (medMap['name'] ?? '').toString();
-        final normalizedExistingName = _normalizeMedicationNameForDuplicate(
-          existingName,
-        );
+        final normalizedExistingName =
+            _normalizeMedicationNameForDuplicate(existingName);
 
         if (normalizedExistingName == normalizedNewName) {
           return true;
@@ -1895,6 +1972,32 @@ class VoiceAssistantService {
         norm.contains('لا تكمل') ||
         norm.contains('الغ') ||
         norm.contains('الغاء');
+  }
+
+  bool _isInvalidVoiceInput(String? text) {
+    if (text == null) return true;
+
+    final cleaned = text.trim().toLowerCase();
+
+    if (cleaned.isEmpty) return true;
+    if (cleaned.length < 3) return true;
+
+    const invalidPhrases = [
+      'thank you',
+      'thanks',
+      'you',
+      'bye',
+      'okay',
+      'ok',
+      'hello',
+      'hi',
+      'hmm',
+      'um',
+      'uh',
+      '...',
+    ];
+
+    return invalidPhrases.contains(cleaned);
   }
 
   TimeOfDay parseTimeFromSpeech(String speech) {
