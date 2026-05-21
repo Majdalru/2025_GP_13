@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/medication.dart';
 import '../../services/medication_scheduler.dart';
 import '../../services/medication_scan_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_application_1/l10n/app_localizations.dart';
@@ -1326,12 +1327,17 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                   ),
                                   onPressed: canApply
                                       ? () async {
-                                          final scannedName = nameCtrl.text.trim();
+                                          final scannedName = nameCtrl.text
+                                              .trim();
                                           final errorMessage =
-                                              await _validateMedicationNameBeforeNext(scannedName);
+                                              await _validateMedicationNameBeforeNext(
+                                                scannedName,
+                                              );
 
                                           if (errorMessage != null) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
                                                   errorMessage,
@@ -1340,9 +1346,13 @@ class _AddMedScreenState extends State<AddMedScreen> {
                                                     fontWeight: FontWeight.w600,
                                                   ),
                                                 ),
-                                                backgroundColor: Colors.orange.shade700,
-                                                behavior: SnackBarBehavior.floating,
-                                                duration: const Duration(seconds: 3),
+                                                backgroundColor:
+                                                    Colors.orange.shade700,
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
                                               ),
                                             );
                                             return;
@@ -1429,6 +1439,26 @@ class _AddMedScreenState extends State<AddMedScreen> {
   // ═══════════════════════════════════════════
   Future<void> _scanFromCamera() async {
     if (_isScanning) return;
+
+    // ── camera permission check ──
+    final cameraStatus = await Permission.camera.request();
+    if (!cameraStatus.isGranted) {
+      if (mounted) {
+        final loc = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              loc.cameraPermissionDenied,
+              style: const TextStyle(fontSize: 20),
+            ),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isScanning = true);
 
     try {
@@ -2038,7 +2068,8 @@ class _Step1MedNameState extends State<_Step1MedName> {
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: _nameController.text.trim().isNotEmpty && !_isCheckingName
+              onPressed:
+                  _nameController.text.trim().isNotEmpty && !_isCheckingName
                   ? () async {
                       setState(() {
                         _isCheckingName = true;

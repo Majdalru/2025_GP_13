@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:math' as math;
-
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 import '../models/voice_command.dart';
 import '../services/voice_assistant_service.dart';
 
@@ -116,7 +116,19 @@ class _FloatingVoiceButtonState extends State<FloatingVoiceButton>
     try {
       final micStatus = await Permission.microphone.request();
       if (!micStatus.isGranted) {
-        debugPrint('❌ Microphone permission not granted');
+        if (mounted) {
+          final loc = AppLocalizations.of(context)!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                loc.micPermissionDenied,
+                style: const TextStyle(fontSize: 18),
+              ),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
         return;
       }
 

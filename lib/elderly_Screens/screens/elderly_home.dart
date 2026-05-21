@@ -112,6 +112,21 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       );
     } catch (e) {
       debugPrint("Error saving elderly location: $e");
+      if (mounted) {
+        final loc = AppLocalizations.of(context)!;
+        final msg = e.toString().contains('location_service_disabled')
+            ? loc.locationServiceDisabled
+            : e.toString().contains('location_permission_permanently_denied')
+            ? loc.locationPermissionPermanentlyDenied
+            : loc.locationPermissionDenied;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg, style: const TextStyle(fontSize: 20)),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -130,14 +145,38 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         return;
       }
 
-      final position = await locationService.getCurrentLocation();
+      late double lat;
+      late double lng;
+      try {
+        final position = await locationService.getCurrentLocation();
+        lat = position.latitude;
+        lng = position.longitude;
+      } catch (e) {
+        if (mounted) {
+          final loc = AppLocalizations.of(context)!;
+          final msg = e.toString().contains('location_service_disabled')
+              ? loc.locationServiceDisabled
+              : e.toString().contains('location_permission_permanently_denied')
+              ? loc.locationPermissionPermanentlyDenied
+              : loc.locationPermissionDenied;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg, style: const TextStyle(fontSize: 20)),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        setState(() => _isSendingEmergency = false);
+        return;
+      }
 
       await FirebaseFirestore.instance
           .collection('elderly_locations')
           .doc(user.uid)
           .set({
-            'latitude': position.latitude,
-            'longitude': position.longitude,
+            'latitude': lat, // was position.latitude
+            'longitude': lng, // was position.longitude
             'updatedAt': FieldValue.serverTimestamp(),
           });
 
@@ -146,8 +185,8 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           .add({
             'elderlyId': user.uid,
             'elderlyName': fullName ?? 'Elderly',
-            'latitude': position.latitude,
-            'longitude': position.longitude,
+            'latitude': lat, // was position.latitude
+            'longitude': lng, // was position.longitude
             'createdAt': FieldValue.serverTimestamp(),
             'status': 'active',
           });
@@ -203,9 +242,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
         });
       }
 
-      debugPrint(
-        "Emergency alert sent: ${position.latitude}, ${position.longitude}",
-      );
+      debugPrint("Emergency alert sent: $lat, $lng");
     } catch (e) {
       debugPrint("Error sending emergency alert: $e");
 

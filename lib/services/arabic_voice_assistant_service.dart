@@ -56,8 +56,7 @@ class ArabicVoiceAssistantService {
 
     final micStatus = await Permission.microphone.request();
     if (!micStatus.isGranted) {
-      debugPrint('🎙️ لم يتم منح صلاحية الميكروفون');
-      return false;
+      throw Exception('mic_permission_denied');
     }
 
     _isInitialized = true;

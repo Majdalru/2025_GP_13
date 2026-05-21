@@ -8,7 +8,7 @@ class LocationService {
     // هل الموقع شغال؟
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw Exception('Location services are disabled.');
+      throw Exception('location_service_disabled');
     }
 
     // الصلاحيات
@@ -16,12 +16,12 @@ class LocationService {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        throw Exception('Location permission denied');
+        throw Exception('location_permission_denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      throw Exception('Location permanently denied');
+      throw Exception('location_permission_permanently_denied');
     }
 
     // جلب الموقع

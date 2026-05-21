@@ -3236,6 +3236,42 @@ abstract class AppLocalizations {
   /// **'Tap a time to adjust it for the new schedule.'**
   String get reviewTimesHint;
 
+  /// No description provided for @micPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone is disabled. Please enable it in Settings.'**
+  String get micPermissionDenied;
+
+  /// No description provided for @cameraPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera is disabled. Please enable it in Settings.'**
+  String get cameraPermissionDenied;
+
+  /// No description provided for @locationServiceDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Location service is disabled. Please enable it in Settings.'**
+  String get locationServiceDisabled;
+
+  /// No description provided for @locationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission denied. Please allow location access.'**
+  String get locationPermissionDenied;
+
+  /// No description provided for @locationPermissionPermanentlyDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission permanently denied. Enable it in app settings.'**
+  String get locationPermissionPermanentlyDenied;
+
+  /// No description provided for @openSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get openSettings;
+
   /// No description provided for @scan.
   ///
   /// In en, this message translates to:

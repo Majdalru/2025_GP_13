@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
 
 import '../models/voice_command.dart';
 import '../services/arabic_voice_assistant_service.dart';
@@ -115,7 +116,19 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
     try {
       final micStatus = await Permission.microphone.request();
       if (!micStatus.isGranted) {
-        debugPrint('❌ Microphone permission not granted');
+        if (mounted) {
+          final loc = AppLocalizations.of(context)!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                loc.micPermissionDenied,
+                style: const TextStyle(fontSize: 20),
+              ),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
         return;
       }
 
@@ -218,19 +231,19 @@ class _ArabicFloatingVoiceButtonState extends State<ArabicFloatingVoiceButton>
         _hasSpokenIntro = true;
       } else {
         final hour = DateTime.now().hour;
-             String shortGreeting;
+        String shortGreeting;
 
-              if (hour < 12) {
-              shortGreeting = _userName != null
+        if (hour < 12) {
+          shortGreeting = _userName != null
               ? "صباح الخير يا $_userName، كيف أستطيع مساعدتك؟"
               : "صباح الخير، كيف أستطيع مساعدتك؟";
-             } else {
-             shortGreeting = _userName != null
-            ? "مساء الخير يا $_userName، كيف أستطيع مساعدتك؟"
-            : "مساء الخير، كيف أستطيع مساعدتك؟";
-            }
+        } else {
+          shortGreeting = _userName != null
+              ? "مساء الخير يا $_userName، كيف أستطيع مساعدتك؟"
+              : "مساء الخير، كيف أستطيع مساعدتك؟";
+        }
 
-await _speak(shortGreeting);
+        await _speak(shortGreeting);
       }
     }
 

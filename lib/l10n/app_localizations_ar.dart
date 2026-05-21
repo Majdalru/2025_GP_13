@@ -1736,6 +1736,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reviewTimesHint => 'اضغط على الوقت لتعديله قبل الاسترجاع.';
 
   @override
+  String get micPermissionDenied =>
+      'الميكروفون معطّل. يرجى تفعيله من الإعدادات.';
+
+  @override
+  String get cameraPermissionDenied =>
+      'الكاميرا معطّلة. يرجى تفعيلها من الإعدادات.';
+
+  @override
+  String get locationServiceDisabled =>
+      'خدمة الموقع معطّلة. يرجى تفعيلها من الإعدادات.';
+
+  @override
+  String get locationPermissionDenied =>
+      'تم رفض إذن الموقع. يرجى السماح بالوصول إلى الموقع.';
+
+  @override
+  String get locationPermissionPermanentlyDenied =>
+      'إذن الموقع مرفوض نهائيًا. يرجى تفعيله من إعدادات التطبيق.';
+
+  @override
+  String get openSettings => 'فتح الإعدادات';
+
+  @override
   String get scan => ' ';
 
   @override

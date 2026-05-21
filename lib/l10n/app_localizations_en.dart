@@ -1749,6 +1749,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewTimesHint => 'Tap a time to adjust it for the new schedule.';
 
   @override
+  String get micPermissionDenied =>
+      'Microphone is disabled. Please enable it in Settings.';
+
+  @override
+  String get cameraPermissionDenied =>
+      'Camera is disabled. Please enable it in Settings.';
+
+  @override
+  String get locationServiceDisabled =>
+      'Location service is disabled. Please enable it in Settings.';
+
+  @override
+  String get locationPermissionDenied =>
+      'Location permission denied. Please allow location access.';
+
+  @override
+  String get locationPermissionPermanentlyDenied =>
+      'Location permission permanently denied. Enable it in app settings.';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
   String get scan => '';
 
   @override
